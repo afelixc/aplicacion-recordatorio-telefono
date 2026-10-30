@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/formatting.dart';
 import '../../data/recurrence.dart';
 import '../../data/reminder.dart';
+import 'multi_day_picker.dart';
 
 /// Formulario de título, día y hora. Se usa para crear y editar recordatorios,
 /// en el modo gratis del chat y, más adelante, para corregir lo que arme la IA.
@@ -84,23 +85,28 @@ class _ReminderFormState extends State<ReminderForm> {
       if (kind == RepeatKind.weekly && _weekdays.isEmpty) {
         _weekdays = {_day.weekday};
       }
-      if (kind == RepeatKind.dates && _dates.isEmpty) _dates = [_day];
     });
+    // En "Días puntuales" se abre directo el almanaque para elegir varios días.
+    if (kind == RepeatKind.dates && _dates.isEmpty) _pickDays();
   }
 
-  Future<void> _addDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _dates.isEmpty ? _day : _dates.last,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 10),
-      helpText: 'Agregar un día',
+  /// Almanaque para elegir varios días de una vez: días de la semana
+  /// (queda "Todas las semanas") o fechas sueltas (queda "Días puntuales").
+  Future<void> _pickDays() async {
+    final current = _repeat == RepeatKind.weekly
+        ? Recurrence.weekly(_weekdays)
+        : Recurrence.dates(_dates);
+    final picked = await showMultiDayPicker(
+      context,
+      initial: current,
+      initialMonth: _day,
     );
     if (picked == null) return;
     setState(() {
       _repeatError = null;
-      if (!_dates.contains(picked)) _dates = [..._dates, picked]..sort();
+      _repeat = picked.kind;
+      _weekdays = {...picked.weekdays};
+      _dates = [...picked.dates];
     });
   }
 
@@ -273,9 +279,12 @@ class _ReminderFormState extends State<ReminderForm> {
                         setState(() => _dates = [..._dates]..remove(d)),
                   ),
                 ActionChip(
-                  avatar: const Icon(Icons.add, size: 18),
-                  label: const Text('Agregar día'),
-                  onPressed: _addDate,
+                  key: const Key('pick-days'),
+                  avatar: const Icon(Icons.calendar_month, size: 18),
+                  label: Text(
+                    _dates.isEmpty ? 'Elegir días' : 'Agregar o quitar días',
+                  ),
+                  onPressed: _pickDays,
                 ),
               ],
             ),

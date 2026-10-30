@@ -38,7 +38,7 @@ Al cargar un recordatorio, en **Repetir** podés elegir:
 - **Todas las semanas**, marcando los días (por ejemplo lunes, miércoles y viernes)
 - **Todos los meses**, el mismo día (si el mes es más corto, el último día del mes)
 - **Todos los años**, la misma fecha
-- **Días puntuales**: elegís varias fechas sueltas
+- **Días puntuales**: se abre un almanaque donde tocás varios días de una vez. Si tocás los **números** (el 1, el 10, el 20…) quedan esas fechas sueltas. Si tocás las **letras de arriba** (L, M, V, D…) queda "todos los lunes, miércoles…". Lo primero que tocás define el modo; si después tocás del otro tipo, cambia y te avisa.
 
 En uno que se repite, **Hecho** solo da por hecha esa vez: sigue avisando las próximas. **Posponer** agrega un aviso extra sin mover las próximas. Para que deje de repetirse, tildalo en el Listado.
 
