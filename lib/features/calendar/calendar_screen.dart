@@ -10,7 +10,8 @@ class CalendarScreen extends StatelessWidget {
     return const ComingSoon(
       icon: Icons.calendar_month_outlined,
       title: 'Almanaque',
-      description: 'Calendario mensual con tus recordatorios. Llega en la etapa 4.',
+      description:
+          'Calendario mensual con tus recordatorios. Llega en la etapa 4.',
     );
   }
 }

@@ -1,9 +1,10 @@
+# Compila el APK de Android y lo publica en "Releases" cada vez que se suben cambios a main.
+# La app instalada revisa Releases al abrirse y ofrece actualizar.
 name: Compilar APK
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -11,12 +12,12 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  apk:
+    runs-on: ubuntu-24.04   # ya trae el SDK de Android instalado
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -31,17 +32,47 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
-      - name: Compilar APK
-        run: flutter build apk --release
+      - name: Cargar la firma
+        env:
+          FIRMA_BASE64: ${{ secrets.FIRMA_BASE64 }}
+          FIRMA_CLAVE: ${{ secrets.FIRMA_CLAVE }}
+        run: |
+          if [ -n "$FIRMA_BASE64" ]; then
+            # Se sacan espacios y saltos de línea que se cuelan al copiar y pegar
+            if ! printf '%s' "$FIRMA_BASE64" | tr -d ' \r\n\t"' | base64 -d > android/app/firma.jks 2>/dev/null; then
+              echo "::error::El secret FIRMA_BASE64 está mal copiado: tiene que ser TODO el texto del archivo FIRMA_BASE64.txt (empieza con MII). Largo recibido: $(printf '%s' "$FIRMA_BASE64" | tr -d ' \r\n\t' | wc -c)"
+              exit 1
+            fi
+            if ! keytool -list -keystore android/app/firma.jks -storepass "$FIRMA_CLAVE" >/dev/null 2>&1; then
+              echo "::error::La firma no abre con FIRMA_CLAVE: revisá que FIRMA_CLAVE sea exactamente el texto de FIRMA_CLAVE.txt, sin espacios. Largo recibido: ${#FIRMA_CLAVE}"
+              exit 1
+            fi
+            printf 'storeFile=app/firma.jks\nstorePassword=%s\nkeyAlias=recordame\nkeyPassword=%s\n' "$FIRMA_CLAVE" "$FIRMA_CLAVE" > android/key.properties
+            echo "FIRMADO=si" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Falta el secret FIRMA_BASE64: el APK sale con firma de prueba, no se publica y no se podrá actualizar encima de otra versión."
+          fi
 
-      - name: Subir APK como artefacto
+      - name: Compilar
+        run: |
+          flutter build apk --release \
+            --build-name=1.0.${{ github.run_number }} \
+            --build-number=${{ github.run_number }}
+          cp build/app/outputs/flutter-apk/app-release.apk Recordame.apk
+
+      # Sin la firma definitiva el APK queda solo como prueba (en la pestaña Actions), no se publica
+      - name: Guardar APK de prueba
+        if: env.FIRMADO != 'si' || github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: recordame-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: APK-de-prueba
+          path: Recordame.apk
 
-      - name: Publicar versión (solo con tags v*)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: build/app/outputs/flutter-apk/app-release.apk
+      - name: Publicar en Releases
+        if: env.FIRMADO == 'si' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v1.0.${{ github.run_number }}" Recordame.apk \
+            --title "Recordame 1.0.${{ github.run_number }}" \
+            --notes "Descargá **Recordame.apk** desde el teléfono y abrilo para instalar. Si ya tenés la app, al abrirla te ofrece actualizar sola."
