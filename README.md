@@ -75,7 +75,7 @@ El dictado usa el reconocimiento de voz de Android, en el idioma elegido en Conf
 
 En **Configuración → Consumo de IA** ves cuánto gastaste hoy y en el mes, un gráfico de los últimos 14 días y un **saldo estimado**. Para el saldo, tocá **Anotar saldo** y poné el saldo que ves en la página del proveedor: desde ese momento la app te va restando lo que consumís.
 
-Es un cálculo de la app, con el precio de cada modelo. Los proveedores no dejan consultar el saldo real ni cargar saldo desde otras apps, así que el botón **Cargar saldo** abre directamente la página de facturación del proveedor. Para OpenAI y Gemini la app no conoce los precios: muestra la cantidad de consultas.
+Es un cálculo de la app, con el precio de cada modelo. Los proveedores no dejan consultar el saldo real ni cargar saldo desde otras apps, así que el botón **Ver o cargar saldo** abre la página de facturación del proveedor y, al volver a la app, te pregunta el saldo que te figura para dejarlo al día. Para OpenAI y Gemini la app no conoce los precios: muestra la cantidad de consultas.
 
 La clave se guarda **cifrada y solo en tu teléfono**. No se sube a ningún lado salvo al proveedor que elegiste, cuando le pedís que interprete un mensaje.
 

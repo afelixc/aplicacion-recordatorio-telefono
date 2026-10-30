@@ -78,24 +78,66 @@ String usd(double v) => v.abs() < 0.01 && v != 0
     : 'US\$ ${v.toStringAsFixed(2)}';
 
 /// Consumo de IA: hoy, este mes, saldo estimado y gráfico por día.
-class UsageSection extends StatelessWidget {
+class UsageSection extends StatefulWidget {
   const UsageSection({super.key, required this.settings});
 
   final AppSettings settings;
 
-  Future<void> _askBalance(BuildContext context) async {
+  @override
+  State<UsageSection> createState() => _UsageSectionState();
+}
+
+class _UsageSectionState extends State<UsageSection>
+    with WidgetsBindingObserver {
+  AppSettings get settings => widget.settings;
+
+  /// Se fue a la página del proveedor: al volver, preguntar el saldo.
+  bool _wentToBillingPage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _wentToBillingPage) {
+      _wentToBillingPage = false;
+      _askBalance(context, title: '¿Cuánto saldo te figura ahora?');
+    }
+  }
+
+  Future<void> _openBillingPage(String url) async {
+    _wentToBillingPage = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<void> _askBalance(
+    BuildContext context, {
+    String title = '¿Cuánto saldo tenés?',
+  }) async {
     final controller = TextEditingController();
     final amount = await showDialog<double>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Cuánto saldo tenés?'),
+        title: Text(title),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Anotá el saldo que ves en la página del proveedor, en dólares. '
-              'Desde ahora la app te va restando lo que vas consumiendo.',
+              'Desde ahora la app te va restando lo que vas consumiendo. '
+              'Si no lo viste, tocá Cancelar.',
             ),
             const SizedBox(height: 12),
             TextField(
@@ -213,20 +255,17 @@ class UsageSection extends StatelessWidget {
                   onPressed: () => _askBalance(context),
                 ),
                 FilledButton.tonalIcon(
-                  icon: const Icon(Icons.add_card),
-                  label: const Text('Cargar saldo'),
-                  onPressed: () => launchUrl(
-                    Uri.parse(provider.billingUrl),
-                    mode: LaunchMode.externalApplication,
-                  ),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Ver o cargar saldo'),
+                  onPressed: () => _openBillingPage(provider.billingUrl),
                 ),
               ],
             ),
             Text(
               showCost
                   ? 'Es un cálculo de la app con el precio de cada modelo; puede diferir un poco del real. '
-                        'El saldo exacto y la carga de saldo están en la página de ${provider.name}: '
-                        'los proveedores no permiten verlos ni cargarlos desde otras apps.'
+                        'Con "Ver o cargar saldo" vas a la página de ${provider.name} y, al volver, '
+                        'la app te pregunta el saldo que te figura para quedar al día.'
                   : 'No conozco el precio del modelo que usás, así que muestro cantidad de consultas. '
                         'El gasto exacto y la carga de saldo están en la página de ${provider.name}.',
               style: theme.textTheme.bodySmall,
