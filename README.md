@@ -4,8 +4,7 @@ App de recordatorios para Android. Le decís o le escribís en lenguaje natural 
 
 Se instala directamente con un APK, sin Play Store.
 
-> **Estado:** en desarrollo (etapa 7 de 8). Funcionan la carga manual, el chat con IA, el dictado por voz, las notificaciones, el listado y el almanaque.
-> Para ver cómo va a quedar, abrí la maqueta interactiva: [`docs/maqueta.html`](docs/maqueta.html) (descargala y abrila en el navegador).
+> **Estado:** primera versión completa. Funcionan la carga manual, el chat con IA, el dictado por voz, los recordatorios que se repiten, las notificaciones, el listado y el almanaque.
 
 ## Funciones
 

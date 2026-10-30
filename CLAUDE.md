@@ -25,6 +25,6 @@
 5. ✅ Configuración: modo, proveedor de IA (Claude, OpenAI, Gemini), clave cifrada, instructivo, idioma
 6. ✅ Chat con IA (interpreta lenguaje natural → título, fecha, hora → el usuario confirma)
 7. ✅ Dictado por voz
-8. Pulido y versión final
+8. ✅ Pulido: ícono propio, versión en Configuración
 
 Segunda etapa (no implementar todavía): Google Calendar (`calendarEventId` ya existe en la tabla) y copia en Google Drive.
