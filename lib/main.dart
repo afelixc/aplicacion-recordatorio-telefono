@@ -42,6 +42,7 @@ Future<void> main() async {
   runApp(
     RecordameApp(
       reminders: reminders,
+      notifications: notifications,
       openedReminders: notifications.openedReminders,
       launchReminderId: notifications.launchReminderId,
     ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -15,6 +16,23 @@ import '../../data/scheduling_reminder_repository.dart';
 import 'reminder_actions.dart';
 import 'reminder_scheduler.dart';
 import 'snooze_options.dart';
+
+/// Estado de los permisos y avisos, para la sección de diagnóstico.
+class NotificationStatus {
+  const NotificationStatus({
+    required this.enabled,
+    required this.exactAlarms,
+    required this.pending,
+    required this.timeZone,
+    this.lastError,
+  });
+
+  final bool enabled;
+  final bool exactAlarms;
+  final int pending;
+  final String timeZone;
+  final String? lastError;
+}
 
 /// Notificaciones locales de Android. Funcionan sin internet, con la app
 /// cerrada y después de reiniciar el teléfono (el plugin las vuelve a programar).
@@ -65,6 +83,65 @@ class NotificationService implements ReminderScheduler {
         AndroidFlutterLocalNotificationsPlugin
       >();
 
+  /// Último error al programar un aviso (se muestra en Configuración).
+  String? lastError;
+
+  static const _package = 'com.afelixc.recordame';
+
+  Future<NotificationStatus> status() async => NotificationStatus(
+    enabled: await _android?.areNotificationsEnabled() ?? false,
+    exactAlarms: await _android?.canScheduleExactNotifications() ?? false,
+    pending: (await _plugin.pendingNotificationRequests()).length,
+    timeZone: tz.local.name,
+    lastError: lastError,
+  );
+
+  /// Muestra un aviso de prueba ahora mismo.
+  Future<void> showTest() => _plugin.show(
+    id: 0,
+    title: 'Aviso de prueba',
+    body: 'Si ves esto, las notificaciones funcionan.',
+    notificationDetails: _details(),
+  );
+
+  /// Programa un aviso de prueba para dentro de [delay].
+  Future<void> scheduleTest(Duration delay) async {
+    final exact = await _android?.canScheduleExactNotifications() ?? true;
+    await _plugin.zonedSchedule(
+      id: 0,
+      title: 'Aviso de prueba programado',
+      body: 'Llegó a horario. Las notificaciones programadas funcionan.',
+      scheduledDate: tz.TZDateTime.now(tz.local).add(delay),
+      notificationDetails: _details(),
+      androidScheduleMode: exact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle,
+    );
+  }
+
+  Future<void> requestExactAlarms() async =>
+      _android?.requestExactAlarmsPermission();
+
+  /// Abre los ajustes de notificaciones de la app.
+  Future<void> openNotificationSettings() => const AndroidIntent(
+    action: 'android.settings.APP_NOTIFICATION_SETTINGS',
+    arguments: {'android.provider.extra.APP_PACKAGE': _package},
+  ).launch();
+
+  /// Pide que Android no cierre la app para ahorrar batería.
+  Future<void> openBatterySettings() async {
+    try {
+      await const AndroidIntent(
+        action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+        data: 'package:$_package',
+      ).launch();
+    } catch (_) {
+      await const AndroidIntent(
+        action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
+      ).launch();
+    }
+  }
+
   /// Pide permiso para mostrar notificaciones (Android 13 en adelante).
   Future<bool> requestPermission() async =>
       await _android?.requestNotificationsPermission() ?? true;
@@ -87,7 +164,7 @@ class NotificationService implements ReminderScheduler {
     }
   }
 
-  NotificationDetails _details(Reminder r) => NotificationDetails(
+  NotificationDetails _details() => NotificationDetails(
     android: AndroidNotificationDetails(
       _channel.id,
       _channel.name,
@@ -111,18 +188,25 @@ class NotificationService implements ReminderScheduler {
     await _plugin.cancel(id: id);
     if (reminder.done || !reminder.dueAt.isAfter(DateTime.now())) return;
 
-    final exact = await _android?.canScheduleExactNotifications() ?? true;
-    await _plugin.zonedSchedule(
-      id: id,
-      title: reminder.title,
-      body: 'Recordatorio · ${Fmt.time(reminder.dueAt)} h',
-      scheduledDate: tz.TZDateTime.from(reminder.dueAt, tz.local),
-      notificationDetails: _details(reminder),
-      androidScheduleMode: exact
-          ? AndroidScheduleMode.exactAllowWhileIdle
-          : AndroidScheduleMode.inexactAllowWhileIdle,
-      payload: '$id',
-    );
+    try {
+      final exact = await _android?.canScheduleExactNotifications() ?? true;
+      await _plugin.zonedSchedule(
+        id: id,
+        title: reminder.title,
+        body: 'Recordatorio · ${Fmt.time(reminder.dueAt)} h',
+        scheduledDate: tz.TZDateTime.from(reminder.dueAt, tz.local),
+        notificationDetails: _details(),
+        androidScheduleMode: exact
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: '$id',
+      );
+      lastError = null;
+    } catch (e) {
+      // El recordatorio queda guardado igual; el error se ve en Configuración.
+      lastError = '$e';
+      debugPrint('No se pudo programar el aviso $id: $e');
+    }
   }
 
   @override
