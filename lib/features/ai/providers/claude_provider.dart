@@ -16,7 +16,7 @@ class ClaudeProvider implements AiProvider {
   @override
   String get name => 'Claude (Anthropic)';
   @override
-  String get defaultModel => 'claude-opus-5-5';
+  String get defaultModel => 'claude-haiku-5-5';
   @override
   String get keyPrefix => 'sk-ant-';
   @override

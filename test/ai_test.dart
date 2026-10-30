@@ -122,9 +122,11 @@ void main() {
       expect(req.headers['x-api-key'], 'clave');
       expect(req.headers['anthropic-version'], '2026-10-21');
       final body = jsonDecode(req.body);
-      expect(body['model'], 'claude-opus-5-5');
+      expect(body['model'], 'claude-haiku-5-5');
       expect(body['output_config']['format']['type'], 'json_schema');
-      expect(body['fallbacks'], 'default');
+      // Haiku no tiene reintento automático con otro modelo.
+      expect(body.containsKey('fallbacks'), isFalse);
+      expect(req.headers.containsKey('anthropic-beta'), isFalse);
       expect(jsonDecode(text)['title'], 'lavar el auto');
     });
 
