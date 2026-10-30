@@ -4,7 +4,7 @@ App de recordatorios para Android. Le decís o le escribís en lenguaje natural 
 
 Se instala directamente con un APK, sin Play Store.
 
-> **Estado:** en desarrollo (etapa 3 de 8). Ya se pueden cargar recordatorios a mano, verlos en el listado y recibir el aviso a la hora indicada.
+> **Estado:** en desarrollo (etapa 4 de 8). Ya se pueden cargar recordatorios a mano, verlos en el listado y recibir el aviso a la hora indicada.
 > Para ver cómo va a quedar, abrí la maqueta interactiva: [`docs/maqueta.html`](docs/maqueta.html) (descargala y abrila en el navegador).
 
 ## Funciones
@@ -17,7 +17,7 @@ Se instala directamente con un APK, sin Play Store.
 | Repetir: todos los días, semanas (eligiendo días), meses, años o días puntuales | ✅ |
 | Aviso de versión nueva con botón para actualizar | ✅ |
 | Notificaciones con botones "Hecho" y "Posponer" (15 min, 1 hora, mañana) | ✅ |
-| Almanaque mensual | ⏳ Etapa 4 |
+| Almanaque mensual (con las repeticiones) | ✅ |
 | Configuración, clave de API cifrada e instructivo | ⏳ Etapa 5 |
 | Modo IA: Claude, OpenAI o Gemini | ⏳ Etapa 6 |
 | Dictado por voz | ⏳ Etapa 7 |

@@ -19,7 +19,7 @@
 2. ✅ Base de datos local, formulario manual (modo gratis), listado; aviso de actualización
 3. ✅ Notificaciones (programadas, después de reiniciar, botones Hecho / Posponer 15 min, 1 hora, mañana)
 3b. ✅ Repetir: diario, semanal (varios días), mensual, anual, días puntuales
-4. Almanaque mensual (mostrar también las repeticiones con `Recurrence.upcoming`)
+4. ✅ Almanaque mensual (incluye repeticiones; `lib/features/calendar/occurrences.dart`)
 5. Configuración: modo, proveedor de IA (Claude, OpenAI, Gemini), clave cifrada, instructivo, idioma
 6. Chat con IA (interpreta lenguaje natural → título, fecha, hora → el usuario confirma)
 7. Dictado por voz

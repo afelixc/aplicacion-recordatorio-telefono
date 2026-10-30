@@ -142,4 +142,25 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('El almanaque muestra los recordatorios del día elegido', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    await pumpApp(tester, [
+      Reminder(
+        title: 'Turno médico',
+        dueAt: DateTime(now.year, now.month, now.day, 23, 30),
+      ),
+    ]);
+    await tester.tap(find.text('Almanaque'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Turno médico'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Turno médico'), findsOneWidget);
+    expect(find.text('23:30'), findsOneWidget);
+  });
 }
