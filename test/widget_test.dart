@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:recordame/app.dart';
+import 'package:recordame/core/settings.dart';
+import 'package:recordame/features/ai/ai_provider.dart';
 import 'package:recordame/data/memory_reminder_repository.dart';
 import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/data/reminder.dart';
@@ -15,7 +17,8 @@ void main() {
     List<Reminder> initial = const [],
   ]) async {
     final repo = MemoryReminderRepository(initial);
-    await tester.pumpWidget(RecordameApp(reminders: repo));
+    final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    await tester.pumpWidget(RecordameApp(reminders: repo, settings: settings));
     await tester.pumpAndSettle();
     return repo;
   }
@@ -163,4 +166,93 @@ void main() {
     expect(find.text('Turno médico'), findsOneWidget);
     expect(find.text('23:30'), findsOneWidget);
   });
+
+  testWidgets('Modo IA: escribe, la IA arma el recordatorio y se confirma', (
+    tester,
+  ) async {
+    final repo = MemoryReminderRepository();
+    final settings = AppSettings(
+      MemorySettingsStore(),
+      MemoryKeyStore({'claude': 'sk-ant-prueba'}),
+    );
+    await settings.load(['claude']);
+    await settings.setMode(UsageMode.ai);
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final date =
+        '${tomorrow.year}-${tomorrow.month.toString().padLeft(2, '0')}-${tomorrow.day.toString().padLeft(2, '0')}';
+    final fake = _FakeProvider(
+      '{"ok":true,"title":"Lavar el auto","date":"$date","time":"09:00",'
+      '"repeat":"none","weekdays":[],"dates":[],"message":"Listo"}',
+    );
+    await tester.pumpWidget(
+      RecordameApp(
+        reminders: repo,
+        settings: settings,
+        aiProviderOverride: fake,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('chat-input')),
+      'Recordame mañana a las 9 lavar el auto',
+    );
+    await tester.tap(find.byTooltip('Enviar'));
+    await tester.pumpAndSettle();
+
+    expect(fake.lastUser, 'Recordame mañana a las 9 lavar el auto');
+    // Se muestra el formulario con lo que entendió la IA, para corregir.
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('reminder-title')))
+          .controller!
+          .text,
+      'Lavar el auto',
+    );
+    await tester.ensureVisible(find.text('Confirmar y guardar'));
+    await tester.tap(find.text('Confirmar y guardar'));
+    await tester.pumpAndSettle();
+
+    final saved = (await repo.watchAll().first).single;
+    expect(saved.title, 'Lavar el auto');
+    expect(
+      saved.dueAt,
+      DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9),
+    );
+  });
+}
+
+class _FakeProvider implements AiProvider {
+  _FakeProvider(this.answer);
+
+  final String answer;
+  String? lastUser;
+
+  @override
+  String get id => 'claude';
+  @override
+  String get name => 'Prueba';
+  @override
+  String get defaultModel => 'modelo';
+  @override
+  String get keyPrefix => '';
+  @override
+  String get keysUrl => '';
+  @override
+  List<String> get guideSteps => const [];
+
+  @override
+  Future<List<String>> listModels(String apiKey) async => ['modelo'];
+
+  @override
+  Future<String> completeJson({
+    required String apiKey,
+    required String model,
+    required String system,
+    required String user,
+    required Map<String, dynamic> schema,
+  }) async {
+    lastUser = user;
+    return answer;
+  }
 }

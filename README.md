@@ -4,7 +4,7 @@ App de recordatorios para Android. Le decís o le escribís en lenguaje natural 
 
 Se instala directamente con un APK, sin Play Store.
 
-> **Estado:** en desarrollo (etapa 4 de 8). Ya se pueden cargar recordatorios a mano, verlos en el listado y recibir el aviso a la hora indicada.
+> **Estado:** en desarrollo (etapa 7 de 8). Funcionan la carga manual, el chat con IA, el dictado por voz, las notificaciones, el listado y el almanaque.
 > Para ver cómo va a quedar, abrí la maqueta interactiva: [`docs/maqueta.html`](docs/maqueta.html) (descargala y abrila en el navegador).
 
 ## Funciones
@@ -18,9 +18,9 @@ Se instala directamente con un APK, sin Play Store.
 | Aviso de versión nueva con botón para actualizar | ✅ |
 | Notificaciones con botones "Hecho" y "Posponer" (15 min, 1 hora, mañana) | ✅ |
 | Almanaque mensual (con las repeticiones) | ✅ |
-| Configuración, clave de API cifrada e instructivo | ⏳ Etapa 5 |
-| Modo IA: Claude, OpenAI o Gemini | ⏳ Etapa 6 |
-| Dictado por voz | ⏳ Etapa 7 |
+| Configuración, clave de API cifrada e instructivo | ✅ |
+| Modo IA: Claude, OpenAI o Gemini | ✅ |
+| Dictado por voz | ✅ |
 | Sincronizar con Google Calendar y copia en Google Drive | 🔜 Segunda etapa |
 
 ## Instalar la app en el teléfono
@@ -63,9 +63,14 @@ El **modo gratis** no necesita clave: cargás título, día y hora con un formul
 
 Para el **modo IA** cada persona usa su propia clave y paga su propio consumo (cada recordatorio cuesta una fracción de centavo):
 
-1. En la app, entrá a **Configuración → Proveedor de IA** y elegí Claude, OpenAI o Gemini.
+1. En la app, entrá a **Configuración**, elegí **Con IA** y, en **Inteligencia artificial**, el proveedor: Claude (Anthropic), OpenAI (ChatGPT) o Gemini (Google).
 2. Abrí el instructivo **"Cómo conseguir tu clave"**: te explica cómo crear la cuenta, cargar saldo y generar la clave en ese proveedor.
-3. Pegá la clave y tocá **Probar clave**.
+3. Pegá la clave y tocá **Guardar y probar**. Probar la clave no gasta saldo.
+4. En **Modelo** podés elegir qué modelo usar. Al probar la clave aparecen todos los de tu cuenta.
+
+Después, en la pestaña **Chat**, escribí o tocá el micrófono y decí, por ejemplo: *"Recordame el viernes a las 9 de la mañana lavar el auto"* o *"Todos los lunes y jueves a las 19 ir al gimnasio"*. La IA arma el recordatorio y te lo muestra para que lo confirmes o lo corrijas antes de guardarlo. Si le falta algo (por ejemplo la hora), te pregunta.
+
+El dictado usa el reconocimiento de voz de Android, en el idioma elegido en Configuración.
 
 La clave se guarda **cifrada y solo en tu teléfono**. No se sube a ningún lado salvo al proveedor que elegiste, cuando le pedís que interprete un mensaje.
 
@@ -101,6 +106,7 @@ lib/
   data/                     Recordatorios: modelo, interfaz y base de datos (Drift/SQLite)
   features/
     home/                   Barra de pestañas (para sumar una, agregala en home_shell.dart)
+    ai/                     Proveedores de IA (para sumar uno: una clase nueva y agregarla en ai_providers.dart)
     chat/                   Chat con IA y dictado
     calendar/               Almanaque
     reminders/              Listado de recordatorios

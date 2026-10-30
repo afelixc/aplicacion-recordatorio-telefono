@@ -4,11 +4,13 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
 import 'core/formatting.dart';
+import 'core/settings.dart';
 import 'data/drift/database.dart';
 import 'data/drift/drift_reminder_repository.dart';
 import 'data/memory_reminder_repository.dart';
 import 'data/reminder.dart';
 import 'data/scheduling_reminder_repository.dart';
+import 'features/ai/ai_providers.dart';
 import 'features/notifications/notification_service.dart';
 import 'features/notifications/reminder_actions.dart';
 import 'features/notifications/reminder_scheduler.dart';
@@ -19,9 +21,14 @@ Future<void> main() async {
 
   // La vista previa web solo sirve para mirar el diseño: datos de ejemplo en
   // memoria y sin notificaciones.
+  final providerIds = aiProviders.map((p) => p.id);
+
   if (kIsWeb) {
+    final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    await settings.load(providerIds);
     runApp(
       RecordameApp(
+        settings: settings,
         reminders: SchedulingReminderRepository(
           MemoryReminderRepository(_sampleReminders()),
           const NoopReminderScheduler(),
@@ -30,6 +37,9 @@ Future<void> main() async {
     );
     return;
   }
+
+  final settings = AppSettings(PrefsSettingsStore(), SecureKeyStore());
+  await settings.load(providerIds);
 
   final notifications = NotificationService.instance;
   await notifications.init();
@@ -42,6 +52,7 @@ Future<void> main() async {
   runApp(
     RecordameApp(
       reminders: reminders,
+      settings: settings,
       notifications: notifications,
       openedReminders: notifications.openedReminders,
       launchReminderId: notifications.launchReminderId,

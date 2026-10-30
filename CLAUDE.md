@@ -12,6 +12,8 @@
 - Las pantallas usan solo `ReminderRepository`, nunca Drift directo. `SchedulingReminderRepository` programa/cancela los avisos en cada cambio.
 - Notificaciones: Android muestra máximo 3 botones (Hecho + 2 opciones con `showInNotification`). Los botones con la app cerrada corren en `onBackgroundNotificationResponse` (otro isolate, abre su propia conexión a la base).
 - Repetición (`lib/data/recurrence.dart`): `dueAt` es la primera vez (de ahí sale la hora). Avisos: ids `reminderId*100 + n` (n=99 para posponer), payload = id del recordatorio. Diario/semanal/anual usan la repetición nativa del plugin; mensual y días puntuales se programan uno por uno (24) y se completan al abrir la app.
+- IA (`lib/features/ai/`): cada proveedor implementa `AiProvider` (HTTP directo, salida JSON con esquema). El pedido y el esquema están en `reminder_interpreter.dart`. Claude: Messages API, `anthropic-version: 2026-10-21`, `output_config.format` json_schema, effort `low`, `fallbacks: "default"` en los modelos que lo admiten. Los nombres de modelo por defecto pueden quedar viejos: el usuario elige el modelo en Configuración (lista que devuelve su cuenta).
+- Configuración (`lib/core/settings.dart`): preferencias en SharedPreferences, claves en `flutter_secure_storage` (`api_key_<proveedor>`).
 - Antes de subir: `flutter analyze` y `flutter test` sin errores.
 
 ## Plan por etapas
@@ -20,9 +22,9 @@
 3. ✅ Notificaciones (programadas, después de reiniciar, botones Hecho / Posponer 15 min, 1 hora, mañana)
 3b. ✅ Repetir: diario, semanal (varios días), mensual, anual, días puntuales
 4. ✅ Almanaque mensual (incluye repeticiones; `lib/features/calendar/occurrences.dart`)
-5. Configuración: modo, proveedor de IA (Claude, OpenAI, Gemini), clave cifrada, instructivo, idioma
-6. Chat con IA (interpreta lenguaje natural → título, fecha, hora → el usuario confirma)
-7. Dictado por voz
+5. ✅ Configuración: modo, proveedor de IA (Claude, OpenAI, Gemini), clave cifrada, instructivo, idioma
+6. ✅ Chat con IA (interpreta lenguaje natural → título, fecha, hora → el usuario confirma)
+7. ✅ Dictado por voz
 8. Pulido y versión final
 
 Segunda etapa (no implementar todavía): Google Calendar (`calendarEventId` ya existe en la tabla) y copia en Google Drive.

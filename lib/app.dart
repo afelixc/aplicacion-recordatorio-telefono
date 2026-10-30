@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_scope.dart';
+import 'core/settings.dart';
+import 'features/ai/ai_provider.dart';
 import 'core/theme.dart';
 import 'data/reminder_repository.dart';
 import 'features/home/home_shell.dart';
@@ -12,13 +14,17 @@ class RecordameApp extends StatelessWidget {
   const RecordameApp({
     super.key,
     required this.reminders,
+    required this.settings,
     this.notifications,
+    this.aiProviderOverride,
     this.openedReminders = const Stream.empty(),
     this.launchReminderId,
   });
 
   final ReminderRepository reminders;
+  final AppSettings settings;
   final NotificationService? notifications;
+  final AiProvider? aiProviderOverride;
 
   /// Recordatorios cuya notificación se tocó con la app abierta.
   final Stream<int> openedReminders;
@@ -30,7 +36,9 @@ class RecordameApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppScope(
       reminders: reminders,
+      settings: settings,
       notifications: notifications,
+      aiProviderOverride: aiProviderOverride,
       child: MaterialApp(
         title: 'Recordame',
         debugShowCheckedModeBanner: false,
