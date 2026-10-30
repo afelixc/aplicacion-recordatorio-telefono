@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../data/reminder_repository.dart';
+import '../data/usage.dart';
 import '../features/ai/ai_provider.dart';
 import '../features/notifications/notification_service.dart';
 import 'settings.dart';
@@ -11,6 +12,7 @@ class AppScope extends InheritedWidget {
     super.key,
     required this.reminders,
     required this.settings,
+    required this.usage,
     this.notifications,
     this.aiProviderOverride,
     required super.child,
@@ -18,6 +20,9 @@ class AppScope extends InheritedWidget {
 
   final ReminderRepository reminders;
   final AppSettings settings;
+
+  /// Registro de consultas a la IA.
+  final UsageRepository usage;
 
   /// Null en la vista web y en las pruebas, donde no hay notificaciones.
   final NotificationService? notifications;
@@ -32,5 +37,6 @@ class AppScope extends InheritedWidget {
   bool updateShouldNotify(AppScope oldWidget) =>
       reminders != oldWidget.reminders ||
       settings != oldWidget.settings ||
+      usage != oldWidget.usage ||
       notifications != oldWidget.notifications;
 }

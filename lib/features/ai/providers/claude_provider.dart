@@ -22,6 +22,8 @@ class ClaudeProvider implements AiProvider {
   @override
   String get keysUrl => 'https://console.anthropic.com/settings/keys';
   @override
+  String get billingUrl => 'https://console.anthropic.com/settings/billing';
+  @override
   List<String> get guideSteps => const [
     'Entrá a console.anthropic.com y creá una cuenta (podés usar tu correo de Google).',
     'Andá a "Billing" (Facturación), agregá una tarjeta y cargá saldo. Con el mínimo alcanza para muchísimos recordatorios.',
@@ -48,7 +50,7 @@ class ClaudeProvider implements AiProvider {
   }
 
   @override
-  Future<String> completeJson({
+  Future<AiResult> completeJson({
     required String apiKey,
     required String model,
     required String system,
@@ -93,6 +95,11 @@ class ClaudeProvider implements AiProvider {
         .map((b) => b['text'] as String)
         .join();
     if (text.isEmpty) throw const AiException('Claude no devolvió respuesta.');
-    return text;
+    final usage = json['usage'] as Map? ?? const {};
+    return AiResult(
+      text,
+      inputTokens: (usage['input_tokens'] as num?)?.toInt() ?? 0,
+      outputTokens: (usage['output_tokens'] as num?)?.toInt() ?? 0,
+    );
   }
 }

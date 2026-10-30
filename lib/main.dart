@@ -7,6 +7,7 @@ import 'core/formatting.dart';
 import 'core/settings.dart';
 import 'data/drift/database.dart';
 import 'data/drift/drift_reminder_repository.dart';
+import 'data/drift/drift_usage_repository.dart';
 import 'data/memory_reminder_repository.dart';
 import 'data/reminder.dart';
 import 'data/scheduling_reminder_repository.dart';
@@ -43,8 +44,9 @@ Future<void> main() async {
 
   final notifications = NotificationService.instance;
   await notifications.init();
+  final db = AppDatabase();
   final reminders = SchedulingReminderRepository(
-    DriftReminderRepository(AppDatabase()),
+    DriftReminderRepository(db),
     notifications,
   );
   notifications.foregroundActions = ReminderActions(reminders);
@@ -53,6 +55,7 @@ Future<void> main() async {
     RecordameApp(
       reminders: reminders,
       settings: settings,
+      usage: DriftUsageRepository(db),
       notifications: notifications,
       openedReminders: notifications.openedReminders,
       launchReminderId: notifications.launchReminderId,

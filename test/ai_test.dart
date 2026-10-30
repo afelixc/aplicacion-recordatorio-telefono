@@ -9,6 +9,7 @@ import 'package:recordame/features/ai/ai_provider.dart';
 import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/features/ai/providers/claude_provider.dart';
 import 'package:recordame/features/ai/providers/gemini_provider.dart';
+import 'package:recordame/features/ai/pricing.dart';
 import 'package:recordame/features/ai/providers/openai_provider.dart';
 import 'package:recordame/features/ai/reminder_interpreter.dart';
 
@@ -87,7 +88,7 @@ void main() {
   });
 
   group('proveedores', () {
-    Future<(http.Request, String)> call(
+    Future<(http.Request, AiResult)> call(
       AiProvider Function(http.Client) make,
       String responseBody,
     ) async {
@@ -116,8 +117,11 @@ void main() {
           'content': [
             {'type': 'text', 'text': jsonEncode(_answer)},
           ],
+          'usage': {'input_tokens': 900, 'output_tokens': 120},
         }),
       );
+      expect(text.inputTokens, 900);
+      expect(text.outputTokens, 120);
       expect(req.url.toString(), 'https://api.anthropic.com/v1/messages');
       expect(req.headers['x-api-key'], 'clave');
       expect(req.headers['anthropic-version'], '2026-10-21');
@@ -127,7 +131,7 @@ void main() {
       // Haiku no tiene reintento automático con otro modelo.
       expect(body.containsKey('fallbacks'), isFalse);
       expect(req.headers.containsKey('anthropic-beta'), isFalse);
-      expect(jsonDecode(text)['title'], 'lavar el auto');
+      expect(jsonDecode(text.text)['title'], 'lavar el auto');
     });
 
     test('Claude rechaza el pedido', () async {
@@ -155,7 +159,7 @@ void main() {
       expect(req.headers['authorization'], 'Bearer clave');
       final body = jsonDecode(req.body);
       expect(body['response_format']['json_schema']['strict'], isTrue);
-      expect(jsonDecode(text)['ok'], isTrue);
+      expect(jsonDecode(text.text)['ok'], isTrue);
     });
 
     test('Gemini (sin additionalProperties en el esquema)', () async {
@@ -176,7 +180,7 @@ void main() {
       expect(req.url.path, '/v1beta/models/gemini-3.5-flash:generateContent');
       expect(req.headers['x-goog-api-key'], 'clave');
       expect(req.body, isNot(contains('additionalProperties')));
-      expect(jsonDecode(text)['date'], '2026-11-06');
+      expect(jsonDecode(text.text)['date'], '2026-11-06');
     });
 
     test('errores HTTP con mensajes claros', () async {
@@ -194,5 +198,15 @@ void main() {
         ),
       );
     });
+  });
+
+  test('precios: Haiku 5.5 y modelos desconocidos', () {
+    final haiku = priceFor('claude-haiku-5-5')!;
+    // 1.000.000 de tokens de entrada = US$ 0,10; 1.000.000 de salida = US$ 0,50.
+    expect(haiku.cost(1000000, 0), closeTo(0.10, 1e-9));
+    expect(haiku.cost(0, 1000000), closeTo(0.50, 1e-9));
+    expect(priceFor('claude-opus-5-5')!.inputPerMillion, 4);
+    expect(priceFor('claude-opus-5')!.inputPerMillion, 5);
+    expect(priceFor('gpt-algo'), isNull);
   });
 }

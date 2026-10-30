@@ -5,8 +5,10 @@ import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../core/settings.dart';
 import '../../data/reminder.dart';
+import '../../data/usage.dart';
 import '../ai/ai_provider.dart';
 import '../ai/ai_providers.dart';
+import '../ai/pricing.dart';
 import '../ai/reminder_interpreter.dart';
 import '../reminders/reminder_form.dart';
 import 'chat_screen.dart';
@@ -110,8 +112,10 @@ class _AiChatState extends State<AiChat> {
         ? text
         : 'Pedido anterior: $_previousRequest\nRespuesta del usuario: $text';
     try {
-      final result = await (await _interpreter()).interpret(request);
+      final interpreter = await _interpreter();
+      final result = await interpreter.interpret(request);
       if (!mounted) return;
+      _recordUsage(interpreter, result.usage);
       if (result.ok) {
         _previousRequest = null;
         _add(
@@ -137,6 +141,22 @@ class _AiChatState extends State<AiChat> {
     } finally {
       if (mounted) setState(() => _thinking = false);
     }
+  }
+
+  /// Anota la consulta para la sección de consumo de Configuración.
+  void _recordUsage(ReminderInterpreter interpreter, AiResult? usage) {
+    if (usage == null) return;
+    final price = priceFor(interpreter.model);
+    AppScope.of(context).usage.record(
+      UsageRecord(
+        at: DateTime.now(),
+        provider: interpreter.provider.id,
+        model: interpreter.model,
+        inputTokens: usage.inputTokens,
+        outputTokens: usage.outputTokens,
+        costUsd: price?.cost(usage.inputTokens, usage.outputTokens),
+      ),
+    );
   }
 
   Future<void> _confirm(Reminder r) async {

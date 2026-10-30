@@ -22,6 +22,8 @@ class GeminiProvider implements AiProvider {
   @override
   String get keysUrl => 'https://aistudio.google.com/app/apikey';
   @override
+  String get billingUrl => 'https://aistudio.google.com/usage';
+  @override
   List<String> get guideSteps => const [
     'Entrá a aistudio.google.com con tu cuenta de Google.',
     'Tocá "Get API key" y después "Create API key".',
@@ -65,7 +67,7 @@ class GeminiProvider implements AiProvider {
   };
 
   @override
-  Future<String> completeJson({
+  Future<AiResult> completeJson({
     required String apiKey,
     required String model,
     required String system,
@@ -103,6 +105,14 @@ class GeminiProvider implements AiProvider {
         : null;
     final text = parts?.map((p) => p['text'] ?? '').join() ?? '';
     if (text.isEmpty) throw const AiException('Gemini no devolvió respuesta.');
-    return text;
+    final usage = json['usageMetadata'] as Map? ?? const {};
+    return AiResult(
+      text,
+      inputTokens: (usage['promptTokenCount'] as num?)?.toInt() ?? 0,
+      // Gemini cobra el razonamiento ("thoughts") como salida.
+      outputTokens:
+          ((usage['candidatesTokenCount'] as num?)?.toInt() ?? 0) +
+          ((usage['thoughtsTokenCount'] as num?)?.toInt() ?? 0),
+    );
   }
 }

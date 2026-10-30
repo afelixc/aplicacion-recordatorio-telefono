@@ -773,15 +773,467 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
   }
 }
 
+class $UsageRecordsTable extends UsageRecords
+    with TableInfo<$UsageRecordsTable, UsageRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $UsageRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _atMeta = const VerificationMeta('at');
+  @override
+  late final GeneratedColumn<DateTime> at = GeneratedColumn<DateTime>(
+    'at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _inputTokensMeta = const VerificationMeta(
+    'inputTokens',
+  );
+  @override
+  late final GeneratedColumn<int> inputTokens = GeneratedColumn<int>(
+    'input_tokens',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _outputTokensMeta = const VerificationMeta(
+    'outputTokens',
+  );
+  @override
+  late final GeneratedColumn<int> outputTokens = GeneratedColumn<int>(
+    'output_tokens',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _costUsdMeta = const VerificationMeta(
+    'costUsd',
+  );
+  @override
+  late final GeneratedColumn<double> costUsd = GeneratedColumn<double>(
+    'cost_usd',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    at,
+    provider,
+    model,
+    inputTokens,
+    outputTokens,
+    costUsd,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'usage_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<UsageRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('at')) {
+      context.handle(_atMeta, at.isAcceptableOrUnknown(data['at']!, _atMeta));
+    } else if (isInserting) {
+      context.missing(_atMeta);
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_providerMeta);
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_modelMeta);
+    }
+    if (data.containsKey('input_tokens')) {
+      context.handle(
+        _inputTokensMeta,
+        inputTokens.isAcceptableOrUnknown(
+          data['input_tokens']!,
+          _inputTokensMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_inputTokensMeta);
+    }
+    if (data.containsKey('output_tokens')) {
+      context.handle(
+        _outputTokensMeta,
+        outputTokens.isAcceptableOrUnknown(
+          data['output_tokens']!,
+          _outputTokensMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_outputTokensMeta);
+    }
+    if (data.containsKey('cost_usd')) {
+      context.handle(
+        _costUsdMeta,
+        costUsd.isAcceptableOrUnknown(data['cost_usd']!, _costUsdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  UsageRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return UsageRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      at: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}at'],
+      )!,
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      )!,
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      )!,
+      inputTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}input_tokens'],
+      )!,
+      outputTokens: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}output_tokens'],
+      )!,
+      costUsd: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cost_usd'],
+      ),
+    );
+  }
+
+  @override
+  $UsageRecordsTable createAlias(String alias) {
+    return $UsageRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class UsageRow extends DataClass implements Insertable<UsageRow> {
+  final int id;
+  final DateTime at;
+  final String provider;
+  final String model;
+  final int inputTokens;
+  final int outputTokens;
+  final double? costUsd;
+  const UsageRow({
+    required this.id,
+    required this.at,
+    required this.provider,
+    required this.model,
+    required this.inputTokens,
+    required this.outputTokens,
+    this.costUsd,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['at'] = Variable<DateTime>(at);
+    map['provider'] = Variable<String>(provider);
+    map['model'] = Variable<String>(model);
+    map['input_tokens'] = Variable<int>(inputTokens);
+    map['output_tokens'] = Variable<int>(outputTokens);
+    if (!nullToAbsent || costUsd != null) {
+      map['cost_usd'] = Variable<double>(costUsd);
+    }
+    return map;
+  }
+
+  UsageRecordsCompanion toCompanion(bool nullToAbsent) {
+    return UsageRecordsCompanion(
+      id: Value(id),
+      at: Value(at),
+      provider: Value(provider),
+      model: Value(model),
+      inputTokens: Value(inputTokens),
+      outputTokens: Value(outputTokens),
+      costUsd: costUsd == null && nullToAbsent
+          ? const Value.absent()
+          : Value(costUsd),
+    );
+  }
+
+  factory UsageRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return UsageRow(
+      id: serializer.fromJson<int>(json['id']),
+      at: serializer.fromJson<DateTime>(json['at']),
+      provider: serializer.fromJson<String>(json['provider']),
+      model: serializer.fromJson<String>(json['model']),
+      inputTokens: serializer.fromJson<int>(json['inputTokens']),
+      outputTokens: serializer.fromJson<int>(json['outputTokens']),
+      costUsd: serializer.fromJson<double?>(json['costUsd']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'at': serializer.toJson<DateTime>(at),
+      'provider': serializer.toJson<String>(provider),
+      'model': serializer.toJson<String>(model),
+      'inputTokens': serializer.toJson<int>(inputTokens),
+      'outputTokens': serializer.toJson<int>(outputTokens),
+      'costUsd': serializer.toJson<double?>(costUsd),
+    };
+  }
+
+  UsageRow copyWith({
+    int? id,
+    DateTime? at,
+    String? provider,
+    String? model,
+    int? inputTokens,
+    int? outputTokens,
+    Value<double?> costUsd = const Value.absent(),
+  }) => UsageRow(
+    id: id ?? this.id,
+    at: at ?? this.at,
+    provider: provider ?? this.provider,
+    model: model ?? this.model,
+    inputTokens: inputTokens ?? this.inputTokens,
+    outputTokens: outputTokens ?? this.outputTokens,
+    costUsd: costUsd.present ? costUsd.value : this.costUsd,
+  );
+  UsageRow copyWithCompanion(UsageRecordsCompanion data) {
+    return UsageRow(
+      id: data.id.present ? data.id.value : this.id,
+      at: data.at.present ? data.at.value : this.at,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      model: data.model.present ? data.model.value : this.model,
+      inputTokens: data.inputTokens.present
+          ? data.inputTokens.value
+          : this.inputTokens,
+      outputTokens: data.outputTokens.present
+          ? data.outputTokens.value
+          : this.outputTokens,
+      costUsd: data.costUsd.present ? data.costUsd.value : this.costUsd,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UsageRow(')
+          ..write('id: $id, ')
+          ..write('at: $at, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('inputTokens: $inputTokens, ')
+          ..write('outputTokens: $outputTokens, ')
+          ..write('costUsd: $costUsd')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, at, provider, model, inputTokens, outputTokens, costUsd);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is UsageRow &&
+          other.id == this.id &&
+          other.at == this.at &&
+          other.provider == this.provider &&
+          other.model == this.model &&
+          other.inputTokens == this.inputTokens &&
+          other.outputTokens == this.outputTokens &&
+          other.costUsd == this.costUsd);
+}
+
+class UsageRecordsCompanion extends UpdateCompanion<UsageRow> {
+  final Value<int> id;
+  final Value<DateTime> at;
+  final Value<String> provider;
+  final Value<String> model;
+  final Value<int> inputTokens;
+  final Value<int> outputTokens;
+  final Value<double?> costUsd;
+  const UsageRecordsCompanion({
+    this.id = const Value.absent(),
+    this.at = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.inputTokens = const Value.absent(),
+    this.outputTokens = const Value.absent(),
+    this.costUsd = const Value.absent(),
+  });
+  UsageRecordsCompanion.insert({
+    this.id = const Value.absent(),
+    required DateTime at,
+    required String provider,
+    required String model,
+    required int inputTokens,
+    required int outputTokens,
+    this.costUsd = const Value.absent(),
+  }) : at = Value(at),
+       provider = Value(provider),
+       model = Value(model),
+       inputTokens = Value(inputTokens),
+       outputTokens = Value(outputTokens);
+  static Insertable<UsageRow> custom({
+    Expression<int>? id,
+    Expression<DateTime>? at,
+    Expression<String>? provider,
+    Expression<String>? model,
+    Expression<int>? inputTokens,
+    Expression<int>? outputTokens,
+    Expression<double>? costUsd,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (at != null) 'at': at,
+      if (provider != null) 'provider': provider,
+      if (model != null) 'model': model,
+      if (inputTokens != null) 'input_tokens': inputTokens,
+      if (outputTokens != null) 'output_tokens': outputTokens,
+      if (costUsd != null) 'cost_usd': costUsd,
+    });
+  }
+
+  UsageRecordsCompanion copyWith({
+    Value<int>? id,
+    Value<DateTime>? at,
+    Value<String>? provider,
+    Value<String>? model,
+    Value<int>? inputTokens,
+    Value<int>? outputTokens,
+    Value<double?>? costUsd,
+  }) {
+    return UsageRecordsCompanion(
+      id: id ?? this.id,
+      at: at ?? this.at,
+      provider: provider ?? this.provider,
+      model: model ?? this.model,
+      inputTokens: inputTokens ?? this.inputTokens,
+      outputTokens: outputTokens ?? this.outputTokens,
+      costUsd: costUsd ?? this.costUsd,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (at.present) {
+      map['at'] = Variable<DateTime>(at.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (inputTokens.present) {
+      map['input_tokens'] = Variable<int>(inputTokens.value);
+    }
+    if (outputTokens.present) {
+      map['output_tokens'] = Variable<int>(outputTokens.value);
+    }
+    if (costUsd.present) {
+      map['cost_usd'] = Variable<double>(costUsd.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('UsageRecordsCompanion(')
+          ..write('id: $id, ')
+          ..write('at: $at, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('inputTokens: $inputTokens, ')
+          ..write('outputTokens: $outputTokens, ')
+          ..write('costUsd: $costUsd')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $RemindersTable reminders = $RemindersTable(this);
+  late final $UsageRecordsTable usageRecords = $UsageRecordsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [reminders];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [reminders, usageRecords];
 }
 
 typedef $$RemindersTableCreateCompanionBuilder = RemindersCompanion Function({
@@ -1151,10 +1603,254 @@ typedef $$RemindersTableProcessedTableManager =
       ReminderRow,
       PrefetchHooks Function()
     >;
+typedef $$UsageRecordsTableCreateCompanionBuilder =
+    UsageRecordsCompanion Function({
+      Value<int> id,
+      required DateTime at,
+      required String provider,
+      required String model,
+      required int inputTokens,
+      required int outputTokens,
+      Value<double?> costUsd,
+    });
+typedef $$UsageRecordsTableUpdateCompanionBuilder =
+    UsageRecordsCompanion Function({
+      Value<int> id,
+      Value<DateTime> at,
+      Value<String> provider,
+      Value<String> model,
+      Value<int> inputTokens,
+      Value<int> outputTokens,
+      Value<double?> costUsd,
+    });
+
+class $$UsageRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $UsageRecordsTable> {
+  $$UsageRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get at => $composableBuilder(
+    column: $table.at,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get inputTokens => $composableBuilder(
+    column: $table.inputTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get outputTokens => $composableBuilder(
+    column: $table.outputTokens,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get costUsd => $composableBuilder(
+    column: $table.costUsd,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$UsageRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $UsageRecordsTable> {
+  $$UsageRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get at => $composableBuilder(
+    column: $table.at,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get inputTokens => $composableBuilder(
+    column: $table.inputTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get outputTokens => $composableBuilder(
+    column: $table.outputTokens,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get costUsd => $composableBuilder(
+    column: $table.costUsd,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$UsageRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $UsageRecordsTable> {
+  $$UsageRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get at =>
+      $composableBuilder(column: $table.at, builder: (column) => column);
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<int> get inputTokens => $composableBuilder(
+    column: $table.inputTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get outputTokens => $composableBuilder(
+    column: $table.outputTokens,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get costUsd =>
+      $composableBuilder(column: $table.costUsd, builder: (column) => column);
+}
+
+class $$UsageRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $UsageRecordsTable,
+          UsageRow,
+          $$UsageRecordsTableFilterComposer,
+          $$UsageRecordsTableOrderingComposer,
+          $$UsageRecordsTableAnnotationComposer,
+          $$UsageRecordsTableCreateCompanionBuilder,
+          $$UsageRecordsTableUpdateCompanionBuilder,
+          (
+            UsageRow,
+            BaseReferences<_$AppDatabase, $UsageRecordsTable, UsageRow>,
+          ),
+          UsageRow,
+          PrefetchHooks Function()
+        > {
+  $$UsageRecordsTableTableManager(_$AppDatabase db, $UsageRecordsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$UsageRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$UsageRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$UsageRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<DateTime> at = const Value.absent(),
+                Value<String> provider = const Value.absent(),
+                Value<String> model = const Value.absent(),
+                Value<int> inputTokens = const Value.absent(),
+                Value<int> outputTokens = const Value.absent(),
+                Value<double?> costUsd = const Value.absent(),
+              }) => UsageRecordsCompanion(
+                id: id,
+                at: at,
+                provider: provider,
+                model: model,
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                costUsd: costUsd,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required DateTime at,
+                required String provider,
+                required String model,
+                required int inputTokens,
+                required int outputTokens,
+                Value<double?> costUsd = const Value.absent(),
+              }) => UsageRecordsCompanion.insert(
+                id: id,
+                at: at,
+                provider: provider,
+                model: model,
+                inputTokens: inputTokens,
+                outputTokens: outputTokens,
+                costUsd: costUsd,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$UsageRecordsTable, UsageRow>(table),
+                  BaseReferences<_$AppDatabase, $UsageRecordsTable, UsageRow>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$UsageRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $UsageRecordsTable,
+      UsageRow,
+      $$UsageRecordsTableFilterComposer,
+      $$UsageRecordsTableOrderingComposer,
+      $$UsageRecordsTableAnnotationComposer,
+      $$UsageRecordsTableCreateCompanionBuilder,
+      $$UsageRecordsTableUpdateCompanionBuilder,
+      (UsageRow, BaseReferences<_$AppDatabase, $UsageRecordsTable, UsageRow>),
+      UsageRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$RemindersTableTableManager get reminders =>
       $$RemindersTableTableManager(_db, _db.reminders);
+  $$UsageRecordsTableTableManager get usageRecords =>
+      $$UsageRecordsTableTableManager(_db, _db.usageRecords);
 }

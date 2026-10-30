@@ -5,6 +5,7 @@ import '../../core/app_scope.dart';
 import '../../core/settings.dart';
 import 'ai_section.dart';
 import 'notifications_section.dart';
+import 'usage_section.dart';
 
 /// Configuración: modo de uso, IA, idioma, notificaciones.
 class SettingsScreen extends StatelessWidget {
@@ -51,6 +52,8 @@ class SettingsScreen extends StatelessWidget {
           if (settings.mode == UsageMode.ai) ...[
             const SizedBox(height: 12),
             AiSection(settings: settings),
+            const SizedBox(height: 12),
+            UsageSection(settings: settings),
           ],
           const SizedBox(height: 12),
           SettingsCard(

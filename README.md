@@ -69,7 +69,13 @@ Para el **modo IA** cada persona usa su propia clave y paga su propio consumo (c
 
 Después, en la pestaña **Chat**, escribí o tocá el micrófono y decí, por ejemplo: *"Recordame el viernes a las 9 de la mañana lavar el auto"* o *"Todos los lunes y jueves a las 19 ir al gimnasio"*. La IA arma el recordatorio y te lo muestra para que lo confirmes o lo corrijas antes de guardarlo. Si le falta algo (por ejemplo la hora), te pregunta.
 
-El dictado usa el reconocimiento de voz de Android, en el idioma elegido en Configuración.
+El dictado usa el reconocimiento de voz de Android, en el idioma elegido en Configuración (por ahora, español de Argentina o español neutro).
+
+### Consumo y saldo
+
+En **Configuración → Consumo de IA** ves cuánto gastaste hoy y en el mes, un gráfico de los últimos 14 días y un **saldo estimado**. Para el saldo, tocá **Anotar saldo** y poné el saldo que ves en la página del proveedor: desde ese momento la app te va restando lo que consumís.
+
+Es un cálculo de la app, con el precio de cada modelo. Los proveedores no dejan consultar el saldo real ni cargar saldo desde otras apps, así que el botón **Cargar saldo** abre directamente la página de facturación del proveedor. Para OpenAI y Gemini la app no conoce los precios: muestra la cantidad de consultas.
 
 La clave se guarda **cifrada y solo en tu teléfono**. No se sube a ningún lado salvo al proveedor que elegiste, cuando le pedís que interprete un mensaje.
 

@@ -9,10 +9,16 @@ import 'ai_provider.dart';
 /// Resultado de interpretar un mensaje: un recordatorio para confirmar, o una
 /// pregunta si faltaba algo.
 class Interpretation {
-  const Interpretation({this.reminder, required this.message});
+  const Interpretation({this.reminder, required this.message, this.usage});
 
   final Reminder? reminder;
   final String message;
+
+  /// Tokens que usó la consulta (null si no se consultó a la IA).
+  final AiResult? usage;
+
+  Interpretation withUsage(AiResult usage) =>
+      Interpretation(reminder: reminder, message: message, usage: usage);
 
   bool get ok => reminder != null;
 }
@@ -88,14 +94,14 @@ Si ok es false, igual completá los demás campos con lo que se pueda ("" o [] s
 
   Future<Interpretation> interpret(String text, {DateTime? now}) async {
     now ??= DateTime.now();
-    final json = await provider.completeJson(
+    final result = await provider.completeJson(
       apiKey: apiKey,
       model: model,
       system: systemPrompt(now, language),
       user: text,
       schema: schema,
     );
-    return parse(json);
+    return parse(result.text).withUsage(result);
   }
 
   /// Convierte la respuesta JSON de la IA en un recordatorio.

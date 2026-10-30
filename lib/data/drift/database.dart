@@ -24,7 +24,19 @@ class Reminders extends Table {
   DateTimeColumn get snoozedUntil => dateTime().nullable()();
 }
 
-@DriftDatabase(tables: [Reminders])
+/// Consultas a la IA, para mostrar el consumo (versión 3 de la base).
+@DataClassName('UsageRow')
+class UsageRecords extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  DateTimeColumn get at => dateTime()();
+  TextColumn get provider => text()();
+  TextColumn get model => text()();
+  IntColumn get inputTokens => integer()();
+  IntColumn get outputTokens => integer()();
+  RealColumn get costUsd => real().nullable()();
+}
+
+@DriftDatabase(tables: [Reminders, UsageRecords])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(
@@ -39,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Subir este número y agregar los pasos en [migration] cuando cambien las tablas.
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -51,6 +63,7 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(reminders, reminders.lastDoneAt);
         await m.addColumn(reminders, reminders.snoozedUntil);
       }
+      if (from < 3) await m.createTable(usageRecords);
     },
   );
 }

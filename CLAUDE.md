@@ -14,6 +14,8 @@
 - Repetición (`lib/data/recurrence.dart`): `dueAt` es la primera vez (de ahí sale la hora). Avisos: ids `reminderId*100 + n` (n=99 para posponer), payload = id del recordatorio. Diario/semanal/anual usan la repetición nativa del plugin; mensual y días puntuales se programan uno por uno (24) y se completan al abrir la app.
 - IA (`lib/features/ai/`): cada proveedor implementa `AiProvider` (HTTP directo, salida JSON con esquema). El pedido y el esquema están en `reminder_interpreter.dart`. Claude: Messages API, `anthropic-version: 2026-10-21`, `output_config.format` json_schema, effort `low`, modelo por defecto `claude-haiku-5-5` (elegido por el usuario por costo), `fallbacks: "default"` solo en los modelos que lo admiten (Opus 5/5.5, Fable 5, Sonnet 5.5). Los nombres de modelo por defecto pueden quedar viejos: el usuario elige el modelo en Configuración (lista que devuelve su cuenta).
 - Configuración (`lib/core/settings.dart`): preferencias en SharedPreferences, claves en `flutter_secure_storage` (`api_key_<proveedor>`).
+- Consumo de IA: cada consulta se guarda en la tabla `UsageRecords` (base versión 3) con tokens y costo estimado (`lib/features/ai/pricing.dart`, solo precios de Claude). El saldo es el que anota el usuario menos lo consumido desde entonces. Ningún proveedor permite leer el saldo real ni cargarlo con una clave común: el botón abre la página de facturación.
+- Idiomas: solo español (Argentina y neutro) por ahora.
 - Antes de subir: `flutter analyze` y `flutter test` sin errores.
 
 ## Plan por etapas

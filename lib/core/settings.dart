@@ -8,8 +8,6 @@ enum UsageMode { free, ai }
 const appLanguages = <(String, String)>[
   ('es-AR', 'Español (Argentina)'),
   ('es-ES', 'Español neutro'),
-  ('en-US', 'English'),
-  ('pt-BR', 'Português (Brasil)'),
 ];
 
 /// Dónde se guardan las preferencias (no secretas).
@@ -99,15 +97,40 @@ class AppSettings extends ChangeNotifier {
 
   String? modelFor(String providerId) => _models[providerId];
 
+  final Map<String, (double, DateTime)> _balances = {};
+
+  /// Saldo que el usuario anotó que cargó y cuándo, o null.
+  (double, DateTime)? balanceFor(String providerId) => _balances[providerId];
+
+  Future<void> setBalance(String providerId, double amountUsd) async {
+    final now = DateTime.now();
+    _balances[providerId] = (amountUsd, now);
+    notifyListeners();
+    await _store.write(
+      'balance_$providerId',
+      '$amountUsd|${now.toIso8601String()}',
+    );
+  }
+
   Future<void> load(Iterable<String> providerIds) async {
     mode =
         UsageMode.values.asNameMap()[await _store.read('mode')] ??
         UsageMode.free;
     providerId = await _store.read('provider') ?? providerId;
-    language = await _store.read('language') ?? language;
+    final savedLanguage = await _store.read('language');
+    // Si quedó guardado un idioma que ya no se ofrece, se vuelve al de Argentina.
+    if (appLanguages.any((l) => l.$1 == savedLanguage)) {
+      language = savedLanguage!;
+    }
     for (final id in providerIds) {
       final model = await _store.read('model_$id');
       if (model != null) _models[id] = model;
+      final balance = (await _store.read('balance_$id'))?.split('|');
+      if (balance != null && balance.length == 2) {
+        final amount = double.tryParse(balance[0]);
+        final at = DateTime.tryParse(balance[1]);
+        if (amount != null && at != null) _balances[id] = (amount, at);
+      }
       if ((await keys.read(id))?.isNotEmpty ?? false) _withKey.add(id);
     }
     notifyListeners();

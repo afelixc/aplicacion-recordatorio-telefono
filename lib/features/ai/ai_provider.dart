@@ -8,6 +8,15 @@ class AiException implements Exception {
   String toString() => message;
 }
 
+/// Respuesta de la IA y cuántos tokens usó (para calcular el consumo).
+class AiResult {
+  const AiResult(this.text, {this.inputTokens = 0, this.outputTokens = 0});
+
+  final String text;
+  final int inputTokens;
+  final int outputTokens;
+}
+
 /// Un proveedor de IA (Claude, OpenAI, Gemini…). Para sumar otro, crear una
 /// clase que implemente esta interfaz y agregarla a `aiProviders`.
 abstract class AiProvider {
@@ -25,11 +34,14 @@ abstract class AiProvider {
   /// Página donde se crea la clave.
   String get keysUrl;
 
+  /// Página donde se ve y se carga el saldo.
+  String get billingUrl;
+
   /// Modelos disponibles con esta clave. Sirve también para probar la clave.
   Future<List<String>> listModels(String apiKey);
 
-  /// Pide una respuesta en JSON que cumpla [schema] y la devuelve como texto.
-  Future<String> completeJson({
+  /// Pide una respuesta en JSON que cumpla [schema].
+  Future<AiResult> completeJson({
     required String apiKey,
     required String model,
     required String system,

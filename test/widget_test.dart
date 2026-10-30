@@ -7,6 +7,7 @@ import 'package:recordame/core/settings.dart';
 import 'package:recordame/features/ai/ai_provider.dart';
 import 'package:recordame/data/memory_reminder_repository.dart';
 import 'package:recordame/data/recurrence.dart';
+import 'package:recordame/data/usage.dart';
 import 'package:recordame/data/reminder.dart';
 
 void main() {
@@ -184,10 +185,12 @@ void main() {
       '{"ok":true,"title":"Lavar el auto","date":"$date","time":"09:00",'
       '"repeat":"none","weekdays":[],"dates":[],"message":"Listo"}',
     );
+    final usage = MemoryUsageRepository();
     await tester.pumpWidget(
       RecordameApp(
         reminders: repo,
         settings: settings,
+        usage: usage,
         aiProviderOverride: fake,
       ),
     );
@@ -201,6 +204,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fake.lastUser, 'Recordame mañana a las 9 lavar el auto');
+    final used = (await usage.watchSince(DateTime(2000)).first).single;
+    expect(used.inputTokens, 1000);
+    expect(used.outputTokens, 200);
     // Se muestra el formulario con lo que entendió la IA, para corregir.
     expect(
       tester
@@ -239,13 +245,15 @@ class _FakeProvider implements AiProvider {
   @override
   String get keysUrl => '';
   @override
+  String get billingUrl => '';
+  @override
   List<String> get guideSteps => const [];
 
   @override
   Future<List<String>> listModels(String apiKey) async => ['modelo'];
 
   @override
-  Future<String> completeJson({
+  Future<AiResult> completeJson({
     required String apiKey,
     required String model,
     required String system,
@@ -253,6 +261,6 @@ class _FakeProvider implements AiProvider {
     required Map<String, dynamic> schema,
   }) async {
     lastUser = user;
-    return answer;
+    return AiResult(answer, inputTokens: 1000, outputTokens: 200);
   }
 }

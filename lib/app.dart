@@ -6,6 +6,7 @@ import 'core/settings.dart';
 import 'features/ai/ai_provider.dart';
 import 'core/theme.dart';
 import 'data/reminder_repository.dart';
+import 'data/usage.dart';
 import 'features/home/home_shell.dart';
 import 'features/notifications/notification_service.dart';
 import 'features/update/update_prompt.dart';
@@ -15,6 +16,7 @@ class RecordameApp extends StatelessWidget {
     super.key,
     required this.reminders,
     required this.settings,
+    this.usage,
     this.notifications,
     this.aiProviderOverride,
     this.openedReminders = const Stream.empty(),
@@ -23,6 +25,9 @@ class RecordameApp extends StatelessWidget {
 
   final ReminderRepository reminders;
   final AppSettings settings;
+
+  /// Si es null se usa un registro en memoria (vista web y pruebas).
+  final UsageRepository? usage;
   final NotificationService? notifications;
   final AiProvider? aiProviderOverride;
 
@@ -37,6 +42,7 @@ class RecordameApp extends StatelessWidget {
     return AppScope(
       reminders: reminders,
       settings: settings,
+      usage: usage ?? _memoryUsage,
       notifications: notifications,
       aiProviderOverride: aiProviderOverride,
       child: MaterialApp(
@@ -58,3 +64,5 @@ class RecordameApp extends StatelessWidget {
     );
   }
 }
+
+final _memoryUsage = MemoryUsageRepository();

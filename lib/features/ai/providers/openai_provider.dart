@@ -22,6 +22,9 @@ class OpenAiProvider implements AiProvider {
   @override
   String get keysUrl => 'https://platform.openai.com/api-keys';
   @override
+  String get billingUrl =>
+      'https://platform.openai.com/settings/organization/billing/overview';
+  @override
   List<String> get guideSteps => const [
     'Entrá a platform.openai.com y creá una cuenta. Ojo: es distinta de la suscripción a ChatGPT.',
     'Andá a "Settings" → "Billing", agregá una tarjeta y cargá saldo (el mínimo alcanza).',
@@ -50,7 +53,7 @@ class OpenAiProvider implements AiProvider {
   }
 
   @override
-  Future<String> completeJson({
+  Future<AiResult> completeJson({
     required String apiKey,
     required String model,
     required String system,
@@ -83,6 +86,11 @@ class OpenAiProvider implements AiProvider {
     if (text == null || text.isEmpty) {
       throw const AiException('OpenAI no devolvió respuesta.');
     }
-    return text;
+    final usage = json['usage'] as Map? ?? const {};
+    return AiResult(
+      text,
+      inputTokens: (usage['prompt_tokens'] as num?)?.toInt() ?? 0,
+      outputTokens: (usage['completion_tokens'] as num?)?.toInt() ?? 0,
+    );
   }
 }
