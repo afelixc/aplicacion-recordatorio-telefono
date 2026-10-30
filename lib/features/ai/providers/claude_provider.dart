@@ -18,6 +18,21 @@ class ClaudeProvider implements AiProvider {
   @override
   String get defaultModel => 'claude-haiku-5-5';
   @override
+  List<(String, String)> get suggestedModels => const [
+    (
+      'claude-haiku-5-5',
+      'Haiku 5.5: rápido y el más económico. Para recordatorios alcanza y sobra (recomendado).',
+    ),
+    (
+      'claude-sonnet-5-5',
+      'Sonnet 5.5: intermedio. Unas 20 veces más caro que Haiku.',
+    ),
+    (
+      'claude-opus-5-5',
+      'Opus 5.5: el más capaz, pensado para tareas difíciles. Unas 40 veces más caro que Haiku; para recordatorios no hace falta.',
+    ),
+  ];
+  @override
   String get keyPrefix => 'sk-ant-';
   @override
   String get keysUrl => 'https://console.anthropic.com/settings/keys';

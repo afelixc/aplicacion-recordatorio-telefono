@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../core/settings.dart';
+import '../help/modes_help.dart';
 import '../reminders/reminder_form.dart';
 import 'ai_chat.dart';
 
@@ -44,13 +45,8 @@ class _ManualEntryState extends State<_ManualEntry> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        ChatBubble(
-          text: widget.missingKey
-              ? 'Para escribirme o hablarme de corrido, cargá tu clave de IA en Configuración → Inteligencia artificial. '
-                    'Mientras tanto, podés cargar el recordatorio acá abajo.'
-              : 'Hola. Cargá qué querés que te recuerde y cuándo. '
-                    'Si activás el modo IA en Configuración, me lo podés escribir o decir de corrido.',
-        ),
+        const ModeChip(),
+        const SizedBox(height: 8),
         if (_lastSaved != null) ChatBubble(text: _lastSaved!),
         const SizedBox(height: 8),
         Card(

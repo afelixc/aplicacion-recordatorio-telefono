@@ -25,6 +25,10 @@ abstract class AiProvider {
   String get name;
   String get defaultModel;
 
+  /// Modelos recomendados con una explicación corta, para elegir sin tener
+  /// que probar la clave primero. Puede estar vacía.
+  List<(String id, String description)> get suggestedModels;
+
   /// Cómo empieza una clave de este proveedor, para avisar si se pegó otra cosa.
   String get keyPrefix;
 

@@ -10,6 +10,7 @@ import '../ai/ai_provider.dart';
 import '../ai/ai_providers.dart';
 import '../ai/pricing.dart';
 import '../ai/reminder_interpreter.dart';
+import '../help/modes_help.dart';
 import '../reminders/reminder_form.dart';
 import 'chat_screen.dart';
 
@@ -40,10 +41,7 @@ class _AiChatState extends State<AiChat> {
   final _scroll = ScrollController();
   final _speech = SpeechToText();
   final _messages = <_Message>[
-    const _Message(
-      'Hola. Decime o escribime qué querés que te recuerde y cuándo. '
-      'Por ejemplo: "Recordame el viernes a las 9 de la mañana lavar el auto".',
-    ),
+    const _Message('Decime o escribime qué querés que te recuerde y cuándo.'),
   ];
 
   Reminder? _pending;
@@ -240,6 +238,8 @@ class _AiChatState extends State<AiChat> {
             controller: _scroll,
             padding: const EdgeInsets.all(16),
             children: [
+              const ModeChip(),
+              const SizedBox(height: 8),
               for (final m in _messages)
                 ChatBubble(text: m.text, mine: m.mine, error: m.error),
               if (_thinking)

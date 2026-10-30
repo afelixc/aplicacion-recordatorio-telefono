@@ -18,6 +18,8 @@ class GeminiProvider implements AiProvider {
   @override
   String get defaultModel => 'gemini-3.5-flash';
   @override
+  List<(String, String)> get suggestedModels => const [];
+  @override
   String get keyPrefix => 'AI';
   @override
   String get keysUrl => 'https://aistudio.google.com/app/apikey';

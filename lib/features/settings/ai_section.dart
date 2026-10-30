@@ -87,7 +87,15 @@ class _AiSectionState extends State<AiSection> {
     final provider = _provider;
     final hasKey = _settings.hasKey(provider.id);
     final model = _settings.modelFor(provider.id) ?? provider.defaultModel;
-    final modelOptions = {...?_models, model}.toList()..sort();
+    // Primero los recomendados (con explicación), después el resto de la cuenta.
+    final suggested = {for (final (id, d) in provider.suggestedModels) id: d};
+    final others = ({...?_models, model}..removeAll(suggested.keys)).toList()
+      ..sort();
+    final modelOptions = [...suggested.keys, ...others];
+    String shortName(String id) {
+      final d = suggested[id];
+      return d == null ? id : d.split(':').first;
+    }
 
     return SettingsCard(
       title: 'Inteligencia artificial',
@@ -158,15 +166,18 @@ class _AiSectionState extends State<AiSection> {
           isExpanded: true,
           decoration: InputDecoration(
             labelText: 'Modelo',
-            helperText: _models == null
-                ? 'Tocá "Probar" para ver todos los modelos de tu cuenta.'
-                : null,
+            helperMaxLines: 3,
+            helperText:
+                suggested[model] ??
+                (_models == null
+                    ? 'Tocá "Probar" para ver todos los modelos de tu cuenta.'
+                    : null),
           ),
           items: [
             for (final m in modelOptions)
               DropdownMenuItem(
                 value: m,
-                child: Text(m, overflow: TextOverflow.ellipsis),
+                child: Text(shortName(m), overflow: TextOverflow.ellipsis),
               ),
           ],
           onChanged: (m) {

@@ -226,6 +226,50 @@ void main() {
       DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9),
     );
   });
+
+  testWidgets(
+    'La solapita del modo abre la explicación y lleva a Configuración',
+    (tester) async {
+      await pumpApp(tester);
+      expect(find.text('Gratis · ¿Querés usar IA?'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('mode-chip')));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Por qué hace falta una clave?'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text('Ir a Configuración'),
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text('Ir a Configuración'));
+      await tester.pumpAndSettle();
+      expect(find.text('Modo de uso'), findsOneWidget);
+    },
+  );
+
+  testWidgets('En modo IA se pueden elegir los modelos de Claude', (
+    tester,
+  ) async {
+    // Pantalla alta para que toda la configuración entre sin deslizar.
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    await settings.load(['claude']);
+    await settings.setMode(UsageMode.ai);
+    await tester.pumpWidget(
+      RecordameApp(reminders: MemoryReminderRepository(), settings: settings),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Configuración'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Haiku 5.5'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sonnet 5.5'), findsWidgets);
+    await tester.tap(find.text('Opus 5.5').last);
+    await tester.pumpAndSettle();
+    expect(settings.modelFor('claude'), 'claude-opus-5-5');
+  });
 }
 
 class _FakeProvider implements AiProvider {
@@ -240,6 +284,8 @@ class _FakeProvider implements AiProvider {
   String get name => 'Prueba';
   @override
   String get defaultModel => 'modelo';
+  @override
+  List<(String, String)> get suggestedModels => const [];
   @override
   String get keyPrefix => '';
   @override

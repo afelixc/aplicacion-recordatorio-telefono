@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/app_scope.dart';
 import '../../core/settings.dart';
+import '../help/modes_help.dart';
 import 'ai_section.dart';
 import 'notifications_section.dart';
 import 'usage_section.dart';
@@ -46,6 +47,14 @@ class SettingsScreen extends StatelessWidget {
                     ? 'Cargás qué, día y hora con un formulario. No usa internet ni gasta saldo.'
                     : 'Escribís o hablás normal ("recordame el viernes a las 9 lavar el auto") y la IA arma el recordatorio. Usa tu propia clave y tu saldo.',
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.help_outline),
+                  label: const Text('¿Cómo funciona? Gratis o con IA'),
+                  onPressed: () => showModesHelp(context),
+                ),
               ),
             ],
           ),

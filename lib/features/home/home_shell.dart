@@ -61,12 +61,21 @@ class HomeShell extends StatefulWidget {
   final Stream<int> openedReminders;
   final int? launchReminderId;
 
+  /// Cambia de pestaña desde cualquier pantalla (por ejemplo, ir a Configuración).
+  static void goToTab(BuildContext context, String label) {
+    final state = context.findAncestorStateOfType<_HomeShellState>();
+    final index = appTabs.indexWhere((t) => t.label == label);
+    if (state != null && index >= 0) state._select(index);
+  }
+
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+
+  void _select(int i) => setState(() => _index = i);
   StreamSubscription<int>? _openedSub;
 
   @override
@@ -105,7 +114,7 @@ class _HomeShellState extends State<HomeShell> {
       body: tab.builder(context),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _select,
         destinations: [
           for (final t in appTabs)
             NavigationDestination(

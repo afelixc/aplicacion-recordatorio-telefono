@@ -18,6 +18,8 @@ class OpenAiProvider implements AiProvider {
   @override
   String get defaultModel => 'gpt-5-mini';
   @override
+  List<(String, String)> get suggestedModels => const [];
+  @override
   String get keyPrefix => 'sk-';
   @override
   String get keysUrl => 'https://platform.openai.com/api-keys';
