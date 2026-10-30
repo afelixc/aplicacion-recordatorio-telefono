@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:recordame/data/memory_reminder_repository.dart';
+import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/data/reminder.dart';
 import 'package:recordame/data/scheduling_reminder_repository.dart';
 import 'package:recordame/features/notifications/reminder_actions.dart';
@@ -85,7 +86,7 @@ void main() {
     for (final entry in expected.entries) {
       final option = snoozeOptionById(entry.key)!;
       final moved = await actions.snooze(r.id!, option, now: now);
-      expect(moved!.dueAt, entry.value, reason: option.label);
+      expect(moved, entry.value, reason: option.label);
       expect(scheduler.scheduled[r.id], entry.value);
     }
   });
@@ -103,6 +104,36 @@ void main() {
         snoozeOptions.where((o) => o.showInNotification).length,
         lessThanOrEqualTo(2),
       );
+    },
+  );
+
+  test(
+    'en uno que se repite, Hecho y Posponer no cortan la repetición',
+    () async {
+      final r = await repo.save(
+        Reminder(
+          title: 'Tomar la pastilla',
+          dueAt: tomorrow,
+          recurrence: const Recurrence.daily(),
+        ),
+      );
+      final now = DateTime(2030, 1, 1, 10);
+
+      final at = await actions.snooze(
+        r.id!,
+        snoozeOptionById('snooze_1h')!,
+        now: now,
+      );
+      var saved = (await repo.getById(r.id!))!;
+      expect(at, DateTime(2030, 1, 1, 11));
+      expect(saved.snoozedUntil, at);
+      expect(saved.dueAt, tomorrow, reason: 'la repetición no se mueve');
+
+      await actions.markDone(r.id!, now: now);
+      saved = (await repo.getById(r.id!))!;
+      expect(saved.done, isFalse, reason: 'sigue repitiéndose');
+      expect(saved.lastDoneAt, now);
+      expect(saved.snoozedUntil, isNull);
     },
   );
 }

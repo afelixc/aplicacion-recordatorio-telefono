@@ -30,7 +30,11 @@ class ReminderTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final repo = AppScope.of(context).reminders;
-    final overdue = !reminder.done && reminder.dueAt.isBefore(DateTime.now());
+    final overdue =
+        !reminder.done &&
+        !reminder.repeats &&
+        reminder.dueAt.isBefore(DateTime.now());
+    final next = reminder.repeats ? reminder.nextOccurrence() : null;
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
@@ -41,6 +45,7 @@ class ReminderTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.only(left: 4, right: 4),
         leading: Checkbox(
+          // En uno que se repite, tildarlo corta la repetición.
           shape: const CircleBorder(),
           value: reminder.done,
           onChanged: (v) => repo.setDone(reminder.id!, v ?? false),
@@ -55,11 +60,15 @@ class ReminderTile extends StatelessWidget {
               : const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          overdue
-              ? '${Fmt.when(reminder.dueAt)} · vencido'
-              : Fmt.when(reminder.dueAt),
+          [
+            describeSchedule(reminder),
+            if (overdue) 'vencido',
+            if (reminder.repeats && !reminder.done)
+              next == null ? 'sin más fechas' : 'próximo: ${Fmt.when(next)}',
+          ].join(reminder.repeats ? '\n' : ' · '),
           style: overdue ? TextStyle(color: theme.colorScheme.error) : null,
         ),
+        isThreeLine: reminder.repeats && !reminder.done,
         onTap: () => showReminderEditor(context, reminder: reminder),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

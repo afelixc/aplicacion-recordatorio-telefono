@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:recordame/app.dart';
 import 'package:recordame/data/memory_reminder_repository.dart';
+import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/data/reminder.dart';
 
 void main() {
@@ -103,5 +104,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Turno con el dentista'), findsOneWidget);
     expect((await repo.watchAll().first).single.title, 'Turno con el dentista');
+  });
+
+  testWidgets('Carga un recordatorio que se repite varios días por semana', (
+    tester,
+  ) async {
+    final repo = await pumpApp(tester);
+    await tester.enterText(find.byKey(const Key('reminder-title')), 'Gimnasio');
+
+    await tester.tap(find.byKey(const Key('reminder-repeat')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Todas las semanas').last);
+    await tester.pumpAndSettle();
+
+    // Viene marcado el día elegido; sumar lunes y jueves (si no estaban).
+    for (final day in ['Lu', 'Ju']) {
+      final chip = tester.widget<FilterChip>(
+        find.widgetWithText(FilterChip, day),
+      );
+      if (!chip.selected) {
+        await tester.tap(find.widgetWithText(FilterChip, day));
+        await tester.pumpAndSettle();
+      }
+    }
+    await tester.ensureVisible(find.text('Guardar recordatorio'));
+    await tester.tap(find.text('Guardar recordatorio'));
+    await tester.pumpAndSettle();
+
+    final saved = (await repo.watchAll().first).single;
+    expect(saved.recurrence.kind, RepeatKind.weekly);
+    expect(
+      saved.recurrence.weekdays,
+      containsAll([DateTime.monday, DateTime.thursday]),
+    );
+    expect(
+      find.textContaining('Guardado ✓ "Gimnasio", Todos los'),
+      findsOneWidget,
+    );
   });
 }

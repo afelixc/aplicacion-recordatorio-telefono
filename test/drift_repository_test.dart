@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:recordame/data/drift/database.dart';
 import 'package:recordame/data/drift/drift_reminder_repository.dart';
+import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/data/reminder.dart';
 
 void main() {
@@ -40,5 +41,20 @@ void main() {
     await repo.delete(a.id!);
     all = await repo.watchAll().first;
     expect(all.map((r) => r.title), ['A']);
+  });
+
+  test('guarda la repetición', () async {
+    final r = await repo.save(
+      Reminder(
+        title: 'Gimnasio',
+        dueAt: DateTime(2026, 11, 2, 19),
+        recurrence: Recurrence.weekly({DateTime.monday, DateTime.thursday}),
+        snoozedUntil: DateTime(2026, 11, 2, 20),
+      ),
+    );
+    final back = (await repo.getById(r.id!))!;
+    expect(back.recurrence.kind, RepeatKind.weekly);
+    expect(back.recurrence.weekdays, {DateTime.monday, DateTime.thursday});
+    expect(back.snoozedUntil, DateTime(2026, 11, 2, 20));
   });
 }

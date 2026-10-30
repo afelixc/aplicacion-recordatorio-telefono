@@ -28,7 +28,11 @@ Future<void> showReminderActionsSheet(
           children: [
             Text(reminder.title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
-            Text(Fmt.when(reminder.dueAt)),
+            Text(
+              reminder.repeats
+                  ? '${reminder.recurrence.describe(reminder.dueAt)} · ${Fmt.time(reminder.dueAt)} h'
+                  : Fmt.when(reminder.dueAt),
+            ),
             const SizedBox(height: 20),
             FilledButton.icon(
               icon: const Icon(Icons.check),
@@ -52,13 +56,11 @@ Future<void> showReminderActionsSheet(
                   OutlinedButton(
                     onPressed: () async {
                       Navigator.pop(context);
-                      final r = await actions.snooze(reminderId, option);
-                      if (r != null) {
+                      final at = await actions.snooze(reminderId, option);
+                      if (at != null) {
                         messenger.showSnackBar(
                           SnackBar(
-                            content: Text(
-                              'Pospuesto para ${Fmt.when(r.dueAt)}',
-                            ),
+                            content: Text('Pospuesto para ${Fmt.when(at)}'),
                           ),
                         );
                       }

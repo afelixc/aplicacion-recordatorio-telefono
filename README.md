@@ -14,6 +14,7 @@ Se instala directamente con un APK, sin Play Store.
 | Pestañas: Chat, Almanaque, Listado, Configuración | ✅ |
 | Carga manual de recordatorios (modo gratis, sin internet) | ✅ |
 | Listado con editar, borrar y marcar como hecho | ✅ |
+| Repetir: todos los días, semanas (eligiendo días), meses, años o días puntuales | ✅ |
 | Aviso de versión nueva con botón para actualizar | ✅ |
 | Notificaciones con botones "Hecho" y "Posponer" (15 min, 1 hora, mañana) | ✅ |
 | Almanaque mensual | ⏳ Etapa 4 |
@@ -28,6 +29,19 @@ Se instala directamente con un APK, sin Play Store.
 2. Abrí el APK en el teléfono. Android te va a pedir permiso para **instalar apps de origen desconocido**: aceptá solo para este archivo.
 3. La primera vez que abras la app, aceptá el permiso de **notificaciones** y el de **alarmas y recordatorios**.
 4. Recomendado: en Ajustes del teléfono → Batería, poné Recordame como **"Sin restricciones"**. Algunas marcas (Xiaomi, Samsung, Motorola, Huawei) cierran las apps en segundo plano y eso puede atrasar los avisos.
+
+## Recordatorios que se repiten
+
+Al cargar un recordatorio, en **Repetir** podés elegir:
+
+- **No se repite** (una sola vez)
+- **Todos los días**
+- **Todas las semanas**, marcando los días (por ejemplo lunes, miércoles y viernes)
+- **Todos los meses**, el mismo día (si el mes es más corto, el último día del mes)
+- **Todos los años**, la misma fecha
+- **Días puntuales**: elegís varias fechas sueltas
+
+En uno que se repite, **Hecho** solo da por hecha esa vez: sigue avisando las próximas. **Posponer** agrega un aviso extra sin mover las próximas. Para que deje de repetirse, tildalo en el Listado.
 
 ## Notificaciones
 

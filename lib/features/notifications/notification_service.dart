@@ -11,6 +11,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../core/formatting.dart';
 import '../../data/drift/database.dart';
 import '../../data/drift/drift_reminder_repository.dart';
+import '../../data/recurrence.dart';
 import '../../data/reminder.dart';
 import '../../data/scheduling_reminder_repository.dart';
 import 'reminder_actions.dart';
@@ -74,7 +75,8 @@ class NotificationService implements ReminderScheduler {
 
     final launch = await _plugin.getNotificationAppLaunchDetails();
     if (launch?.didNotificationLaunchApp ?? false) {
-      launchReminderId = launch!.notificationResponse?.id;
+      final response = launch!.notificationResponse;
+      if (response != null) launchReminderId = reminderIdOf(response);
     }
   }
 
@@ -147,7 +149,7 @@ class NotificationService implements ReminderScheduler {
       await _android?.requestNotificationsPermission() ?? true;
 
   Future<void> _onResponse(NotificationResponse response) async {
-    final id = response.id;
+    final id = reminderIdOf(response);
     if (id == null) return;
     final handled =
         await foregroundActions?.handle(id, response.actionId) ?? false;
@@ -181,26 +183,81 @@ class NotificationService implements ReminderScheduler {
     ),
   );
 
+  /// Cada recordatorio usa los números de aviso `id * 100` a `id * 100 + 99`:
+  /// uno por cada día de la semana o fecha suelta, y el último para "Posponer".
+  static const _slots = 100;
+  static const _snoozeSlot = 99;
+
+  /// Recordatorio al que pertenece un aviso.
+  static int? reminderIdOf(NotificationResponse response) =>
+      int.tryParse(response.payload ?? '') ??
+      (response.id == null ? null : response.id! ~/ _slots);
+
   @override
   Future<void> schedule(Reminder reminder) async {
     final id = reminder.id;
     if (id == null) return;
-    await _plugin.cancel(id: id);
-    if (reminder.done || !reminder.dueAt.isAfter(DateTime.now())) return;
+    await cancel(id);
+    await _schedule(reminder);
+  }
+
+  Future<void> _schedule(Reminder reminder) async {
+    final id = reminder.id!;
+    if (reminder.done) return;
+    final now = DateTime.now();
+    final start = reminder.dueAt;
+    final rule = reminder.recurrence;
 
     try {
       final exact = await _android?.canScheduleExactNotifications() ?? true;
-      await _plugin.zonedSchedule(
-        id: id,
-        title: reminder.title,
-        body: 'Recordatorio · ${Fmt.time(reminder.dueAt)} h',
-        scheduledDate: tz.TZDateTime.from(reminder.dueAt, tz.local),
-        notificationDetails: _details(),
-        androidScheduleMode: exact
-            ? AndroidScheduleMode.exactAllowWhileIdle
-            : AndroidScheduleMode.inexactAllowWhileIdle,
-        payload: '$id',
-      );
+      Future<void> at(int slot, DateTime when, [DateTimeComponents? repeat]) =>
+          _plugin.zonedSchedule(
+            id: id * _slots + slot,
+            title: reminder.title,
+            body: 'Recordatorio · ${Fmt.time(when)} h',
+            scheduledDate: tz.TZDateTime.from(when, tz.local),
+            notificationDetails: _details(),
+            androidScheduleMode: exact
+                ? AndroidScheduleMode.exactAllowWhileIdle
+                : AndroidScheduleMode.inexactAllowWhileIdle,
+            matchDateTimeComponents: repeat,
+            payload: '$id',
+          );
+
+      switch (rule.kind) {
+        case RepeatKind.none:
+          if (start.isAfter(now)) await at(0, start);
+        case RepeatKind.daily:
+          await at(0, rule.nextAfter(start, now)!, DateTimeComponents.time);
+        case RepeatKind.weekly:
+          // Un aviso que se repite por cada día de la semana elegido.
+          final days =
+              (rule.weekdays.isEmpty ? {start.weekday} : rule.weekdays).toList()
+                ..sort();
+          for (var i = 0; i < days.length; i++) {
+            final next = Recurrence.weekly({days[i]}).nextAfter(start, now)!;
+            await at(i, next, DateTimeComponents.dayOfWeekAndTime);
+          }
+        case RepeatKind.yearly:
+          await at(
+            0,
+            rule.nextAfter(start, now)!,
+            DateTimeComponents.dateAndTime,
+          );
+        case RepeatKind.monthly:
+        case RepeatKind.dates:
+          // Los meses no tienen todos los mismos días: se programan uno por uno
+          // (se completan de nuevo cada vez que se abre la app).
+          final dates = rule.upcoming(start, now, 24);
+          for (var i = 0; i < dates.length; i++) {
+            await at(i, dates[i]);
+          }
+      }
+
+      final snoozed = reminder.snoozedUntil;
+      if (snoozed != null && snoozed.isAfter(now)) {
+        await at(_snoozeSlot, snoozed);
+      }
       lastError = null;
     } catch (e) {
       // El recordatorio queda guardado igual; el error se ve en Configuración.
@@ -210,13 +267,20 @@ class NotificationService implements ReminderScheduler {
   }
 
   @override
-  Future<void> cancel(int reminderId) => _plugin.cancel(id: reminderId);
+  Future<void> cancel(int reminderId) async {
+    for (final p in await _plugin.pendingNotificationRequests()) {
+      // `p.id == reminderId`: avisos de la versión 1.0.5 o anterior.
+      if (p.id ~/ _slots == reminderId || p.id == reminderId) {
+        await _plugin.cancel(id: p.id);
+      }
+    }
+  }
 
   @override
   Future<void> rescheduleAll(List<Reminder> reminders) async {
     await _plugin.cancelAll();
     for (final r in reminders) {
-      await schedule(r);
+      if (r.id != null) await _schedule(r);
     }
   }
 }
@@ -227,7 +291,7 @@ class NotificationService implements ReminderScheduler {
 Future<void> onBackgroundNotificationResponse(
   NotificationResponse response,
 ) async {
-  final id = response.id;
+  final id = NotificationService.reminderIdOf(response);
   if (id == null) return;
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting(Fmt.locale);

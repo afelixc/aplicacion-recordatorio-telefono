@@ -47,7 +47,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 await repo.save(r);
                 setState(() {
                   _formVersion++;
-                  _lastSaved = 'Guardado ✓ "${r.title}", ${Fmt.when(r.dueAt)}.';
+                  _lastSaved =
+                      'Guardado ✓ "${r.title}", ${describeSchedule(r)}.';
                 });
               },
             ),

@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../recurrence.dart';
 import '../reminder.dart';
 import '../reminder_repository.dart';
 import 'database.dart';
@@ -14,8 +15,15 @@ class DriftReminderRepository implements ReminderRepository {
     id: r.id,
     title: r.title,
     dueAt: r.dueAt,
+    recurrence: Recurrence.fromStorage(
+      r.repeatKind,
+      r.repeatWeekdays,
+      r.repeatDates,
+    ),
     done: r.done,
     completedAt: r.completedAt,
+    lastDoneAt: r.lastDoneAt,
+    snoozedUntil: r.snoozedUntil,
     calendarEventId: r.calendarEventId,
   );
 
@@ -38,8 +46,13 @@ class DriftReminderRepository implements ReminderRepository {
     final companion = RemindersCompanion(
       title: Value(reminder.title),
       dueAt: Value(reminder.dueAt),
+      repeatKind: Value(reminder.recurrence.storageKind),
+      repeatWeekdays: Value(reminder.recurrence.storageWeekdays),
+      repeatDates: Value(reminder.recurrence.storageDates),
       done: Value(reminder.done),
       completedAt: Value(reminder.completedAt),
+      lastDoneAt: Value(reminder.lastDoneAt),
+      snoozedUntil: Value(reminder.snoozedUntil),
       updatedAt: Value(DateTime.now()),
     );
     if (reminder.id == null) {

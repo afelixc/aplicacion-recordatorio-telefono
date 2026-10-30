@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../data/reminder.dart';
+
 /// Formatos de fecha y hora en español.
 class Fmt {
   static const locale = 'es_AR';
@@ -7,6 +9,9 @@ class Fmt {
   /// "viernes 6 de noviembre"
   static String day(DateTime d) =>
       DateFormat("EEEE d 'de' MMMM", locale).format(d);
+
+  /// "vie 6/11"
+  static String shortDay(DateTime d) => DateFormat("EEE d/M", locale).format(d);
 
   /// "09:00"
   static String time(DateTime d) => DateFormat.Hm(locale).format(d);
@@ -25,3 +30,9 @@ class Fmt {
     return '$dayText · ${time(d)} h';
   }
 }
+
+/// Cuándo toca un recordatorio, en una línea: "mañana · 09:00 h" o
+/// "Todos los lunes y miércoles · 09:00 h".
+String describeSchedule(Reminder r) => r.repeats
+    ? '${r.recurrence.describe(r.dueAt)} · ${Fmt.time(r.dueAt)} h'
+    : Fmt.when(r.dueAt);

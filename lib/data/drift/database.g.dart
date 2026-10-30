@@ -99,6 +99,63 @@ class $RemindersTable extends Reminders
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _repeatKindMeta = const VerificationMeta(
+    'repeatKind',
+  );
+  @override
+  late final GeneratedColumn<String> repeatKind = GeneratedColumn<String>(
+    'repeat_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('none'),
+  );
+  static const VerificationMeta _repeatWeekdaysMeta = const VerificationMeta(
+    'repeatWeekdays',
+  );
+  @override
+  late final GeneratedColumn<int> repeatWeekdays = GeneratedColumn<int>(
+    'repeat_weekdays',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _repeatDatesMeta = const VerificationMeta(
+    'repeatDates',
+  );
+  @override
+  late final GeneratedColumn<String> repeatDates = GeneratedColumn<String>(
+    'repeat_dates',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastDoneAtMeta = const VerificationMeta(
+    'lastDoneAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastDoneAt = GeneratedColumn<DateTime>(
+    'last_done_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _snoozedUntilMeta = const VerificationMeta(
+    'snoozedUntil',
+  );
+  @override
+  late final GeneratedColumn<DateTime> snoozedUntil = GeneratedColumn<DateTime>(
+    'snoozed_until',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -109,6 +166,11 @@ class $RemindersTable extends Reminders
     createdAt,
     updatedAt,
     calendarEventId,
+    repeatKind,
+    repeatWeekdays,
+    repeatDates,
+    lastDoneAt,
+    snoozedUntil,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -177,6 +239,48 @@ class $RemindersTable extends Reminders
         ),
       );
     }
+    if (data.containsKey('repeat_kind')) {
+      context.handle(
+        _repeatKindMeta,
+        repeatKind.isAcceptableOrUnknown(data['repeat_kind']!, _repeatKindMeta),
+      );
+    }
+    if (data.containsKey('repeat_weekdays')) {
+      context.handle(
+        _repeatWeekdaysMeta,
+        repeatWeekdays.isAcceptableOrUnknown(
+          data['repeat_weekdays']!,
+          _repeatWeekdaysMeta,
+        ),
+      );
+    }
+    if (data.containsKey('repeat_dates')) {
+      context.handle(
+        _repeatDatesMeta,
+        repeatDates.isAcceptableOrUnknown(
+          data['repeat_dates']!,
+          _repeatDatesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_done_at')) {
+      context.handle(
+        _lastDoneAtMeta,
+        lastDoneAt.isAcceptableOrUnknown(
+          data['last_done_at']!,
+          _lastDoneAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('snoozed_until')) {
+      context.handle(
+        _snoozedUntilMeta,
+        snoozedUntil.isAcceptableOrUnknown(
+          data['snoozed_until']!,
+          _snoozedUntilMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -218,6 +322,26 @@ class $RemindersTable extends Reminders
         DriftSqlType.string,
         data['${effectivePrefix}calendar_event_id'],
       ),
+      repeatKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}repeat_kind'],
+      )!,
+      repeatWeekdays: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}repeat_weekdays'],
+      )!,
+      repeatDates: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}repeat_dates'],
+      ),
+      lastDoneAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_done_at'],
+      ),
+      snoozedUntil: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}snoozed_until'],
+      ),
     );
   }
 
@@ -238,6 +362,11 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
 
   /// Reservado para la sincronización con Google Calendar (segunda etapa).
   final String? calendarEventId;
+  final String repeatKind;
+  final int repeatWeekdays;
+  final String? repeatDates;
+  final DateTime? lastDoneAt;
+  final DateTime? snoozedUntil;
   const ReminderRow({
     required this.id,
     required this.title,
@@ -247,6 +376,11 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     required this.createdAt,
     required this.updatedAt,
     this.calendarEventId,
+    required this.repeatKind,
+    required this.repeatWeekdays,
+    this.repeatDates,
+    this.lastDoneAt,
+    this.snoozedUntil,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -262,6 +396,17 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     map['updated_at'] = Variable<DateTime>(updatedAt);
     if (!nullToAbsent || calendarEventId != null) {
       map['calendar_event_id'] = Variable<String>(calendarEventId);
+    }
+    map['repeat_kind'] = Variable<String>(repeatKind);
+    map['repeat_weekdays'] = Variable<int>(repeatWeekdays);
+    if (!nullToAbsent || repeatDates != null) {
+      map['repeat_dates'] = Variable<String>(repeatDates);
+    }
+    if (!nullToAbsent || lastDoneAt != null) {
+      map['last_done_at'] = Variable<DateTime>(lastDoneAt);
+    }
+    if (!nullToAbsent || snoozedUntil != null) {
+      map['snoozed_until'] = Variable<DateTime>(snoozedUntil);
     }
     return map;
   }
@@ -280,6 +425,17 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       calendarEventId: calendarEventId == null && nullToAbsent
           ? const Value.absent()
           : Value(calendarEventId),
+      repeatKind: Value(repeatKind),
+      repeatWeekdays: Value(repeatWeekdays),
+      repeatDates: repeatDates == null && nullToAbsent
+          ? const Value.absent()
+          : Value(repeatDates),
+      lastDoneAt: lastDoneAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastDoneAt),
+      snoozedUntil: snoozedUntil == null && nullToAbsent
+          ? const Value.absent()
+          : Value(snoozedUntil),
     );
   }
 
@@ -297,6 +453,11 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       calendarEventId: serializer.fromJson<String?>(json['calendarEventId']),
+      repeatKind: serializer.fromJson<String>(json['repeatKind']),
+      repeatWeekdays: serializer.fromJson<int>(json['repeatWeekdays']),
+      repeatDates: serializer.fromJson<String?>(json['repeatDates']),
+      lastDoneAt: serializer.fromJson<DateTime?>(json['lastDoneAt']),
+      snoozedUntil: serializer.fromJson<DateTime?>(json['snoozedUntil']),
     );
   }
   @override
@@ -311,6 +472,11 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'calendarEventId': serializer.toJson<String?>(calendarEventId),
+      'repeatKind': serializer.toJson<String>(repeatKind),
+      'repeatWeekdays': serializer.toJson<int>(repeatWeekdays),
+      'repeatDates': serializer.toJson<String?>(repeatDates),
+      'lastDoneAt': serializer.toJson<DateTime?>(lastDoneAt),
+      'snoozedUntil': serializer.toJson<DateTime?>(snoozedUntil),
     };
   }
 
@@ -323,6 +489,11 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     DateTime? createdAt,
     DateTime? updatedAt,
     Value<String?> calendarEventId = const Value.absent(),
+    String? repeatKind,
+    int? repeatWeekdays,
+    Value<String?> repeatDates = const Value.absent(),
+    Value<DateTime?> lastDoneAt = const Value.absent(),
+    Value<DateTime?> snoozedUntil = const Value.absent(),
   }) => ReminderRow(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -334,6 +505,11 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     calendarEventId: calendarEventId.present
         ? calendarEventId.value
         : this.calendarEventId,
+    repeatKind: repeatKind ?? this.repeatKind,
+    repeatWeekdays: repeatWeekdays ?? this.repeatWeekdays,
+    repeatDates: repeatDates.present ? repeatDates.value : this.repeatDates,
+    lastDoneAt: lastDoneAt.present ? lastDoneAt.value : this.lastDoneAt,
+    snoozedUntil: snoozedUntil.present ? snoozedUntil.value : this.snoozedUntil,
   );
   ReminderRow copyWithCompanion(RemindersCompanion data) {
     return ReminderRow(
@@ -349,6 +525,21 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       calendarEventId: data.calendarEventId.present
           ? data.calendarEventId.value
           : this.calendarEventId,
+      repeatKind: data.repeatKind.present
+          ? data.repeatKind.value
+          : this.repeatKind,
+      repeatWeekdays: data.repeatWeekdays.present
+          ? data.repeatWeekdays.value
+          : this.repeatWeekdays,
+      repeatDates: data.repeatDates.present
+          ? data.repeatDates.value
+          : this.repeatDates,
+      lastDoneAt: data.lastDoneAt.present
+          ? data.lastDoneAt.value
+          : this.lastDoneAt,
+      snoozedUntil: data.snoozedUntil.present
+          ? data.snoozedUntil.value
+          : this.snoozedUntil,
     );
   }
 
@@ -362,7 +553,12 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
           ..write('completedAt: $completedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('calendarEventId: $calendarEventId')
+          ..write('calendarEventId: $calendarEventId, ')
+          ..write('repeatKind: $repeatKind, ')
+          ..write('repeatWeekdays: $repeatWeekdays, ')
+          ..write('repeatDates: $repeatDates, ')
+          ..write('lastDoneAt: $lastDoneAt, ')
+          ..write('snoozedUntil: $snoozedUntil')
           ..write(')'))
         .toString();
   }
@@ -377,6 +573,11 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     createdAt,
     updatedAt,
     calendarEventId,
+    repeatKind,
+    repeatWeekdays,
+    repeatDates,
+    lastDoneAt,
+    snoozedUntil,
   );
   @override
   bool operator ==(Object other) =>
@@ -389,7 +590,12 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
           other.completedAt == this.completedAt &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
-          other.calendarEventId == this.calendarEventId);
+          other.calendarEventId == this.calendarEventId &&
+          other.repeatKind == this.repeatKind &&
+          other.repeatWeekdays == this.repeatWeekdays &&
+          other.repeatDates == this.repeatDates &&
+          other.lastDoneAt == this.lastDoneAt &&
+          other.snoozedUntil == this.snoozedUntil);
 }
 
 class RemindersCompanion extends UpdateCompanion<ReminderRow> {
@@ -401,6 +607,11 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<String?> calendarEventId;
+  final Value<String> repeatKind;
+  final Value<int> repeatWeekdays;
+  final Value<String?> repeatDates;
+  final Value<DateTime?> lastDoneAt;
+  final Value<DateTime?> snoozedUntil;
   const RemindersCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -410,6 +621,11 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.calendarEventId = const Value.absent(),
+    this.repeatKind = const Value.absent(),
+    this.repeatWeekdays = const Value.absent(),
+    this.repeatDates = const Value.absent(),
+    this.lastDoneAt = const Value.absent(),
+    this.snoozedUntil = const Value.absent(),
   });
   RemindersCompanion.insert({
     this.id = const Value.absent(),
@@ -420,6 +636,11 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.calendarEventId = const Value.absent(),
+    this.repeatKind = const Value.absent(),
+    this.repeatWeekdays = const Value.absent(),
+    this.repeatDates = const Value.absent(),
+    this.lastDoneAt = const Value.absent(),
+    this.snoozedUntil = const Value.absent(),
   }) : title = Value(title),
        dueAt = Value(dueAt);
   static Insertable<ReminderRow> custom({
@@ -431,6 +652,11 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<String>? calendarEventId,
+    Expression<String>? repeatKind,
+    Expression<int>? repeatWeekdays,
+    Expression<String>? repeatDates,
+    Expression<DateTime>? lastDoneAt,
+    Expression<DateTime>? snoozedUntil,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -441,6 +667,11 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (calendarEventId != null) 'calendar_event_id': calendarEventId,
+      if (repeatKind != null) 'repeat_kind': repeatKind,
+      if (repeatWeekdays != null) 'repeat_weekdays': repeatWeekdays,
+      if (repeatDates != null) 'repeat_dates': repeatDates,
+      if (lastDoneAt != null) 'last_done_at': lastDoneAt,
+      if (snoozedUntil != null) 'snoozed_until': snoozedUntil,
     });
   }
 
@@ -453,6 +684,11 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<String?>? calendarEventId,
+    Value<String>? repeatKind,
+    Value<int>? repeatWeekdays,
+    Value<String?>? repeatDates,
+    Value<DateTime?>? lastDoneAt,
+    Value<DateTime?>? snoozedUntil,
   }) {
     return RemindersCompanion(
       id: id ?? this.id,
@@ -463,6 +699,11 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       calendarEventId: calendarEventId ?? this.calendarEventId,
+      repeatKind: repeatKind ?? this.repeatKind,
+      repeatWeekdays: repeatWeekdays ?? this.repeatWeekdays,
+      repeatDates: repeatDates ?? this.repeatDates,
+      lastDoneAt: lastDoneAt ?? this.lastDoneAt,
+      snoozedUntil: snoozedUntil ?? this.snoozedUntil,
     );
   }
 
@@ -493,6 +734,21 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     if (calendarEventId.present) {
       map['calendar_event_id'] = Variable<String>(calendarEventId.value);
     }
+    if (repeatKind.present) {
+      map['repeat_kind'] = Variable<String>(repeatKind.value);
+    }
+    if (repeatWeekdays.present) {
+      map['repeat_weekdays'] = Variable<int>(repeatWeekdays.value);
+    }
+    if (repeatDates.present) {
+      map['repeat_dates'] = Variable<String>(repeatDates.value);
+    }
+    if (lastDoneAt.present) {
+      map['last_done_at'] = Variable<DateTime>(lastDoneAt.value);
+    }
+    if (snoozedUntil.present) {
+      map['snoozed_until'] = Variable<DateTime>(snoozedUntil.value);
+    }
     return map;
   }
 
@@ -506,7 +762,12 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
           ..write('completedAt: $completedAt, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
-          ..write('calendarEventId: $calendarEventId')
+          ..write('calendarEventId: $calendarEventId, ')
+          ..write('repeatKind: $repeatKind, ')
+          ..write('repeatWeekdays: $repeatWeekdays, ')
+          ..write('repeatDates: $repeatDates, ')
+          ..write('lastDoneAt: $lastDoneAt, ')
+          ..write('snoozedUntil: $snoozedUntil')
           ..write(')'))
         .toString();
   }
@@ -532,6 +793,11 @@ typedef $$RemindersTableCreateCompanionBuilder = RemindersCompanion Function({
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<String?> calendarEventId,
+  Value<String> repeatKind,
+  Value<int> repeatWeekdays,
+  Value<String?> repeatDates,
+  Value<DateTime?> lastDoneAt,
+  Value<DateTime?> snoozedUntil,
 });
 typedef $$RemindersTableUpdateCompanionBuilder = RemindersCompanion Function({
   Value<int> id,
@@ -542,6 +808,11 @@ typedef $$RemindersTableUpdateCompanionBuilder = RemindersCompanion Function({
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<String?> calendarEventId,
+  Value<String> repeatKind,
+  Value<int> repeatWeekdays,
+  Value<String?> repeatDates,
+  Value<DateTime?> lastDoneAt,
+  Value<DateTime?> snoozedUntil,
 });
 
 class $$RemindersTableFilterComposer
@@ -590,6 +861,31 @@ class $$RemindersTableFilterComposer
 
   ColumnFilters<String> get calendarEventId => $composableBuilder(
     column: $table.calendarEventId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get repeatKind => $composableBuilder(
+    column: $table.repeatKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get repeatWeekdays => $composableBuilder(
+    column: $table.repeatWeekdays,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get repeatDates => $composableBuilder(
+    column: $table.repeatDates,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastDoneAt => $composableBuilder(
+    column: $table.lastDoneAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get snoozedUntil => $composableBuilder(
+    column: $table.snoozedUntil,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -642,6 +938,31 @@ class $$RemindersTableOrderingComposer
     column: $table.calendarEventId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get repeatKind => $composableBuilder(
+    column: $table.repeatKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get repeatWeekdays => $composableBuilder(
+    column: $table.repeatWeekdays,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get repeatDates => $composableBuilder(
+    column: $table.repeatDates,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastDoneAt => $composableBuilder(
+    column: $table.lastDoneAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get snoozedUntil => $composableBuilder(
+    column: $table.snoozedUntil,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RemindersTableAnnotationComposer
@@ -678,6 +999,31 @@ class $$RemindersTableAnnotationComposer
 
   GeneratedColumn<String> get calendarEventId => $composableBuilder(
     column: $table.calendarEventId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get repeatKind => $composableBuilder(
+    column: $table.repeatKind,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get repeatWeekdays => $composableBuilder(
+    column: $table.repeatWeekdays,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get repeatDates => $composableBuilder(
+    column: $table.repeatDates,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get lastDoneAt => $composableBuilder(
+    column: $table.lastDoneAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get snoozedUntil => $composableBuilder(
+    column: $table.snoozedUntil,
     builder: (column) => column,
   );
 }
@@ -721,6 +1067,11 @@ class $$RemindersTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> calendarEventId = const Value.absent(),
+                Value<String> repeatKind = const Value.absent(),
+                Value<int> repeatWeekdays = const Value.absent(),
+                Value<String?> repeatDates = const Value.absent(),
+                Value<DateTime?> lastDoneAt = const Value.absent(),
+                Value<DateTime?> snoozedUntil = const Value.absent(),
               }) => RemindersCompanion(
                 id: id,
                 title: title,
@@ -730,6 +1081,11 @@ class $$RemindersTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 calendarEventId: calendarEventId,
+                repeatKind: repeatKind,
+                repeatWeekdays: repeatWeekdays,
+                repeatDates: repeatDates,
+                lastDoneAt: lastDoneAt,
+                snoozedUntil: snoozedUntil,
               ),
           createCompanionCallback:
               ({
@@ -741,6 +1097,11 @@ class $$RemindersTableTableManager
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String?> calendarEventId = const Value.absent(),
+                Value<String> repeatKind = const Value.absent(),
+                Value<int> repeatWeekdays = const Value.absent(),
+                Value<String?> repeatDates = const Value.absent(),
+                Value<DateTime?> lastDoneAt = const Value.absent(),
+                Value<DateTime?> snoozedUntil = const Value.absent(),
               }) => RemindersCompanion.insert(
                 id: id,
                 title: title,
@@ -750,6 +1111,11 @@ class $$RemindersTableTableManager
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 calendarEventId: calendarEventId,
+                repeatKind: repeatKind,
+                repeatWeekdays: repeatWeekdays,
+                repeatDates: repeatDates,
+                lastDoneAt: lastDoneAt,
+                snoozedUntil: snoozedUntil,
               ),
           withReferenceMapper: (p0) => p0
               .map(

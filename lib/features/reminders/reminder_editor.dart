@@ -49,7 +49,7 @@ Future<void> showReminderEditor(
               await repo.save(r);
               navigator.pop();
               messenger.showSnackBar(
-                SnackBar(content: Text('Guardado para ${Fmt.when(r.dueAt)}')),
+                SnackBar(content: Text('Guardado: ${describeSchedule(r)}')),
               );
             },
           ),

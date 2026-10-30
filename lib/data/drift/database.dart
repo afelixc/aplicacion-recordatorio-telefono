@@ -15,6 +15,13 @@ class Reminders extends Table {
 
   /// Reservado para la sincronización con Google Calendar (segunda etapa).
   TextColumn get calendarEventId => text().nullable()();
+
+  // Repetición (versión 2 de la base).
+  TextColumn get repeatKind => text().withDefault(const Constant('none'))();
+  IntColumn get repeatWeekdays => integer().withDefault(const Constant(0))();
+  TextColumn get repeatDates => text().nullable()();
+  DateTimeColumn get lastDoneAt => dateTime().nullable()();
+  DateTimeColumn get snoozedUntil => dateTime().nullable()();
 }
 
 @DriftDatabase(tables: [Reminders])
@@ -32,5 +39,18 @@ class AppDatabase extends _$AppDatabase {
 
   /// Subir este número y agregar los pasos en [migration] cuando cambien las tablas.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(reminders, reminders.repeatKind);
+        await m.addColumn(reminders, reminders.repeatWeekdays);
+        await m.addColumn(reminders, reminders.repeatDates);
+        await m.addColumn(reminders, reminders.lastDoneAt);
+        await m.addColumn(reminders, reminders.snoozedUntil);
+      }
+    },
+  );
 }
