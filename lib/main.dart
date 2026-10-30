@@ -3,23 +3,53 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'app.dart';
+import 'core/formatting.dart';
 import 'data/drift/database.dart';
 import 'data/drift/drift_reminder_repository.dart';
 import 'data/memory_reminder_repository.dart';
 import 'data/reminder.dart';
-import 'data/reminder_repository.dart';
+import 'data/scheduling_reminder_repository.dart';
+import 'features/notifications/notification_service.dart';
+import 'features/notifications/reminder_actions.dart';
+import 'features/notifications/reminder_scheduler.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('es_AR');
+  await initializeDateFormatting(Fmt.locale);
 
-  // En el teléfono se usa la base de datos local. La vista previa web solo
-  // sirve para mirar el diseño, así que usa datos de ejemplo en memoria.
-  final ReminderRepository reminders = kIsWeb
-      ? MemoryReminderRepository(_sampleReminders())
-      : DriftReminderRepository(AppDatabase());
+  // La vista previa web solo sirve para mirar el diseño: datos de ejemplo en
+  // memoria y sin notificaciones.
+  if (kIsWeb) {
+    runApp(
+      RecordameApp(
+        reminders: SchedulingReminderRepository(
+          MemoryReminderRepository(_sampleReminders()),
+          const NoopReminderScheduler(),
+        ),
+      ),
+    );
+    return;
+  }
 
-  runApp(RecordameApp(reminders: reminders));
+  final notifications = NotificationService.instance;
+  await notifications.init();
+  final reminders = SchedulingReminderRepository(
+    DriftReminderRepository(AppDatabase()),
+    notifications,
+  );
+  notifications.foregroundActions = ReminderActions(reminders);
+
+  runApp(
+    RecordameApp(
+      reminders: reminders,
+      openedReminders: notifications.openedReminders,
+      launchReminderId: notifications.launchReminderId,
+    ),
+  );
+
+  // Después de mostrar la app: pedir permiso y dejar todos los avisos al día.
+  await notifications.requestPermission();
+  await reminders.resync();
 }
 
 List<Reminder> _sampleReminders() {

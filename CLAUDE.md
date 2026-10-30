@@ -9,13 +9,14 @@
 - **Firma:** está en los secrets `FIRMA_BASE64` y `FIRMA_CLAVE` (alias `recordame`). No cambiar el `applicationId` (`com.afelixc.recordame`) ni la firma: si cambian, el APK nuevo no se instala encima y se pierden los recordatorios.
 - **Nunca** subir claves de API, la firma (`*.jks`) ni `android/key.properties`. Cada usuario carga su propia clave de API en la app y se guarda cifrada en el teléfono.
 - Si cambian las tablas de la base (`lib/data/drift/database.dart`): subir `schemaVersion`, escribir la migración y correr `dart run build_runner build` (el `.g.dart` generado se sube al repositorio).
-- Las pantallas usan solo `ReminderRepository`, nunca Drift directo.
+- Las pantallas usan solo `ReminderRepository`, nunca Drift directo. `SchedulingReminderRepository` programa/cancela los avisos en cada cambio.
+- Notificaciones: Android muestra máximo 3 botones (Hecho + 2 opciones con `showInNotification`). Los botones con la app cerrada corren en `onBackgroundNotificationResponse` (otro isolate, abre su propia conexión a la base).
 - Antes de subir: `flutter analyze` y `flutter test` sin errores.
 
 ## Plan por etapas
 1. ✅ Proyecto base, README, .gitignore, APK automático
 2. ✅ Base de datos local, formulario manual (modo gratis), listado; aviso de actualización
-3. Notificaciones (programadas, después de reiniciar, botones Hecho / Posponer 15 min, 1 hora, mañana)
+3. ✅ Notificaciones (programadas, después de reiniciar, botones Hecho / Posponer 15 min, 1 hora, mañana)
 4. Almanaque mensual
 5. Configuración: modo, proveedor de IA (Claude, OpenAI, Gemini), clave cifrada, instructivo, idioma
 6. Chat con IA (interpreta lenguaje natural → título, fecha, hora → el usuario confirma)

@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../calendar/calendar_screen.dart';
 import '../chat/chat_screen.dart';
+import '../notifications/reminder_actions_sheet.dart';
 import '../reminders/reminders_screen.dart';
 import '../settings/settings_screen.dart';
 
@@ -49,7 +52,14 @@ final List<AppTab> appTabs = [
 ];
 
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key});
+  const HomeShell({
+    super.key,
+    this.openedReminders = const Stream.empty(),
+    this.launchReminderId,
+  });
+
+  final Stream<int> openedReminders;
+  final int? launchReminderId;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -57,6 +67,30 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+  StreamSubscription<int>? _openedSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Al tocar una notificación se muestran sus opciones (Hecho / Posponer).
+    _openedSub = widget.openedReminders.listen(_showReminder);
+    final launchId = widget.launchReminderId;
+    if (launchId != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _showReminder(launchId),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _openedSub?.cancel();
+    super.dispose();
+  }
+
+  void _showReminder(int id) {
+    if (mounted) showReminderActionsSheet(context, id);
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -4,7 +4,7 @@ App de recordatorios para Android. Le decís o le escribís en lenguaje natural 
 
 Se instala directamente con un APK, sin Play Store.
 
-> **Estado:** en desarrollo (etapa 2 de 8). Ya se pueden cargar recordatorios a mano y verlos en el listado. Todavía no avisan con notificaciones (etapa 3).
+> **Estado:** en desarrollo (etapa 3 de 8). Ya se pueden cargar recordatorios a mano, verlos en el listado y recibir el aviso a la hora indicada.
 > Para ver cómo va a quedar, abrí la maqueta interactiva: [`docs/maqueta.html`](docs/maqueta.html) (descargala y abrila en el navegador).
 
 ## Funciones
@@ -15,7 +15,7 @@ Se instala directamente con un APK, sin Play Store.
 | Carga manual de recordatorios (modo gratis, sin internet) | ✅ |
 | Listado con editar, borrar y marcar como hecho | ✅ |
 | Aviso de versión nueva con botón para actualizar | ✅ |
-| Notificaciones con botones "Hecho" y "Posponer" (15 min, 1 hora, mañana) | ⏳ Etapa 3 |
+| Notificaciones con botones "Hecho" y "Posponer" (15 min, 1 hora, mañana) | ✅ |
 | Almanaque mensual | ⏳ Etapa 4 |
 | Configuración, clave de API cifrada e instructivo | ⏳ Etapa 5 |
 | Modo IA: Claude, OpenAI o Gemini | ⏳ Etapa 6 |
@@ -28,6 +28,14 @@ Se instala directamente con un APK, sin Play Store.
 2. Abrí el APK en el teléfono. Android te va a pedir permiso para **instalar apps de origen desconocido**: aceptá solo para este archivo.
 3. La primera vez que abras la app, aceptá el permiso de **notificaciones** y el de **alarmas y recordatorios**.
 4. Recomendado: en Ajustes del teléfono → Batería, poné Recordame como **"Sin restricciones"**. Algunas marcas (Xiaomi, Samsung, Motorola, Huawei) cierran las apps en segundo plano y eso puede atrasar los avisos.
+
+## Notificaciones
+
+Cada recordatorio avisa con una notificación a la fecha y hora indicadas, aunque la app esté cerrada y aunque se haya reiniciado el teléfono. No usan internet ni gastan saldo.
+
+- Botones de la notificación: **Hecho**, **15 min** y **1 hora**. Android permite como máximo tres botones.
+- Si tocás la notificación se abre la app con todas las opciones: **Hecho**, **15 min**, **1 hora** y **Mañana**.
+- Las opciones de posponer están en `lib/features/notifications/snooze_options.dart`: para sumar una, se agrega a la lista.
 
 ## Actualizaciones
 
@@ -82,6 +90,7 @@ lib/
     chat/                   Chat con IA y dictado
     calendar/               Almanaque
     reminders/              Listado de recordatorios
+    notifications/          Avisos, botones Hecho / Posponer y opciones de posponer
     settings/               Configuración e instructivo
     update/                 Aviso de versión nueva y actualización
 ```

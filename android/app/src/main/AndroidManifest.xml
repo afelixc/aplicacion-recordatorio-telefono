@@ -2,6 +2,12 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Para instalar las versiones nuevas que se bajan de GitHub -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- Notificaciones: mostrarlas, a la hora exacta y de nuevo después de reiniciar -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <application
         android:label="Recordame"
         android:name="${applicationName}"
@@ -33,6 +39,17 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Notificaciones programadas, sus botones y reprogramación al reiniciar -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
         <!-- Actualizaciones: permite abrir el APK descargado con el instalador de Android -->
         <provider
             android:name="sk.fourq.otaupdate.OtaUpdateFileProvider"

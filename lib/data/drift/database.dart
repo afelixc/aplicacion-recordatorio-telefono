@@ -20,7 +20,15 @@ class Reminders extends Table {
 @DriftDatabase(tables: [Reminders])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-    : super(executor ?? driftDatabase(name: 'recordame'));
+    : super(
+        executor ??
+            driftDatabase(
+              name: 'recordame',
+              // La app y los botones de la notificación (que corren aparte)
+              // comparten la misma base.
+              native: const DriftNativeOptions(shareAcrossIsolates: true),
+            ),
+      );
 
   /// Subir este número y agregar los pasos en [migration] cuando cambien las tablas.
   @override
