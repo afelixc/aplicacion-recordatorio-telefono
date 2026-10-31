@@ -51,6 +51,7 @@ class ReminderInterpreter {
       'repeat',
       'weekdays',
       'dates',
+      'in_minutes',
       'message',
     ],
     'properties': {
@@ -70,6 +71,10 @@ class ReminderInterpreter {
         'type': 'array',
         'items': {'type': 'string'},
       },
+      'in_minutes': {
+        'type': 'integer',
+        'description': 'Minutos desde ahora si el pedido es relativo; si no, 0',
+      },
       'message': {'type': 'string'},
     },
   };
@@ -81,10 +86,11 @@ Sos el asistente de una app de recordatorios. Convertís el mensaje del usuario 
 Ahora es $today (hora del teléfono del usuario).
 
 Completá el JSON así:
-- ok: true si se entiende qué recordar y cuándo. false si falta qué recordar, si la fecha es ambigua de verdad, o si el mensaje no es un pedido de recordatorio.
+- ok: true si se entiende qué recordar y cuándo. false solo si falta qué recordar, si no dice nada de cuándo, o si el mensaje no es un pedido de recordatorio. "En 15 minutos", "en media hora", "en 2 horas", "dentro de un rato" (= 30 minutos) son un cuándo válido: ok true, no preguntes.
 - title: qué hay que recordar, breve, con mayúscula inicial y sin la fecha ni la hora. Ejemplo: "Recordame el viernes a las 9 lavar el auto" → "Lavar el auto". En el mismo idioma que usó el usuario.
 - date: la primera fecha en que toca, AAAA-MM-DD. Calculá las fechas relativas desde ahora: "mañana", "pasado mañana", "el viernes" (el próximo; si hoy es ese día y la hora ya pasó, el de la semana siguiente), "en 2 horas", "el 15" (de este mes, o del próximo si ya pasó).
 - time: hora en formato de 24 horas HH:mm. "9 de la mañana" = 09:00, "3 de la tarde" = 15:00, "8 de la noche" = 20:00, "mediodía" = 12:00. Si no dice la hora, usá 09:00.
+- in_minutes: si el cuándo es relativo a ahora ("en 15 minutos" → 15, "en media hora" → 30, "en 2 horas" → 120, "en una hora y media" → 90), la cantidad de minutos. Igual completá date y time con la cuenta hecha. Si no es relativo, 0.
 - repeat: "none" si es una sola vez; "daily" todos los días; "weekly" todas las semanas; "monthly" todos los meses; "yearly" todos los años; "dates" si nombra varias fechas sueltas.
 - weekdays: solo con "weekly", los días de la semana del 1 (lunes) al 7 (domingo), por ejemplo "lunes y jueves" → [1, 4]. Si no, [].
 - dates: solo con "dates", todas las fechas AAAA-MM-DD. Si no, [].
@@ -101,11 +107,11 @@ Si ok es false, igual completá los demás campos con lo que se pueda ("" o [] s
       user: text,
       schema: schema,
     );
-    return parse(result.text).withUsage(result);
+    return parse(result.text, now: now).withUsage(result);
   }
 
   /// Convierte la respuesta JSON de la IA en un recordatorio.
-  static Interpretation parse(String raw) {
+  static Interpretation parse(String raw, {DateTime? now}) {
     final Map<String, dynamic> j;
     try {
       j = jsonDecode(raw) as Map<String, dynamic>;
@@ -119,6 +125,21 @@ Si ok es false, igual completá los demás campos con lo que se pueda ("" o [] s
     final date = DateTime.tryParse(j['date'] as String? ?? '');
     final time = RegExp(r'^(\d{1,2}):(\d{2})')
         .firstMatch(j['time'] as String? ?? '');
+    // "En 15 minutos": la cuenta se hace acá, con la hora exacta del teléfono.
+    final inMinutes = j['in_minutes'];
+    if (inMinutes is int &&
+        inMinutes > 0 &&
+        title.isNotEmpty &&
+        (j['repeat'] == null || j['repeat'] == 'none')) {
+      final at = (now ?? DateTime.now()).add(Duration(minutes: inMinutes));
+      return Interpretation(
+        reminder: Reminder(
+          title: title[0].toUpperCase() + title.substring(1),
+          dueAt: DateTime(at.year, at.month, at.day, at.hour, at.minute),
+        ),
+        message: message,
+      );
+    }
     if (j['ok'] != true || title.isEmpty || date == null) {
       return Interpretation(
         message: message.isEmpty

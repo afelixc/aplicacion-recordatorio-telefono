@@ -17,8 +17,9 @@
 - Consumo de IA: cada consulta se guarda en la tabla `UsageRecords` (base versión 3) con tokens y costo estimado (`lib/features/ai/pricing.dart`, solo precios de Claude). El saldo es el que anota el usuario menos lo consumido desde entonces. Ningún proveedor permite leer el saldo real ni cargarlo con una clave común: el botón abre la página de facturación.
 - Idiomas de la IA y del dictado: español (Argentina), español neutro, inglés, italiano. Los menús siguen en español.
 - Nombre: "Recordame" debajo del ícono (`android:label`), "TE RECORDARÉ" arriba dentro de la app.
-- Chat con IA: lo que entiende la IA se guarda enseguida (activo) y se ofrece Modificar / Cancelar. Solapas "Último recordatorio" y "Chat completo". El dictado (`lib/features/chat/dictation.dart`) no tiene límite: se reinicia solo en cada pausa hasta Enviar o Cancelar.
+- Chat con IA: lo que entiende la IA se guarda enseguida (activo) y se ofrece Modificar / Cancelar. Solapas "Último recordatorio" y "Chat completo". El dictado (`lib/features/chat/dictation.dart`) no tiene límite: se reinicia solo en cada pausa hasta Enviar o Cancelar. Mientras graba muestra "Grabando 0:12" y el texto queda oculto (botón "Ver texto").
 - El chat completo se guarda en el teléfono (`AppSettings.chatHistory`, clave `chat_history`, últimos 300 mensajes) y se puede borrar.
+- Pedidos relativos ("en 15 minutos"): la IA devuelve `in_minutes` y la cuenta se hace en el teléfono.
 - Ejemplos (`lib/features/chat/examples_sheet.dart`): botón con recuadro que abre la lista; son solo para leer, tocarlos no crea nada. Debajo, "Cargar a mano".
 - Listado → Pendientes tiene filtros Todos / De hoy / Pasados.
 - Configuración es un menú de recuadros: cada opción abre su pantalla.
@@ -34,5 +35,7 @@
 6. ✅ Chat con IA (interpreta lenguaje natural → título, fecha, hora → el usuario confirma)
 7. ✅ Dictado por voz
 8. ✅ Pulido: ícono propio, versión en Configuración
+
+Ideas a futuro (el usuario dijo que por ahora no): solapa "Charlar con la IA" (chat general con la misma clave y saldo), mandar el audio a la IA en vez de usar el reconocimiento de voz de Android.
 
 Segunda etapa (no implementar todavía): Google Calendar (`calendarEventId` ya existe en la tabla) y copia en Google Drive.

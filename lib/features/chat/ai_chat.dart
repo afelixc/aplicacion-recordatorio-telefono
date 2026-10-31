@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/app_scope.dart';
@@ -628,8 +630,9 @@ class _HistoryView extends StatelessWidget {
   }
 }
 
-/// Mientras se habla: lo que se va entendiendo, Cancelar y Enviar.
-class _TalkingPanel extends StatelessWidget {
+/// Mientras se habla: como grabar un audio. Se ve que está grabando y el
+/// tiempo; lo que se va entendiendo queda escondido (se puede ver si se quiere).
+class _TalkingPanel extends StatefulWidget {
   const _TalkingPanel({
     required this.text,
     required this.onCancel,
@@ -641,39 +644,79 @@ class _TalkingPanel extends StatelessWidget {
   final VoidCallback onSend;
 
   @override
+  State<_TalkingPanel> createState() => _TalkingPanelState();
+}
+
+class _TalkingPanelState extends State<_TalkingPanel> {
+  final _started = DateTime.now();
+  late final Timer _timer;
+  bool _showText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) => setState(() {}),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final elapsed = DateTime.now().difference(_started);
+    final clock =
+        '${elapsed.inMinutes}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}';
+    // El punto rojo titila como en las grabadoras.
+    final blink = elapsed.inMilliseconds ~/ 500 % 2 == 0;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
-            Icon(Icons.mic, color: scheme.error),
+            AnimatedOpacity(
+              opacity: blink ? 1 : 0.25,
+              duration: const Duration(milliseconds: 300),
+              child: Icon(Icons.fiber_manual_record, color: scheme.error),
+            ),
             const SizedBox(width: 6),
-            Text(
-              'Te escucho… hablá tranquilo, no se corta.',
-              style: theme.textTheme.labelLarge,
+            Text('Grabando  $clock', style: theme.textTheme.titleMedium),
+            const Spacer(),
+            TextButton(
+              onPressed: () => setState(() => _showText = !_showText),
+              child: Text(_showText ? 'Ocultar texto' : 'Ver texto'),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Container(
-          constraints: const BoxConstraints(minHeight: 56, maxHeight: 140),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: SingleChildScrollView(
-            reverse: true,
-            child: Text(
-              text.isEmpty ? '…' : text,
-              style: theme.textTheme.bodyLarge,
-            ),
+        Text(
+          'Hablá tranquilo, no se corta. Cuando termines tocá Enviar.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
           ),
         ),
+        if (_showText) ...[
+          const SizedBox(height: 8),
+          Container(
+            constraints: const BoxConstraints(minHeight: 48, maxHeight: 120),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: SingleChildScrollView(
+              reverse: true,
+              child: Text(widget.text.isEmpty ? '…' : widget.text),
+            ),
+          ),
+        ],
         const SizedBox(height: 10),
         Row(
           children: [
@@ -681,7 +724,7 @@ class _TalkingPanel extends StatelessWidget {
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.close),
                 label: const Text('Cancelar'),
-                onPressed: onCancel,
+                onPressed: widget.onCancel,
               ),
             ),
             const SizedBox(width: 12),
@@ -693,7 +736,7 @@ class _TalkingPanel extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.send),
                 label: const Text('Enviar'),
-                onPressed: onSend,
+                onPressed: widget.onSend,
               ),
             ),
           ],

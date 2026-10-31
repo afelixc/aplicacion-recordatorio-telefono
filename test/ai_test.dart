@@ -36,6 +36,25 @@ void main() {
       expect(r.reminder!.recurrence.kind, RepeatKind.none);
     });
 
+    test('"en 15 minutos": se cuenta desde ahora, sin preguntar', () {
+      final now = DateTime(2026, 10, 31, 13, 50, 20);
+      final r = ReminderInterpreter.parse(
+        jsonEncode({
+          ..._answer,
+          'ok': false,
+          'title': 'ver tema comida',
+          'date': '',
+          'time': '',
+          'in_minutes': 15,
+          'message': '¿Cuándo?',
+        }),
+        now: now,
+      );
+      expect(r.ok, isTrue);
+      expect(r.reminder!.title, 'Ver tema comida');
+      expect(r.reminder!.dueAt, DateTime(2026, 10, 31, 14, 5));
+    });
+
     test('semanal con días', () {
       final r = ReminderInterpreter.parse(
         jsonEncode({
