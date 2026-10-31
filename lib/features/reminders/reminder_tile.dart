@@ -7,9 +7,16 @@ import 'reminder_editor.dart';
 
 /// Un recordatorio en una lista: marcar como hecho, editar y borrar.
 class ReminderTile extends StatelessWidget {
-  const ReminderTile({super.key, required this.reminder});
+  const ReminderTile({
+    super.key,
+    required this.reminder,
+    this.highlightDone = false,
+  });
 
   final Reminder reminder;
+
+  /// Pinta los hechos de amarillo clarito para distinguirlos de los pendientes.
+  final bool highlightDone;
 
   Future<void> _delete(BuildContext context) async {
     final repo = AppScope.of(context).reminders;
@@ -39,11 +46,17 @@ class ReminderTile extends StatelessWidget {
         !reminder.repeats &&
         reminder.dueAt.isBefore(DateTime.now());
     final next = reminder.repeats ? reminder.nextOccurrence() : null;
+    final tinted = highlightDone && reminder.done;
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
+      color: tinted ? const Color(0xFFFFF4D6) : null,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
+        side: BorderSide(
+          color: tinted
+              ? const Color(0xFFE8C77A)
+              : theme.colorScheme.outlineVariant,
+        ),
         borderRadius: BorderRadius.circular(14),
       ),
       child: ListTile(

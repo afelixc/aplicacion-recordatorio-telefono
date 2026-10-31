@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_scope.dart';
+import '../../data/reminder_repository.dart';
+import '../../data/scheduling_reminder_repository.dart';
 import '../notifications/notification_service.dart';
+import '../notifications/notification_sound.dart';
 
 /// Estado de las notificaciones, accesos a los ajustes de Android y avisos de prueba.
 class NotificationsSection extends StatefulWidget {
@@ -69,6 +73,23 @@ class _NotificationsSectionState extends State<NotificationsSection>
               children: [
                 Text('Notificaciones', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
+                Material(
+                  color: theme.colorScheme.secondaryContainer.withValues(
+                    alpha: 0.5,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  child: ListTile(
+                    leading: const Icon(Icons.music_note),
+                    title: const Text('Sonido del aviso'),
+                    subtitle: Text(service.soundName),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      await showSoundPicker(context, service);
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
                 if (s == null)
                   const LinearProgressIndicator()
                 else ...[
@@ -179,6 +200,140 @@ class _StatusRow extends StatelessWidget {
           Expanded(child: Text(ok ? okText : badText)),
           if (!ok) TextButton(onPressed: onAction, child: Text(actionLabel)),
         ],
+      ),
+    );
+  }
+}
+
+/// Lista de sonidos: los de Recordame y "Elegir otro del teléfono".
+/// Tocar el ▶ lo hace sonar; tocar el nombre lo elige.
+Future<void> showSoundPicker(
+  BuildContext context,
+  NotificationService service,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (sheetContext) => _SoundSheet(
+      service: service,
+      reminders: AppScope.of(context).reminders,
+    ),
+  ).whenComplete(SoundPicker.stop);
+}
+
+class _SoundSheet extends StatefulWidget {
+  const _SoundSheet({required this.service, required this.reminders});
+
+  final NotificationService service;
+  final ReminderRepository reminders;
+
+  @override
+  State<_SoundSheet> createState() => _SoundSheetState();
+}
+
+class _SoundSheetState extends State<_SoundSheet> {
+  bool _saving = false;
+
+  Future<void> _choose(SoundChoice choice) async {
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    try {
+      await widget.service.setSound(choice);
+      // Los avisos ya programados pasan al sonido nuevo.
+      final repo = widget.reminders;
+      if (repo is SchedulingReminderRepository) await repo.resync();
+      navigator.pop();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Listo: "${choice.name}". Probalo con "Aviso ahora".'),
+        ),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _saving = false);
+      messenger.showSnackBar(SnackBar(content: Text('No se pudo: $e')));
+    }
+  }
+
+  Future<void> _fromPhone() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final picked = await SoundPicker.pickFromPhone(widget.service.soundUri);
+      if (picked != null) await _choose(picked);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Este teléfono no deja elegir sonidos desde otra app.'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final current = widget.service.soundUri;
+    final custom =
+        current != null && !builtInSounds.any((s) => s.uri == current);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Sonido de los recordatorios',
+                style: theme.textTheme.titleLarge,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Text(
+                'Tocá ▶ para escucharlo y el nombre para elegirlo.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
+            if (_saving) const LinearProgressIndicator(),
+            for (final s in builtInSounds)
+              ListTile(
+                leading: IconButton(
+                  tooltip: 'Escuchar ${s.name}',
+                  icon: const Icon(Icons.play_circle_outline),
+                  onPressed: () => SoundPicker.play(s.uri),
+                ),
+                title: Text(s.name),
+                trailing: s.uri == current
+                    ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
+                    : null,
+                onTap: _saving ? null : () => _choose(s),
+              ),
+            if (custom)
+              ListTile(
+                leading: IconButton(
+                  tooltip: 'Escuchar',
+                  icon: const Icon(Icons.play_circle_outline),
+                  onPressed: () => SoundPicker.play(current),
+                ),
+                title: Text(widget.service.soundName),
+                subtitle: const Text('Del teléfono'),
+                trailing: Icon(
+                  Icons.check_circle,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.library_music_outlined),
+              title: const Text('Elegir otro sonido del teléfono…'),
+              subtitle: const Text('Tonos, alarmas y notificaciones'),
+              onTap: _saving ? null : _fromPhone,
+            ),
+          ],
+        ),
       ),
     );
   }

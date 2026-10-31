@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -14,6 +15,7 @@ import '../../data/drift/drift_reminder_repository.dart';
 import '../../data/recurrence.dart';
 import '../../data/reminder.dart';
 import '../../data/scheduling_reminder_repository.dart';
+import 'notification_sound.dart';
 import 'reminder_actions.dart';
 import 'reminder_scheduler.dart';
 import 'snooze_options.dart';
@@ -54,15 +56,56 @@ class NotificationService implements ReminderScheduler {
   /// Se asigna en main(): ejecuta los botones cuando la app está abierta.
   ReminderActions? foregroundActions;
 
-  static const _channel = AndroidNotificationChannel(
-    'recordatorios',
+  /// Android no deja cambiar el sonido de un canal ya creado: cada sonido
+  /// nuevo usa un canal nuevo (`recordatorios_<n>`) y se borra el anterior.
+  static const _defaultChannelId = 'recordatorios';
+  String _channelId = _defaultChannelId;
+  String? _soundUri;
+  String _soundName = builtInSounds.first.name;
+
+  String? get soundUri => _soundUri;
+  String get soundName => _soundName;
+
+  AndroidNotificationChannel get _channel => AndroidNotificationChannel(
+    _channelId,
     'Recordatorios',
     description: 'Avisos de tus recordatorios a la hora indicada',
     importance: Importance.high,
+    sound: _soundUri == null ? null : UriAndroidNotificationSound(_soundUri!),
   );
+
+  /// Lee el sonido elegido (también desde los botones con la app cerrada).
+  Future<void> loadSound() async {
+    final p = await SharedPreferences.getInstance();
+    _channelId = p.getString('notif_channel') ?? _defaultChannelId;
+    _soundUri = p.getString('notif_sound_uri');
+    _soundName = p.getString('notif_sound_name') ?? builtInSounds.first.name;
+  }
+
+  /// Cambia el sonido de los avisos. Después hay que volver a programar los
+  /// avisos (`resync`) para que usen el canal nuevo.
+  Future<void> setSound(SoundChoice choice) async {
+    final old = _channelId;
+    _soundUri = choice.uri;
+    _soundName = choice.name;
+    _channelId = 'recordatorios_${DateTime.now().millisecondsSinceEpoch}';
+    await _android?.createNotificationChannel(_channel);
+    if (old != _channelId) {
+      await _android?.deleteNotificationChannel(channelId: old);
+    }
+    final p = await SharedPreferences.getInstance();
+    await p.setString('notif_channel', _channelId);
+    await p.setString('notif_sound_name', _soundName);
+    if (_soundUri == null) {
+      await p.remove('notif_sound_uri');
+    } else {
+      await p.setString('notif_sound_uri', _soundUri!);
+    }
+  }
 
   Future<void> init() async {
     await _initTimeZone();
+    await loadSound();
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('ic_notification'),
@@ -172,6 +215,7 @@ class NotificationService implements ReminderScheduler {
       _channel.name,
       channelDescription: _channel.description,
       importance: Importance.high,
+      sound: _channel.sound,
       priority: Priority.high,
       category: AndroidNotificationCategory.reminder,
       color: const Color(0xFF2B3A67),
@@ -296,6 +340,7 @@ Future<void> onBackgroundNotificationResponse(
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting(Fmt.locale);
   await NotificationService._initTimeZone();
+  await NotificationService.instance.loadSound();
   final db = AppDatabase();
   try {
     final repo = SchedulingReminderRepository(

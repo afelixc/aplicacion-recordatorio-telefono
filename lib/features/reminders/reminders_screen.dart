@@ -131,6 +131,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
                               itemBuilder: (_, i) => ReminderTile(
                                 key: ValueKey(items[i].id),
                                 reminder: items[i],
+                                // En "Todos", los hechos con otro color.
+                                highlightDone: _filter == _Filter.all,
                               ),
                             ),
                     ),
@@ -164,23 +166,53 @@ class _PendingChips extends StatelessWidget {
       _Pending.all: 'Todos',
     };
     final scheme = Theme.of(context).colorScheme;
+    // Tres partes iguales: siempre entran las tres, con cualquier número.
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (final p in _Pending.values) ...[
-            ChoiceChip(
-              visualDensity: VisualDensity.compact,
-              label: Text('${labels[p]} (${counts[p] ?? 0})'),
-              selected: selected == p,
-              showCheckmark: false,
-              selectedColor: p == _Pending.overdue
-                  ? scheme.errorContainer
-                  : scheme.secondaryContainer,
-              onSelected: (_) => onSelected(p),
+            if (p != _Pending.values.first) const SizedBox(width: 6),
+            Expanded(
+              child: Material(
+                color: selected == p
+                    ? (p == _Pending.overdue
+                          ? scheme.errorContainer
+                          : scheme.secondaryContainer)
+                    : Colors.transparent,
+                shape: StadiumBorder(
+                  side: BorderSide(
+                    color: selected == p
+                        ? Colors.transparent
+                        : scheme.outlineVariant,
+                  ),
+                ),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () => onSelected(p),
+                  child: SizedBox(
+                    height: 34,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${labels[p]} (${counts[p] ?? 0})',
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontWeight: selected == p
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(width: 6),
           ],
         ],
       ),

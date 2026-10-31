@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Evita que la compilación de release borre el ícono de la notificación. -->
+<!-- Evita que la compilación de release borre el ícono de la notificación y los sonidos propios. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_notification" />
+    tools:keep="@drawable/ic_notification,@raw/campanita,@raw/timbre,@raw/suave,@raw/alerta" />
