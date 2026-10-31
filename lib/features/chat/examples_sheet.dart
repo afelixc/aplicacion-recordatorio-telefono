@@ -50,6 +50,11 @@ const exampleGroups = <(IconData, String, List<String>)>[
     'Días puntuales',
     ['El 5, el 12 y el 19 de noviembre a las 18 clase de guitarra'],
   ),
+  (
+    Icons.playlist_add,
+    'Dos de una vez (máximo dos)',
+    ['En 1 minuto lente y en 3 minutos pelota'],
+  ),
 ];
 
 const exampleTips = [

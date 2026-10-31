@@ -16,18 +16,33 @@ import 'chat_screen.dart';
 import 'dictation.dart';
 import 'examples_sheet.dart';
 
-enum _Status { thinking, saved, canceled, question, error }
+enum _Status { thinking, saved, question, error }
+
+/// Un recordatorio que armó la IA y si sigue activo o se canceló.
+class _Item {
+  const _Item(this.reminder, {this.active = true});
+
+  final Reminder reminder;
+  final bool active;
+}
 
 /// Lo último que pasó: se muestra en la solapa "Último recordatorio".
 class _Last {
-  const _Last(this.status, {this.said, this.reminder, this.text});
+  const _Last(this.status, {this.said, this.items = const [], this.text});
 
   final _Status status;
 
   /// Lo que dijo o escribió el usuario.
   final String? said;
-  final Reminder? reminder;
+
+  /// Los recordatorios que se guardaron (hasta dos).
+  final List<_Item> items;
+
+  /// La pregunta o el error; con [items], la pregunta por el que faltó.
   final String? text;
+
+  _Last withItem(int i, _Item item) =>
+      _Last(status, said: said, items: [...items]..[i] = item, text: text);
 }
 
 /// Chat con IA: el usuario habla o escribe, la IA arma el recordatorio y queda
@@ -57,6 +72,9 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
 
   /// Si la IA hizo una pregunta, el pedido anterior para no perder contexto.
   String? _previousRequest;
+
+  /// Los que ya se guardaron de ese pedido, para no repetirlos al completar.
+  final _alreadySaved = <String>{};
 
   @override
   void initState() {
@@ -117,21 +135,44 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
       final result = await interpreter.interpret(request);
       if (!mounted) return;
       _recordUsage(interpreter, result.usage);
-      if (result.ok) {
-        // Queda guardado y activo enseguida; después se puede modificar o cancelar.
-        _previousRequest = null;
-        final saved = await repo.save(result.reminder!);
-        _show(
-          _Last(_Status.saved, said: text, reminder: saved),
-          'Listo ✓ "${saved.title}", ${describeSchedule(saved)}. Quedó activo.',
-        );
-      } else {
-        _previousRequest = request;
-        _show(
-          _Last(_Status.question, said: text, text: result.message),
-          result.message,
-        );
+      // Los completos quedan guardados y activos enseguida; después se pueden
+      // modificar o cancelar. Si a otro le faltaba algo, se pregunta.
+      final saved = <Reminder>[];
+      for (final r in result.reminders) {
+        if (_alreadySaved.contains(r.title.toLowerCase())) continue;
+        saved.add(await repo.save(r));
       }
+      final question = result.ok ? result.question : result.message;
+      final lines = [
+        for (final r in saved)
+          'Listo ✓ "${r.title}", ${describeSchedule(r)}. Quedó activo.',
+        if (result.tooMany)
+          'Te anoté los dos primeros: puedo hasta dos por mensaje. '
+              'Mandame el resto en otro mensaje.',
+        ?question,
+      ];
+      if (question != null) {
+        _alreadySaved.addAll(saved.map((r) => r.title.toLowerCase()));
+        _previousRequest = _alreadySaved.isEmpty
+            ? request
+            : '$request\nYa quedaron guardados, no los vuelvas a crear: '
+                  '${_alreadySaved.join(', ')}.';
+      } else {
+        _previousRequest = null;
+        _alreadySaved.clear();
+      }
+      if (lines.isEmpty) lines.add('Eso ya lo tenía anotado.');
+      _show(
+        saved.isEmpty
+            ? _Last(_Status.question, said: text, text: lines.join('\n'))
+            : _Last(
+                _Status.saved,
+                said: text,
+                items: [for (final r in saved) _Item(r)],
+                text: question,
+              ),
+        lines.join('\n'),
+      );
     } on AiException catch (e) {
       _show(
         _Last(_Status.error, said: text, text: e.message),
@@ -173,28 +214,29 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
     );
   }
 
-  Future<void> _modify(Reminder r) async {
+  Future<void> _modify(int i) async {
     final repo = AppScope.of(context).reminders;
+    final r = _last!.items[i].reminder;
     await showReminderEditor(context, reminder: r);
     final updated = await repo.getById(r.id!);
-    if (!mounted || updated == null) return;
-    setState(
-      () => _last = _Last(_Status.saved, said: _last?.said, reminder: updated),
-    );
+    if (!mounted || updated == null || _last == null) return;
+    setState(() => _last = _last!.withItem(i, _Item(updated)));
   }
 
-  Future<void> _cancel(Reminder r) async {
+  Future<void> _cancel(int i) async {
+    final r = _last!.items[i].reminder;
     await AppScope.of(context).reminders.delete(r.id!);
     _show(
-      _Last(_Status.canceled, said: _last?.said, reminder: r),
+      _last!.withItem(i, _Item(r, active: false)),
       'Cancelado: "${r.title}".',
     );
   }
 
-  Future<void> _restore(Reminder r) async {
+  Future<void> _restore(int i) async {
+    final r = _last!.items[i].reminder;
     final saved = await AppScope.of(context).reminders.save(r);
     _show(
-      _Last(_Status.saved, said: _last?.said, reminder: saved),
+      _last!.withItem(i, _Item(saved)),
       'Lo volví a activar: "${saved.title}".',
     );
   }
@@ -319,9 +361,9 @@ class _LastView extends StatelessWidget {
   final String providerName;
   final VoidCallback onExamples;
   final VoidCallback onManual;
-  final ValueChanged<Reminder> onModify;
-  final ValueChanged<Reminder> onCancel;
-  final ValueChanged<Reminder> onRestore;
+  final ValueChanged<int> onModify;
+  final ValueChanged<int> onCancel;
+  final ValueChanged<int> onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -415,40 +457,56 @@ class _LastView extends StatelessWidget {
                 ),
             ],
           ),
-          _Status.saved => _ReminderCard(
-            reminder: last.reminder!,
-            active: true,
-            said: saidLine,
-            actions: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.close),
-                  label: const Text('Cancelar'),
-                  onPressed: () => onCancel(last.reminder!),
+          _Status.saved => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (i, item) in last.items.indexed) ...[
+                if (i > 0) const SizedBox(height: 8),
+                _ReminderCard(
+                  reminder: item.reminder,
+                  active: item.active,
+                  // Lo que dijo va arriba de todo, en la primera tarjeta.
+                  said: i == 0 ? saidLine : null,
+                  actions: item.active
+                      ? [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.close),
+                              label: const Text('Cancelar'),
+                              onPressed: () => onCancel(i),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                              icon: const Icon(Icons.edit),
+                              label: const Text('Modificar'),
+                              onPressed: () => onModify(i),
+                            ),
+                          ),
+                        ]
+                      : [
+                          Expanded(
+                            child: TextButton.icon(
+                              icon: const Icon(Icons.undo),
+                              label: const Text('Volver a activarlo'),
+                              onPressed: () => onRestore(i),
+                            ),
+                          ),
+                        ],
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton.tonalIcon(
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Modificar'),
-                  onPressed: () => onModify(last.reminder!),
+              ],
+              // Al otro le faltaba algo: la pregunta, debajo.
+              if (last.text != null) ...[
+                const SizedBox(height: 8),
+                ChatBubble(text: last.text!),
+                Text(
+                  'Respondeme con el micrófono o escribiendo.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          _Status.canceled => _ReminderCard(
-            reminder: last.reminder!,
-            active: false,
-            said: saidLine,
-            actions: [
-              Expanded(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.undo),
-                  label: const Text('Volver a activarlo'),
-                  onPressed: () => onRestore(last.reminder!),
-                ),
-              ),
+              ],
             ],
           ),
         },

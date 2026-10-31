@@ -90,6 +90,52 @@ void main() {
       expect(r.message, '¿A qué hora?');
     });
 
+    test('dos en un mensaje; si falta algo en uno, guarda el otro', () {
+      final r = ReminderInterpreter.parse(
+        jsonEncode({
+          'reminders': [
+            {..._answer, 'title': 'lente'},
+            {..._answer, 'ok': false, 'title': 'pelota', 'message': '¿Cuándo?'},
+          ],
+          'message': 'Listo',
+        }),
+      );
+      expect(r.reminders.map((e) => e.title), ['Lente']);
+      expect(r.question, '¿Cuándo?');
+    });
+
+    test('dos relativos: en 1 y en 3 minutos', () {
+      final now = DateTime(2026, 10, 31, 10, 0);
+      final r = ReminderInterpreter.parse(
+        jsonEncode({
+          'reminders': [
+            {..._answer, 'title': 'lente', 'in_minutes': 1},
+            {..._answer, 'title': 'pelota', 'in_minutes': 3},
+          ],
+          'message': 'Listo',
+        }),
+        now: now,
+      );
+      expect(r.reminders.map((e) => e.dueAt), [
+        DateTime(2026, 10, 31, 10, 1),
+        DateTime(2026, 10, 31, 10, 3),
+      ]);
+      expect(r.tooMany, isFalse);
+    });
+
+    test('más de dos: toma los dos primeros y avisa', () {
+      final r = ReminderInterpreter.parse(
+        jsonEncode({
+          'reminders': [
+            for (final t in ['uno', 'dos', 'tres']) {..._answer, 'title': t},
+          ],
+          'message': 'Listo',
+        }),
+      );
+      expect(r.reminders.map((e) => e.title), ['Uno', 'Dos']);
+      expect(r.tooMany, isTrue);
+    });
+
     test('respuesta rota', () {
       expect(
         () => ReminderInterpreter.parse('no es json'),

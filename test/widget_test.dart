@@ -255,6 +255,59 @@ void main() {
     expect(reopened.chatHistory.first.mine, isTrue);
   });
 
+  testWidgets('dos recordatorios en un mensaje: guarda el completo y '
+      'pregunta por el otro', (tester) async {
+    final repo = MemoryReminderRepository();
+    final settings = AppSettings(
+      MemorySettingsStore(),
+      MemoryKeyStore({'claude': 'sk-ant-prueba'}),
+    );
+    await settings.load(['claude']);
+    await settings.setMode(UsageMode.ai);
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final date =
+        '${tomorrow.year}-${tomorrow.month.toString().padLeft(2, '0')}-${tomorrow.day.toString().padLeft(2, '0')}';
+    String item(String title, {bool ok = true, String time = '09:00'}) =>
+        '{"ok":$ok,"title":"$title","date":"${ok ? date : ''}",'
+        '"time":"$time","repeat":"none","weekdays":[],"dates":[],'
+        '"in_minutes":0,"message":"${ok ? 'Listo' : '¿Cuándo lo de la pelota?'}"}';
+    final fake = _FakeProvider(
+      '{"reminders":[${item('Lente')},${item('Pelota', ok: false)}],'
+      '"message":"Listo"}',
+      [
+        // Al responder, la IA vuelve a mandar los dos: Lente no se repite.
+        '{"reminders":[${item('Lente')},${item('Pelota', time: '18:00')}],'
+            '"message":"Listo"}',
+      ],
+    );
+    await tester.pumpWidget(
+      RecordameApp(
+        reminders: repo,
+        settings: settings,
+        aiProviderOverride: fake,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('chat-input')),
+      'Mañana a las 9 lente, y pelota',
+    );
+    await tester.tap(find.byTooltip('Enviar'));
+    await tester.pumpAndSettle();
+    expect((await repo.watchAll().first).single.title, 'Lente');
+    expect(find.text('Activo'), findsOneWidget);
+    expect(find.text('¿Cuándo lo de la pelota?'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('chat-input')), 'a las 18');
+    await tester.tap(find.byTooltip('Enviar'));
+    await tester.pumpAndSettle();
+    expect(fake.lastUser, contains('no los vuelvas a crear: lente'));
+    final all = await repo.watchAll().first;
+    expect(all.map((r) => r.title), unorderedEquals(['Lente', 'Pelota']));
+    expect(all.firstWhere((r) => r.title == 'Pelota').dueAt.hour, 18);
+  });
+
   testWidgets('Ejemplos: se leen, pero tocarlos no crea nada', (tester) async {
     final repo = MemoryReminderRepository();
     final settings = AppSettings(
@@ -439,9 +492,13 @@ void main() {
 }
 
 class _FakeProvider implements AiProvider {
-  _FakeProvider(this.answer);
+  _FakeProvider(this.answer, [this.later = const []]);
 
   final String answer;
+
+  /// Respuestas para las consultas siguientes, en orden.
+  final List<String> later;
+  int _calls = 0;
   String? lastUser;
 
   @override
@@ -473,6 +530,10 @@ class _FakeProvider implements AiProvider {
     required Map<String, dynamic> schema,
   }) async {
     lastUser = user;
-    return AiResult(answer, inputTokens: 1000, outputTokens: 200);
+    final i = _calls++;
+    final text = i == 0 || later.isEmpty
+        ? answer
+        : later[(i - 1).clamp(0, later.length - 1)];
+    return AiResult(text, inputTokens: 1000, outputTokens: 200);
   }
 }

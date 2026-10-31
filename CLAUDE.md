@@ -19,6 +19,7 @@
 - Nombre: "Recordame" debajo del ícono (`android:label`), "TE RECORDARÉ" arriba dentro de la app.
 - Chat con IA: lo que entiende la IA se guarda enseguida (activo) y se ofrece Modificar / Cancelar. Solapas "Último recordatorio" y "Chat completo". El dictado (`lib/features/chat/dictation.dart`) no tiene límite: se reinicia solo en cada pausa hasta Enviar o Cancelar. Mientras graba muestra "Grabando 0:12" y el texto queda oculto (botón "Ver texto").
 - El chat completo se guarda en el teléfono (`AppSettings.chatHistory`, clave `chat_history`, últimos 300 mensajes) y se puede borrar.
+- Varios en un mensaje: la IA devuelve una lista `reminders`; se usan hasta 2 (`maxPerMessage`, el usuario pidió dos por ahora). Los completos se guardan y por el incompleto se pregunta; al responder no se repiten los ya guardados (`_alreadySaved`).
 - Pedidos relativos ("en 15 minutos"): la IA devuelve `in_minutes` y la cuenta se hace en el teléfono.
 - Ejemplos (`lib/features/chat/examples_sheet.dart`): botón con recuadro que abre la lista; son solo para leer, tocarlos no crea nada. Debajo, "Cargar a mano".
 - Listado → Pendientes tiene filtros Pasados / Hoy / Todos (arranca en Hoy). Borrar muestra "Deshacer" 5 segundos (`persist: false`).
