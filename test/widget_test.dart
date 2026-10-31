@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 
 import 'package:recordame/app.dart';
 import 'package:recordame/core/settings.dart';
@@ -72,6 +73,8 @@ void main() {
     ]);
     await tester.tap(find.text('Listado'));
     await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Todos ('));
+    await tester.pumpAndSettle();
 
     // Marcar "Pagar la luz" como hecho: sale de Pendientes y aparece en Hechos.
     await tester.tap(find.byType(Checkbox).first);
@@ -98,6 +101,8 @@ void main() {
       ),
     ]);
     await tester.tap(find.text('Listado'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Todos ('));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Editar'));
     await tester.pumpAndSettle();
@@ -293,6 +298,10 @@ void main() {
     ]);
     await tester.tap(find.text('Listado'));
     await tester.pumpAndSettle();
+    // Arranca en "Hoy".
+    expect(find.text('Hoy (1)'), findsOneWidget);
+    expect(find.text('Hoy a la noche'), findsOneWidget);
+    expect(find.text('Para mañana'), findsNothing);
     expect(find.text('Todos (3)'), findsOneWidget);
 
     await tester.tap(find.text('Pasados (1)'));
@@ -301,10 +310,40 @@ void main() {
     expect(find.text('Para mañana'), findsNothing);
     expect(find.text('Reprogramar'), findsOneWidget);
 
-    await tester.tap(find.textContaining('De hoy'));
+    await tester.tap(find.text('Todos (3)'));
     await tester.pumpAndSettle();
     expect(find.text('Hoy a la noche'), findsOneWidget);
-    expect(find.text('Para mañana'), findsNothing);
+    expect(find.text('Para mañana'), findsOneWidget);
+  });
+
+  testWidgets('Almanaque: deslizar cambia de mes', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Almanaque'));
+    await tester.pumpAndSettle();
+    final now = DateTime.now();
+    String title(DateTime m) {
+      final t = DateFormat('MMMM yyyy', 'es_AR').format(m);
+      return t[0].toUpperCase() + t.substring(1);
+    }
+
+    expect(find.textContaining(title(now)), findsOneWidget);
+    await tester.fling(
+      find.byType(ListView).first,
+      const Offset(-300, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(title(DateTime(now.year, now.month + 1))),
+      findsOneWidget,
+    );
+    await tester.fling(find.byType(ListView).first, const Offset(300, 0), 1000);
+    await tester.fling(find.byType(ListView).first, const Offset(300, 0), 1000);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(title(DateTime(now.year, now.month - 1))),
+      findsOneWidget,
+    );
   });
 
   testWidgets(

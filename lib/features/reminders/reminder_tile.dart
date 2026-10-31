@@ -18,6 +18,10 @@ class ReminderTile extends StatelessWidget {
     messenger.showSnackBar(
       SnackBar(
         content: Text('Borrado: ${reminder.title}'),
+        // 5 segundos para deshacer; después se va solo y queda borrado.
+        duration: const Duration(seconds: 5),
+        persist: false,
+        showCloseIcon: true,
         action: SnackBarAction(
           label: 'Deshacer',
           onPressed: () => repo.save(reminder),

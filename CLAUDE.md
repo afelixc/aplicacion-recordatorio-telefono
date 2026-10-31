@@ -21,7 +21,8 @@
 - El chat completo se guarda en el teléfono (`AppSettings.chatHistory`, clave `chat_history`, últimos 300 mensajes) y se puede borrar.
 - Pedidos relativos ("en 15 minutos"): la IA devuelve `in_minutes` y la cuenta se hace en el teléfono.
 - Ejemplos (`lib/features/chat/examples_sheet.dart`): botón con recuadro que abre la lista; son solo para leer, tocarlos no crea nada. Debajo, "Cargar a mano".
-- Listado → Pendientes tiene filtros Todos / De hoy / Pasados.
+- Listado → Pendientes tiene filtros Pasados / Hoy / Todos (arranca en Hoy). Borrar muestra "Deshacer" 5 segundos (`persist: false`).
+- Almanaque: deslizar a la izquierda = mes siguiente, a la derecha = anterior.
 - Configuración es un menú de recuadros: cada opción abre su pantalla.
 - Antes de subir: `flutter analyze` y `flutter test` sin errores.
 

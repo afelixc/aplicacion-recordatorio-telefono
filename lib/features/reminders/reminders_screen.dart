@@ -9,7 +9,7 @@ import 'reminder_tile.dart';
 enum _Filter { pending, done, all }
 
 /// Dentro de Pendientes: todos, los de hoy o los que ya pasaron.
-enum _Pending { all, today, overdue }
+enum _Pending { overdue, today, all }
 
 /// Un pendiente que ya pasó y no se marcó como hecho.
 bool isOverdue(Reminder r, DateTime now) =>
@@ -32,7 +32,7 @@ class RemindersScreen extends StatefulWidget {
 
 class _RemindersScreenState extends State<RemindersScreen> {
   _Filter _filter = _Filter.pending;
-  _Pending _pending = _Pending.all;
+  _Pending _pending = _Pending.today;
 
   bool _matches(Reminder r, DateTime now) => switch (_filter) {
     _Filter.pending => switch (_pending) {
@@ -61,10 +61,16 @@ class _RemindersScreenState extends State<RemindersScreen> {
               width: double.infinity,
               child: SegmentedButton<_Filter>(
                 showSelectedIcon: false,
+                // Todo en un renglón, aunque la pantalla sea angosta.
+                style: SegmentedButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  textStyle: const TextStyle(fontSize: 13),
+                ),
                 segments: const [
                   ButtonSegment(
                     value: _Filter.pending,
-                    label: Text('Pendientes'),
+                    label: Text('Pendientes', maxLines: 1, softWrap: false),
                   ),
                   ButtonSegment(value: _Filter.done, label: Text('Hechos')),
                   ButtonSegment(value: _Filter.all, label: Text('Todos')),
@@ -153,17 +159,19 @@ class _PendingChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const labels = {
-      _Pending.all: 'Todos',
-      _Pending.today: 'De hoy',
       _Pending.overdue: 'Pasados',
+      _Pending.today: 'Hoy',
+      _Pending.all: 'Todos',
     };
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           for (final p in _Pending.values) ...[
             ChoiceChip(
+              visualDensity: VisualDensity.compact,
               label: Text('${labels[p]} (${counts[p] ?? 0})'),
               selected: selected == p,
               showCheckmark: false,
