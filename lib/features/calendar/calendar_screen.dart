@@ -219,15 +219,27 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final fg = isSelected ? scheme.onPrimary : scheme.onSurface;
+    final hasReminders = count > 0;
+    // Hoy: bien resaltado. Días con recordatorios: fondo suave y puntitos
+    // (uno por recordatorio, hasta 5). El día elegido lleva un borde.
+    final bg = isToday
+        ? scheme.secondary
+        : hasReminders
+        ? scheme.primaryContainer
+        : Colors.transparent;
+    final fg = isToday
+        ? scheme.onSecondary
+        : hasReminders
+        ? scheme.onPrimaryContainer
+        : scheme.onSurface;
     return Padding(
       padding: const EdgeInsets.all(2),
       child: Material(
-        color: isSelected ? scheme.primary : Colors.transparent,
+        color: bg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
-          side: isToday && !isSelected
-              ? BorderSide(color: scheme.secondary, width: 1.5)
+          side: isSelected
+              ? BorderSide(color: scheme.primary, width: 2)
               : BorderSide.none,
         ),
         child: InkWell(
@@ -236,20 +248,26 @@ class _DayCell extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('${day.day}', style: TextStyle(color: fg)),
+              Text(
+                '${day.day}',
+                style: TextStyle(
+                  color: fg,
+                  fontWeight: isToday || hasReminders ? FontWeight.w700 : null,
+                ),
+              ),
               const SizedBox(height: 3),
               SizedBox(
-                height: 6,
+                height: 5,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    for (var i = 0; i < count.clamp(0, 3); i++)
+                    for (var i = 0; i < count.clamp(0, 5); i++)
                       Container(
-                        width: 5,
-                        height: 5,
-                        margin: const EdgeInsets.symmetric(horizontal: 1),
+                        width: 4,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(horizontal: 0.75),
                         decoration: BoxDecoration(
-                          color: isSelected ? fg : scheme.secondary,
+                          color: isToday ? fg : scheme.primary,
                           shape: BoxShape.circle,
                         ),
                       ),

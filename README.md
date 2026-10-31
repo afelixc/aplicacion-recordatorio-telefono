@@ -67,7 +67,7 @@ Para el **modo IA** cada persona usa su propia clave y paga su propio consumo (c
 3. Pegá la clave y tocá **Guardar y probar**. Probar la clave no gasta saldo.
 4. En **Modelo** podés elegir qué modelo usar. Al probar la clave aparecen todos los de tu cuenta.
 
-Después, en la pestaña **Chat**, escribí o tocá el micrófono y decí, por ejemplo: *"Recordame el viernes a las 9 de la mañana lavar el auto"* o *"Todos los lunes y jueves a las 19 ir al gimnasio"*. La IA arma el recordatorio y te lo muestra para que lo confirmes o lo corrijas antes de guardarlo. Si le falta algo (por ejemplo la hora), te pregunta.
+Después, en la pestaña **Chat**, tocá el micrófono y decí, por ejemplo: *"Recordame el viernes a las 9 de la mañana lavar el auto"* o *"Todos los lunes y jueves a las 19 ir al gimnasio"*. Podés hablar todo lo que quieras: no se corta. Cuando terminás, tocá **Enviar** (o **Cancelar**). La IA arma el recordatorio y **queda activo enseguida**; si algo no está bien, tocá **Modificar** o **Cancelar**. Si le falta algo (por ejemplo la hora), te pregunta.
 
 El dictado usa el reconocimiento de voz de Android, en el idioma elegido en Configuración (por ahora, español de Argentina o español neutro).
 

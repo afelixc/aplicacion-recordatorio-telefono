@@ -59,9 +59,16 @@ class DriftReminderRepository implements ReminderRepository {
       final id = await _db.into(_db.reminders).insert(companion);
       return reminder.copyWith(id: id);
     }
-    await (_db.update(
+    final updated = await (_db.update(
       _db.reminders,
     )..where((t) => t.id.equals(reminder.id!))).write(companion);
+    // Si ya no existía (por ejemplo, "Deshacer" después de borrar), se vuelve
+    // a crear con el mismo id.
+    if (updated == 0) {
+      await _db
+          .into(_db.reminders)
+          .insert(companion.copyWith(id: Value(reminder.id!)));
+    }
     return reminder;
   }
 

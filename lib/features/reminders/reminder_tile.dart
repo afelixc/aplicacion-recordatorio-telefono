@@ -59,16 +59,34 @@ class ReminderTile extends StatelessWidget {
                 )
               : const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(
-          [
-            describeSchedule(reminder),
-            if (overdue) 'vencido',
-            if (reminder.repeats && !reminder.done)
-              next == null ? 'sin más fechas' : 'próximo: ${Fmt.when(next)}',
-          ].join(reminder.repeats ? '\n' : ' · '),
-          style: overdue ? TextStyle(color: theme.colorScheme.error) : null,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              [
+                describeSchedule(reminder),
+                if (overdue) 'vencido',
+                if (reminder.repeats && !reminder.done)
+                  next == null
+                      ? 'sin más fechas'
+                      : 'próximo: ${Fmt.when(next)}',
+              ].join(reminder.repeats ? '\n' : ' · '),
+              style: overdue ? TextStyle(color: theme.colorScheme.error) : null,
+            ),
+            if (overdue)
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.update, size: 18),
+                label: const Text('Reprogramar'),
+                onPressed: () =>
+                    showReminderEditor(context, reminder: reminder),
+              ),
+          ],
         ),
-        isThreeLine: reminder.repeats && !reminder.done,
+        isThreeLine: overdue || (reminder.repeats && !reminder.done),
         onTap: () => showReminderEditor(context, reminder: reminder),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

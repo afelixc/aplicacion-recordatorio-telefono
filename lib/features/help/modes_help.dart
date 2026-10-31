@@ -1,41 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/app_scope.dart';
-import '../../core/settings.dart';
 import '../home/home_shell.dart';
-
-/// Solapita chica arriba del chat: muestra el modo actual y, al tocarla,
-/// la explicación completa.
-class ModeChip extends StatelessWidget {
-  const ModeChip({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final settings = AppScope.of(context).settings;
-    final scheme = Theme.of(context).colorScheme;
-    final (label, icon, warn) = switch ((settings.mode, settings.aiReady)) {
-      (UsageMode.free, _) => (
-        'Gratis · ¿Querés usar IA?',
-        Icons.edit_note,
-        false,
-      ),
-      (UsageMode.ai, false) => ('Con IA · falta la clave', Icons.key_off, true),
-      (UsageMode.ai, true) => ('Con IA', Icons.auto_awesome, false),
-    };
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ActionChip(
-        key: const Key('mode-chip'),
-        avatar: Icon(icon, size: 18, color: warn ? scheme.error : null),
-        label: Text(label),
-        visualDensity: VisualDensity.compact,
-        side: warn ? BorderSide(color: scheme.error) : null,
-        onPressed: () => showModesHelp(context),
-      ),
-    );
-  }
-}
 
 /// Explicación completa: gratis vs. con IA, por qué hace falta una clave,
 /// cuánto sale y cómo conseguirla.
@@ -48,7 +14,7 @@ Future<void> showModesHelp(BuildContext context) {
       expand: false,
       initialChildSize: 0.85,
       maxChildSize: 0.95,
-      builder: (_, scroll) => _ModesHelp(
+      builder: (_, scroll) => ModesHelpView(
         scroll: scroll,
         onGoToSettings: () {
           Navigator.pop(sheetContext);
@@ -60,11 +26,22 @@ Future<void> showModesHelp(BuildContext context) {
   );
 }
 
-class _ModesHelp extends StatelessWidget {
-  const _ModesHelp({required this.scroll, required this.onGoToSettings});
+/// La explicación, para mostrar en una hoja o dentro de Configuración.
+class ModesHelpView extends StatelessWidget {
+  const ModesHelpView({
+    super.key,
+    this.scroll,
+    this.onGoToSettings,
+    this.header = const [],
+  });
 
-  final ScrollController scroll;
-  final VoidCallback onGoToSettings;
+  final ScrollController? scroll;
+
+  /// Si es null no se muestra el botón "Ir a Configuración".
+  final VoidCallback? onGoToSettings;
+
+  /// Lo que va arriba de la explicación (por ejemplo, el selector de modo).
+  final List<Widget> header;
 
   @override
   Widget build(BuildContext context) {
@@ -163,11 +140,12 @@ class _ModesHelp extends StatelessWidget {
                 mode: LaunchMode.externalApplication,
               ),
             ),
-            FilledButton.icon(
-              icon: const Icon(Icons.settings),
-              label: const Text('Ir a Configuración'),
-              onPressed: onGoToSettings,
-            ),
+            if (onGoToSettings != null)
+              FilledButton.icon(
+                icon: const Icon(Icons.settings),
+                label: const Text('Ir a Configuración'),
+                onPressed: onGoToSettings,
+              ),
           ],
         ),
         h('¿Y OpenAI o Gemini?'),

@@ -106,9 +106,10 @@ class _HomeShellState extends State<HomeShell> {
     final tab = appTabs[_index];
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: const Text(
-          'Recordame',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          'TE RECORDARÉ',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 2),
         ),
       ),
       body: tab.builder(context),

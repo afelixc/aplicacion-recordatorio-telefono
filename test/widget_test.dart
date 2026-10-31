@@ -26,7 +26,8 @@ void main() {
 
   testWidgets('Muestra las cuatro pestañas', (tester) async {
     await pumpApp(tester);
-    expect(find.text('Recordame'), findsOneWidget);
+    expect(find.text('TE RECORDARÉ'), findsOneWidget);
+    expect(find.text('Tu plan:'), findsOneWidget);
     for (final label in ['Chat', 'Almanaque', 'Listado', 'Configuración']) {
       expect(find.text(label), findsWidgets);
     }
@@ -168,7 +169,7 @@ void main() {
     expect(find.text('23:30'), findsOneWidget);
   });
 
-  testWidgets('Modo IA: escribe, la IA arma el recordatorio y se confirma', (
+  testWidgets('Modo IA: escribe, la IA arma el recordatorio y queda activo', (
     tester,
   ) async {
     final repo = MemoryReminderRepository();
@@ -207,32 +208,49 @@ void main() {
     final used = (await usage.watchSince(DateTime(2000)).first).single;
     expect(used.inputTokens, 1000);
     expect(used.outputTokens, 200);
-    // Se muestra el formulario con lo que entendió la IA, para corregir.
-    expect(
-      tester
-          .widget<TextFormField>(find.byKey(const Key('reminder-title')))
-          .controller!
-          .text,
-      'Lavar el auto',
-    );
-    await tester.ensureVisible(find.text('Confirmar y guardar'));
-    await tester.tap(find.text('Confirmar y guardar'));
-    await tester.pumpAndSettle();
-
+    // Queda guardado y activo sin confirmar, con Modificar y Cancelar.
+    expect(find.text('Activo'), findsOneWidget);
+    expect(find.text('Modificar'), findsOneWidget);
     final saved = (await repo.watchAll().first).single;
     expect(saved.title, 'Lavar el auto');
     expect(
       saved.dueAt,
       DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9),
     );
+
+    // Cancelar lo borra; "Volver a activarlo" lo recupera.
+    await tester.ensureVisible(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(await repo.watchAll().first, isEmpty);
+    expect(find.text('Cancelado'), findsOneWidget);
+    await tester.ensureVisible(find.text('Volver a activarlo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Volver a activarlo'));
+    await tester.pumpAndSettle();
+    expect((await repo.watchAll().first).single.title, 'Lavar el auto');
+
+    // En "Chat completo" está toda la conversación.
+    await tester.tap(find.text('Chat completo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Recordame mañana a las 9 lavar el auto'), findsOneWidget);
   });
 
   testWidgets(
-    'La solapita del modo abre la explicación y lleva a Configuración',
+    'Tu plan: cambia entre Gratis y Con IA; la ayuda lleva a Configuración',
     (tester) async {
-      await pumpApp(tester);
-      expect(find.text('Gratis · ¿Querés usar IA?'), findsOneWidget);
-      await tester.tap(find.byKey(const Key('mode-chip')));
+      final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+      await tester.pumpWidget(
+        RecordameApp(reminders: MemoryReminderRepository(), settings: settings),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Con IA'));
+      await tester.pumpAndSettle();
+      expect(settings.mode, UsageMode.ai);
+      expect(find.text('Falta tu clave de IA.'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('¿Cómo funciona?'));
       await tester.pumpAndSettle();
       expect(find.text('¿Por qué hace falta una clave?'), findsOneWidget);
 
@@ -244,6 +262,7 @@ void main() {
       await tester.tap(find.text('Ir a Configuración'));
       await tester.pumpAndSettle();
       expect(find.text('Modo de uso'), findsOneWidget);
+      expect(find.text('Inteligencia artificial'), findsOneWidget);
     },
   );
 
@@ -262,6 +281,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Configuración'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Inteligencia artificial'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Haiku 5.5'));
     await tester.pumpAndSettle();

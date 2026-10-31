@@ -8,6 +8,8 @@ enum UsageMode { free, ai }
 const appLanguages = <(String, String)>[
   ('es-AR', 'Español (Argentina)'),
   ('es-ES', 'Español neutro'),
+  ('en-US', 'English'),
+  ('it-IT', 'Italiano'),
 ];
 
 /// Dónde se guardan las preferencias (no secretas).

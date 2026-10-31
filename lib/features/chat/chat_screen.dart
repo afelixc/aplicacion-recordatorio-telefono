@@ -4,6 +4,7 @@ import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../core/settings.dart';
 import '../help/modes_help.dart';
+import '../home/home_shell.dart';
 import '../reminders/reminder_form.dart';
 import 'ai_chat.dart';
 
@@ -17,17 +18,89 @@ class ChatScreen extends StatelessWidget {
     final settings = AppScope.of(context).settings;
     return ListenableBuilder(
       listenable: settings,
-      builder: (context, _) => settings.aiReady
-          ? AiChat(key: ValueKey(settings.providerId), settings: settings)
-          : _ManualEntry(missingKey: settings.mode == UsageMode.ai),
+      builder: (context, _) => Column(
+        children: [
+          PlanBar(settings: settings),
+          Expanded(
+            child: settings.aiReady
+                ? AiChat(key: ValueKey(settings.providerId), settings: settings)
+                : const _ManualEntry(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Tu plan: Gratis | Con IA". El activo se ve resaltado y el otro en gris.
+class PlanBar extends StatelessWidget {
+  const PlanBar({super.key, required this.settings});
+
+  final AppSettings settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final missingKey = settings.mode == UsageMode.ai && !settings.aiReady;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text('Tu plan:', style: theme.textTheme.labelLarge),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SegmentedButton<UsageMode>(
+                  key: const Key('plan-selector'),
+                  showSelectedIcon: false,
+                  style: SegmentedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    selectedBackgroundColor: scheme.primary,
+                    selectedForegroundColor: scheme.onPrimary,
+                    foregroundColor: scheme.onSurface.withValues(alpha: 0.45),
+                  ),
+                  segments: const [
+                    ButtonSegment(value: UsageMode.free, label: Text('Gratis')),
+                    ButtonSegment(value: UsageMode.ai, label: Text('Con IA')),
+                  ],
+                  selected: {settings.mode},
+                  onSelectionChanged: (s) => settings.setMode(s.first),
+                ),
+              ),
+              IconButton(
+                tooltip: '¿Cómo funciona?',
+                icon: const Icon(Icons.help_outline),
+                onPressed: () => showModesHelp(context),
+              ),
+            ],
+          ),
+          if (missingKey)
+            Row(
+              children: [
+                Icon(Icons.key_off, size: 18, color: scheme.error),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Falta tu clave de IA.',
+                    style: TextStyle(color: scheme.error),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => HomeShell.goToTab(context, 'Configuración'),
+                  child: const Text('Cargarla'),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 }
 
 class _ManualEntry extends StatefulWidget {
-  const _ManualEntry({required this.missingKey});
-
-  final bool missingKey;
+  const _ManualEntry();
 
   @override
   State<_ManualEntry> createState() => _ManualEntryState();
@@ -45,8 +118,6 @@ class _ManualEntryState extends State<_ManualEntry> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const ModeChip(),
-        const SizedBox(height: 8),
         if (_lastSaved != null) ChatBubble(text: _lastSaved!),
         const SizedBox(height: 8),
         Card(
