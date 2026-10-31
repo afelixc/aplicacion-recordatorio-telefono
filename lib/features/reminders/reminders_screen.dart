@@ -2,10 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_scope.dart';
 import '../../data/reminder.dart';
+import '../calendar/occurrences.dart';
 import 'reminder_editor.dart';
 import 'reminder_tile.dart';
 
 enum _Filter { pending, done, all }
+
+/// Dentro de Pendientes: todos, los de hoy o los que ya pasaron.
+enum _Pending { all, today, overdue }
+
+/// Un pendiente que ya pasó y no se marcó como hecho.
+bool isOverdue(Reminder r, DateTime now) =>
+    !r.done && !r.repeats && r.dueAt.isBefore(now);
+
+/// Un pendiente que toca hoy (en los que se repiten, si hoy toca una vez).
+bool isToday(Reminder r, DateTime now) {
+  if (r.done) return false;
+  final today = dayOf(now);
+  final tomorrow = DateTime(now.year, now.month, now.day + 1);
+  return occurrencesByDay([r], today, tomorrow).isNotEmpty;
+}
 
 class RemindersScreen extends StatefulWidget {
   const RemindersScreen({super.key});
@@ -16,9 +32,14 @@ class RemindersScreen extends StatefulWidget {
 
 class _RemindersScreenState extends State<RemindersScreen> {
   _Filter _filter = _Filter.pending;
+  _Pending _pending = _Pending.all;
 
-  bool _matches(Reminder r) => switch (_filter) {
-    _Filter.pending => !r.done,
+  bool _matches(Reminder r, DateTime now) => switch (_filter) {
+    _Filter.pending => switch (_pending) {
+      _Pending.all => !r.done,
+      _Pending.today => isToday(r, now),
+      _Pending.overdue => isOverdue(r, now),
+    },
     _Filter.done => r.done,
     _Filter.all => true,
   };
@@ -60,18 +81,54 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                var items = snapshot.data!.where(_matches).toList();
+                final now = DateTime.now();
+                final all = snapshot.data!;
+                var items = all.where((r) => _matches(r, now)).toList();
                 // Los hechos, del más reciente al más viejo.
                 if (_filter == _Filter.done) items = items.reversed.toList();
-                if (items.isEmpty) return _Empty(filter: _filter);
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                  itemCount: items.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 8),
-                  itemBuilder: (_, i) => ReminderTile(
-                    key: ValueKey(items[i].id),
-                    reminder: items[i],
-                  ),
+                return Column(
+                  children: [
+                    if (_filter == _Filter.pending)
+                      _PendingChips(
+                        selected: _pending,
+                        counts: {
+                          _Pending.all: all.where((r) => !r.done).length,
+                          _Pending.today: all
+                              .where((r) => isToday(r, now))
+                              .length,
+                          _Pending.overdue: all
+                              .where((r) => isOverdue(r, now))
+                              .length,
+                        },
+                        onSelected: (p) => setState(() => _pending = p),
+                      ),
+                    if (_filter == _Filter.pending &&
+                        _pending == _Pending.overdue &&
+                        items.isNotEmpty)
+                      const _Hint(
+                        'Ya pasaron y no los marcaste como hechos. Tocá '
+                        '"Reprogramar" para darles una fecha nueva.',
+                      ),
+                    if (_filter == _Filter.done && items.isNotEmpty)
+                      const _Hint(
+                        'Para volver a activar uno, destildá el círculo o '
+                        'tocalo y cambiale la fecha.',
+                      ),
+                    Expanded(
+                      child: items.isEmpty
+                          ? _Empty(filter: _filter, pending: _pending)
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+                              itemCount: items.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 8),
+                              itemBuilder: (_, i) => ReminderTile(
+                                key: ValueKey(items[i].id),
+                                reminder: items[i],
+                              ),
+                            ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -82,14 +139,80 @@ class _RemindersScreenState extends State<RemindersScreen> {
   }
 }
 
+class _PendingChips extends StatelessWidget {
+  const _PendingChips({
+    required this.selected,
+    required this.counts,
+    required this.onSelected,
+  });
+
+  final _Pending selected;
+  final Map<_Pending, int> counts;
+  final ValueChanged<_Pending> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = {
+      _Pending.all: 'Todos',
+      _Pending.today: 'De hoy',
+      _Pending.overdue: 'Pasados',
+    };
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: Row(
+        children: [
+          for (final p in _Pending.values) ...[
+            ChoiceChip(
+              label: Text('${labels[p]} (${counts[p] ?? 0})'),
+              selected: selected == p,
+              showCheckmark: false,
+              selectedColor: p == _Pending.overdue
+                  ? scheme.errorContainer
+                  : scheme.secondaryContainer,
+              onSelected: (_) => onSelected(p),
+            ),
+            const SizedBox(width: 6),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+      child: Text(
+        text,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
 class _Empty extends StatelessWidget {
-  const _Empty({required this.filter});
+  const _Empty({required this.filter, required this.pending});
 
   final _Filter filter;
+  final _Pending pending;
 
   @override
   Widget build(BuildContext context) {
     final text = switch (filter) {
+      _Filter.pending when pending == _Pending.today =>
+        'Hoy no tenés nada pendiente.',
+      _Filter.pending when pending == _Pending.overdue =>
+        'No tenés recordatorios vencidos. ¡Bien ahí!',
       _Filter.pending =>
         'No tenés recordatorios pendientes.\nTocá "Nuevo" para cargar uno.',
       _Filter.done => 'Todavía no marcaste ninguno como hecho.',

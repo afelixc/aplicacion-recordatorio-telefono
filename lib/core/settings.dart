@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,6 +80,36 @@ class MemoryKeyStore implements KeyStore {
 }
 
 /// Configuración de la app. Avisa a las pantallas cuando cambia.
+/// Un mensaje del chat con la IA (se guarda en el teléfono).
+class ChatEntry {
+  const ChatEntry(
+    this.text, {
+    this.mine = false,
+    this.error = false,
+    required this.at,
+  });
+
+  final String text;
+  final bool mine;
+  final bool error;
+  final DateTime at;
+
+  Map<String, dynamic> toJson() => {
+    't': text,
+    if (mine) 'm': true,
+    if (error) 'e': true,
+    'a': at.toIso8601String(),
+  };
+
+  static ChatEntry? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final text = j['t'];
+    final at = DateTime.tryParse('${j['a']}');
+    if (text is! String || at == null) return null;
+    return ChatEntry(text, mine: j['m'] == true, error: j['e'] == true, at: at);
+  }
+}
+
 class AppSettings extends ChangeNotifier {
   AppSettings(this._store, this.keys);
 
@@ -114,7 +146,39 @@ class AppSettings extends ChangeNotifier {
     );
   }
 
+  /// Lo hablado con la IA (los últimos [maxChat] mensajes).
+  final List<ChatEntry> chatHistory = [];
+  static const maxChat = 300;
+
+  Future<void> addChat(ChatEntry entry) async {
+    chatHistory.add(entry);
+    if (chatHistory.length > maxChat) {
+      chatHistory.removeRange(0, chatHistory.length - maxChat);
+    }
+    await _saveChat();
+  }
+
+  Future<void> clearChat() async {
+    chatHistory.clear();
+    await _saveChat();
+  }
+
+  Future<void> _saveChat() => _store.write(
+    'chat_history',
+    jsonEncode([for (final e in chatHistory) e.toJson()]),
+  );
+
   Future<void> load(Iterable<String> providerIds) async {
+    final chat = await _store.read('chat_history');
+    if (chat != null) {
+      try {
+        chatHistory
+          ..clear()
+          ..addAll((jsonDecode(chat) as List).map(ChatEntry.fromJson).nonNulls);
+      } catch (_) {
+        // Si quedó algo roto, se empieza un chat nuevo.
+      }
+    }
     mode =
         UsageMode.values.asNameMap()[await _store.read('mode')] ??
         UsageMode.free;

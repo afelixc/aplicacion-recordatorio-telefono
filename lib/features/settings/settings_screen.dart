@@ -33,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
             )
             .$2;
         return ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           children: [
             _MenuItem(
               icon: Icons.tune,
@@ -85,12 +85,14 @@ class SettingsScreen extends StatelessWidget {
                     : NotificationsSection(service: scope.notifications!),
               ),
             ),
-            const ListTile(
-              enabled: false,
-              leading: Icon(Icons.schedule),
-              title: Text('Próximamente'),
-              subtitle: Text(
-                'Sincronizar con Google Calendar y copia de seguridad en Google Drive',
+            const _BoxedTile(
+              child: ListTile(
+                enabled: false,
+                leading: CircleAvatar(child: Icon(Icons.schedule)),
+                title: Text('Próximamente'),
+                subtitle: Text(
+                  'Sincronizar con Google Calendar y copia de seguridad en Google Drive',
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -120,15 +122,48 @@ class _MenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return ListTile(
-      leading: Icon(icon, color: warn ? scheme.error : null),
-      title: Text(title),
-      subtitle: Text(
-        subtitle,
-        style: warn ? TextStyle(color: scheme.error) : null,
+    return _BoxedTile(
+      warn: warn,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: warn
+              ? scheme.errorContainer
+              : scheme.primaryContainer,
+          foregroundColor: warn ? scheme.error : scheme.onPrimaryContainer,
+          child: Icon(icon),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(
+          subtitle,
+          style: warn ? TextStyle(color: scheme.error) : null,
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () =>
+            Navigator.of(context).push(MaterialPageRoute(builder: page)),
       ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: page)),
+    );
+  }
+}
+
+/// Recuadro de cada opción del menú.
+class _BoxedTile extends StatelessWidget {
+  const _BoxedTile({required this.child, this.warn = false});
+
+  final Widget child;
+  final bool warn;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: warn ? scheme.error : scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: child,
     );
   }
 }

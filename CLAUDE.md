@@ -18,7 +18,10 @@
 - Idiomas de la IA y del dictado: español (Argentina), español neutro, inglés, italiano. Los menús siguen en español.
 - Nombre: "Recordame" debajo del ícono (`android:label`), "TE RECORDARÉ" arriba dentro de la app.
 - Chat con IA: lo que entiende la IA se guarda enseguida (activo) y se ofrece Modificar / Cancelar. Solapas "Último recordatorio" y "Chat completo". El dictado (`lib/features/chat/dictation.dart`) no tiene límite: se reinicia solo en cada pausa hasta Enviar o Cancelar.
-- Configuración es un menú: cada opción abre su pantalla.
+- El chat completo se guarda en el teléfono (`AppSettings.chatHistory`, clave `chat_history`, últimos 300 mensajes) y se puede borrar.
+- Ejemplos (`lib/features/chat/examples_sheet.dart`): botón con recuadro que abre la lista; son solo para leer, tocarlos no crea nada. Debajo, "Cargar a mano".
+- Listado → Pendientes tiene filtros Todos / De hoy / Pasados.
+- Configuración es un menú de recuadros: cada opción abre su pantalla.
 - Antes de subir: `flutter analyze` y `flutter test` sin errores.
 
 ## Plan por etapas

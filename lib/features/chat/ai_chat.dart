@@ -12,14 +12,7 @@ import '../ai/reminder_interpreter.dart';
 import '../reminders/reminder_editor.dart';
 import 'chat_screen.dart';
 import 'dictation.dart';
-
-class _Message {
-  const _Message(this.text, {this.mine = false, this.error = false});
-
-  final String text;
-  final bool mine;
-  final bool error;
-}
+import 'examples_sheet.dart';
 
 enum _Status { thinking, saved, canceled, question, error }
 
@@ -53,7 +46,7 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
   final _input = TextEditingController();
   final _dictation = Dictation();
   late final _tabs = TabController(length: 2, vsync: this);
-  final _history = <_Message>[];
+  List<ChatEntry> get _history => widget.settings.chatHistory;
 
   _Last? _last;
 
@@ -62,12 +55,6 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
 
   /// Si la IA hizo una pregunta, el pedido anterior para no perder contexto.
   String? _previousRequest;
-
-  static const _examples = [
-    'Recordame el viernes a las 9 de la mañana lavar el auto',
-    'Todos los lunes y jueves a las 19 ir al gimnasio',
-    'Mañana a las 20 llamar a Juan',
-  ];
 
   @override
   void initState() {
@@ -116,10 +103,8 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
     if (text.isEmpty || _thinking) return;
     _input.clear();
     _tabs.animateTo(0);
-    setState(() {
-      _history.add(_Message(text, mine: true));
-      _last = _Last(_Status.thinking, said: text);
-    });
+    widget.settings.addChat(ChatEntry(text, mine: true, at: DateTime.now()));
+    setState(() => _last = _Last(_Status.thinking, said: text));
 
     final request = _previousRequest == null
         ? text
@@ -164,10 +149,10 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
 
   void _show(_Last last, String message, {bool error = false}) {
     if (!mounted) return;
-    setState(() {
-      _last = last;
-      _history.add(_Message(message, error: error));
-    });
+    widget.settings.addChat(
+      ChatEntry(message, error: error, at: DateTime.now()),
+    );
+    setState(() => _last = last);
   }
 
   /// Anota la consulta para la sección de consumo de Configuración.
@@ -267,14 +252,19 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
               _LastView(
                 last: _last,
                 providerName: providerById(widget.settings.providerId).name,
-                examples: _examples,
-                onExample: _send,
+                onExamples: () => showExamples(context),
                 onManual: () => showReminderEditor(context),
                 onModify: _modify,
                 onCancel: _cancel,
                 onRestore: _restore,
               ),
-              _HistoryView(messages: _history),
+              _HistoryView(
+                messages: _history,
+                onClear: () async {
+                  await widget.settings.clearChat();
+                  setState(() {});
+                },
+              ),
             ],
           ),
         ),
@@ -310,13 +300,13 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
   }
 }
 
-/// Solapa "Último recordatorio": lo último que se pidió y cómo quedó.
+/// Solapa "Último recordatorio": lo último que se pidió y cómo quedó, todo
+/// a la vista sin tener que deslizar.
 class _LastView extends StatelessWidget {
   const _LastView({
     required this.last,
     required this.providerName,
-    required this.examples,
-    required this.onExample,
+    required this.onExamples,
     required this.onManual,
     required this.onModify,
     required this.onCancel,
@@ -325,8 +315,7 @@ class _LastView extends StatelessWidget {
 
   final _Last? last;
   final String providerName;
-  final List<String> examples;
-  final ValueChanged<String> onExample;
+  final VoidCallback onExamples;
   final VoidCallback onManual;
   final ValueChanged<Reminder> onModify;
   final ValueChanged<Reminder> onCancel;
@@ -338,6 +327,26 @@ class _LastView extends StatelessWidget {
     final scheme = theme.colorScheme;
     final last = this.last;
 
+    final shortcuts = Row(
+      children: [
+        Expanded(
+          child: _BoxButton(
+            icon: Icons.lightbulb_outline,
+            label: 'Ejemplos',
+            onPressed: onExamples,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _BoxButton(
+            icon: Icons.edit_note,
+            label: 'Cargar a mano',
+            onPressed: onManual,
+          ),
+        ),
+      ],
+    );
+
     if (last == null) {
       return ListView(
         padding: const EdgeInsets.all(16),
@@ -346,84 +355,131 @@ class _LastView extends StatelessWidget {
             'Tocá el micrófono y decime qué querés que te recuerde y cuándo.',
             style: theme.textTheme.bodyLarge,
           ),
-          const SizedBox(height: 12),
-          Text('Por ejemplo:', style: theme.textTheme.labelLarge),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final e in examples)
-                ActionChip(label: Text(e), onPressed: () => onExample(e)),
-              ActionChip(
-                avatar: const Icon(Icons.edit_note, size: 18),
-                label: const Text('Cargar a mano'),
-                onPressed: onManual,
-              ),
-            ],
-          ),
+          const SizedBox(height: 16),
+          shortcuts,
         ],
       );
     }
 
     final said = last.said;
+    final saidLine = said == null
+        ? null
+        : Text(
+            'Dijiste: “$said”',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontStyle: FontStyle.italic,
+            ),
+          );
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       children: [
-        if (said != null) ChatBubble(text: said, mine: true),
         switch (last.status) {
-          _Status.thinking => Row(
+          _Status.thinking => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              ?saidLine,
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 10),
+                  Text('Pensando con $providerName…'),
+                ],
               ),
-              const SizedBox(width: 10),
-              Text('Pensando con $providerName…'),
             ],
           ),
-          _Status.question => ChatBubble(text: last.text ?? ''),
-          _Status.error => ChatBubble(text: last.text ?? '', error: true),
+          _Status.question || _Status.error => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (saidLine != null) ...[saidLine, const SizedBox(height: 8)],
+              ChatBubble(
+                text: last.text ?? '',
+                error: last.status == _Status.error,
+              ),
+              if (last.status == _Status.question)
+                Text(
+                  'Respondeme con el micrófono o escribiendo.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
           _Status.saved => _ReminderCard(
             reminder: last.reminder!,
             active: true,
+            said: saidLine,
             actions: [
-              OutlinedButton.icon(
-                icon: const Icon(Icons.close),
-                label: const Text('Cancelar'),
-                onPressed: () => onCancel(last.reminder!),
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.close),
+                  label: const Text('Cancelar'),
+                  onPressed: () => onCancel(last.reminder!),
+                ),
               ),
-              FilledButton.tonalIcon(
-                icon: const Icon(Icons.edit),
-                label: const Text('Modificar'),
-                onPressed: () => onModify(last.reminder!),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Modificar'),
+                  onPressed: () => onModify(last.reminder!),
+                ),
               ),
             ],
           ),
           _Status.canceled => _ReminderCard(
             reminder: last.reminder!,
             active: false,
+            said: saidLine,
             actions: [
-              TextButton.icon(
-                icon: const Icon(Icons.undo),
-                label: const Text('Volver a activarlo'),
-                onPressed: () => onRestore(last.reminder!),
+              Expanded(
+                child: TextButton.icon(
+                  icon: const Icon(Icons.undo),
+                  label: const Text('Volver a activarlo'),
+                  onPressed: () => onRestore(last.reminder!),
+                ),
               ),
             ],
           ),
         },
-        if (last.status == _Status.question)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              'Respondeme con el micrófono o escribiendo.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
-          ),
+        const SizedBox(height: 12),
+        shortcuts,
       ],
+    );
+  }
+}
+
+/// Botón con recuadro (Ejemplos, Cargar a mano).
+class _BoxButton extends StatelessWidget {
+  const _BoxButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        side: BorderSide(color: scheme.primary.withValues(alpha: 0.5)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      icon: Icon(icon),
+      label: Text(label),
+      onPressed: onPressed,
     );
   }
 }
@@ -433,11 +489,13 @@ class _ReminderCard extends StatelessWidget {
     required this.reminder,
     required this.active,
     required this.actions,
+    this.said,
   });
 
   final Reminder reminder;
   final bool active;
   final List<Widget> actions;
+  final Widget? said;
 
   @override
   Widget build(BuildContext context) {
@@ -454,10 +512,11 @@ class _ReminderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (said != null) ...[said!, const SizedBox(height: 8)],
             Row(
               children: [
                 Icon(
@@ -474,18 +533,19 @@ class _ReminderCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               reminder.title,
-              style: theme.textTheme.titleLarge?.copyWith(
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
                 decoration: active ? null : TextDecoration.lineThrough,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(describeSchedule(reminder)),
             if (next != null) Text('Próximo: ${Fmt.when(next)}'),
-            const SizedBox(height: 12),
-            Wrap(spacing: 8, runSpacing: 8, children: actions),
+            const SizedBox(height: 10),
+            Row(children: actions),
           ],
         ),
       ),
@@ -493,24 +553,77 @@ class _ReminderCard extends StatelessWidget {
   }
 }
 
-/// Solapa "Chat completo": todo lo hablado en esta sesión.
+/// Solapa "Chat completo": todo lo hablado, guardado en el teléfono.
 class _HistoryView extends StatelessWidget {
-  const _HistoryView({required this.messages});
+  const _HistoryView({required this.messages, required this.onClear});
 
-  final List<_Message> messages;
+  final List<ChatEntry> messages;
+  final VoidCallback onClear;
+
+  Future<void> _confirmClear(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Borrar el chat?'),
+        content: const Text(
+          'Se borra solo la conversación. Los recordatorios quedan como están.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Borrar chat'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) onClear();
+  }
 
   @override
   Widget build(BuildContext context) {
     if (messages.isEmpty) {
       return const Center(child: Text('Todavía no hablamos.'));
     }
+    final theme = Theme.of(context);
+    final items = <Widget>[];
+    DateTime? day;
+    for (final m in messages) {
+      final d = DateTime(m.at.year, m.at.month, m.at.day);
+      if (d != day) {
+        day = d;
+        items.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Center(
+              child: Text(
+                Fmt.day(d),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      items.add(ChatBubble(text: m.text, mine: m.mine, error: m.error));
+    }
+    items.add(
+      Center(
+        child: TextButton.icon(
+          icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+          label: const Text('Borrar chat'),
+          onPressed: () => _confirmClear(context),
+        ),
+      ),
+    );
     return ListView(
       reverse: true,
       padding: const EdgeInsets.all(16),
-      children: [
-        for (final m in messages.reversed)
-          ChatBubble(text: m.text, mine: m.mine, error: m.error),
-      ],
+      children: items.reversed.toList(),
     );
   }
 }
@@ -616,15 +729,15 @@ class _Composer extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 72,
-          height: 72,
+          width: 64,
+          height: 64,
           child: FloatingActionButton.large(
             heroTag: 'mic',
             tooltip: 'Hablar',
             backgroundColor: scheme.secondary,
             foregroundColor: scheme.onSecondary,
             onPressed: busy || dictatingIntoField ? null : onTalk,
-            child: const Icon(Icons.mic, size: 34),
+            child: const Icon(Icons.mic, size: 30),
           ),
         ),
         const SizedBox(height: 2),

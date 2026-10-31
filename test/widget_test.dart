@@ -173,8 +173,9 @@ void main() {
     tester,
   ) async {
     final repo = MemoryReminderRepository();
+    final store = MemorySettingsStore();
     final settings = AppSettings(
-      MemorySettingsStore(),
+      store,
       MemoryKeyStore({'claude': 'sk-ant-prueba'}),
     );
     await settings.load(['claude']);
@@ -234,7 +235,76 @@ void main() {
     // En "Chat completo" está toda la conversación.
     await tester.tap(find.text('Chat completo'));
     await tester.pumpAndSettle();
-    expect(find.text('Recordame mañana a las 9 lavar el auto'), findsOneWidget);
+    expect(
+      find.text('Recordame mañana a las 9 lavar el auto', skipOffstage: false),
+      findsOneWidget,
+    );
+
+    // El chat queda guardado: al volver a abrir la app sigue estando.
+    final reopened = AppSettings(store, MemoryKeyStore());
+    await reopened.load(['claude']);
+    expect(
+      reopened.chatHistory.map((e) => e.text),
+      contains('Recordame mañana a las 9 lavar el auto'),
+    );
+    expect(reopened.chatHistory.first.mine, isTrue);
+  });
+
+  testWidgets('Ejemplos: se leen, pero tocarlos no crea nada', (tester) async {
+    final repo = MemoryReminderRepository();
+    final settings = AppSettings(
+      MemorySettingsStore(),
+      MemoryKeyStore({'claude': 'sk-ant-prueba'}),
+    );
+    await settings.load(['claude']);
+    await settings.setMode(UsageMode.ai);
+    final fake = _FakeProvider('{}');
+    await tester.pumpWidget(
+      RecordameApp(
+        reminders: repo,
+        settings: settings,
+        aiProviderOverride: fake,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Cargar a mano'), findsOneWidget);
+    await tester.tap(find.text('Ejemplos'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ejemplos y formas de pedirlo'), findsOneWidget);
+    expect(find.text('Una sola vez'), findsOneWidget);
+    await tester.tap(find.textContaining('Mañana a las 20 llamar a Juan'));
+    await tester.pumpAndSettle();
+    expect(fake.lastUser, isNull);
+    expect(await repo.watchAll().first, isEmpty);
+  });
+
+  testWidgets('Pendientes: filtra los de hoy y los pasados', (tester) async {
+    final now = DateTime.now();
+    await pumpApp(tester, [
+      Reminder(
+        title: 'Ayer vencido',
+        dueAt: now.subtract(const Duration(days: 1)),
+      ),
+      Reminder(title: 'Para mañana', dueAt: now.add(const Duration(days: 1))),
+      Reminder(
+        title: 'Hoy a la noche',
+        dueAt: DateTime(now.year, now.month, now.day, 23, 59),
+      ),
+    ]);
+    await tester.tap(find.text('Listado'));
+    await tester.pumpAndSettle();
+    expect(find.text('Todos (3)'), findsOneWidget);
+
+    await tester.tap(find.text('Pasados (1)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ayer vencido'), findsOneWidget);
+    expect(find.text('Para mañana'), findsNothing);
+    expect(find.text('Reprogramar'), findsOneWidget);
+
+    await tester.tap(find.textContaining('De hoy'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hoy a la noche'), findsOneWidget);
+    expect(find.text('Para mañana'), findsNothing);
   });
 
   testWidgets(
