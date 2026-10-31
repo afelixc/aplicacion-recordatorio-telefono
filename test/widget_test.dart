@@ -393,12 +393,48 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Inteligencia artificial'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Haiku 5.5'));
-    await tester.pumpAndSettle();
-    expect(find.text('Sonnet 5.5'), findsWidgets);
-    await tester.tap(find.text('Opus 5.5').last);
+    // Los tres modelos se ven con su explicación; tocar uno lo elige al toque.
+    expect(find.text('Haiku 5.5'), findsOneWidget);
+    expect(find.text('Sonnet 5.5'), findsOneWidget);
+    await tester.tap(find.text('Opus 5.5'));
     await tester.pumpAndSettle();
     expect(settings.modelFor('claude'), 'claude-opus-5-5');
+    expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+  });
+
+  testWidgets('Borrar la clave pide confirmación', (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = AppSettings(
+      MemorySettingsStore(),
+      MemoryKeyStore({'claude': 'sk-ant-prueba'}),
+    );
+    await settings.load(['claude']);
+    await settings.setMode(UsageMode.ai);
+    await tester.pumpWidget(
+      RecordameApp(
+        reminders: MemoryReminderRepository(),
+        settings: settings,
+        aiProviderOverride: _FakeProvider('{}'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Configuración'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Inteligencia artificial'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Borrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('¿Borrar la clave?'), findsOneWidget);
+    await tester.tap(find.text('No, dejarla'));
+    await tester.pumpAndSettle();
+    expect(settings.hasKey('claude'), isTrue);
+    await tester.tap(find.text('Borrar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sí, borrar'));
+    await tester.pumpAndSettle();
+    expect(settings.hasKey('claude'), isFalse);
   });
 }
 

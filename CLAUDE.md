@@ -26,6 +26,7 @@
 - Sonido de los avisos (Configuración → Notificaciones): 4 sonidos propios en `res/raw` (campanita, timbre, suave, alerta; protegidos en `keep.xml`) o uno del teléfono con el selector de Android (`MainActivity.kt`, canal `recordame/sonido`). Android no deja cambiar el sonido de un canal: cada cambio crea `recordatorios_<n>`, borra el anterior y hace `resync`. Elegido en SharedPreferences (`notif_channel`, `notif_sound_uri`, `notif_sound_name`).
 - Almanaque: deslizar a la izquierda = mes siguiente, a la derecha = anterior.
 - Configuración es un menú de recuadros: cada opción abre su pantalla.
+- Inteligencia artificial: recuadro "Proveedor y clave" (al entrar prueba la clave sola; verde = funcionando, rojo = error; Borrar pide confirmación), recuadro "Modelo" con los recomendados como tarjetas con explicación y costo cada 100 recordatorios, y "Ayuda".
 - Antes de subir: `flutter analyze` y `flutter test` sin errores.
 
 ## Plan por etapas

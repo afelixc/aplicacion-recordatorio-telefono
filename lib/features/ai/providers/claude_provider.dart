@@ -21,15 +21,15 @@ class ClaudeProvider implements AiProvider {
   List<(String, String)> get suggestedModels => const [
     (
       'claude-haiku-5-5',
-      'Haiku 5.5: rápido y el más económico. Para recordatorios alcanza y sobra (recomendado).',
+      'Haiku 5.5: el recomendado. Es el más rápido y el más económico; para entender recordatorios ("mañana a las 9 llamar a Juan", "todos los lunes…") alcanza y sobra.',
     ),
     (
       'claude-sonnet-5-5',
-      'Sonnet 5.5: intermedio. Unas 20 veces más caro que Haiku.',
+      'Sonnet 5.5: intermedio. Entiende mejor pedidos largos o enredados, pero sale unas 20 veces más que Haiku y tarda un poco más.',
     ),
     (
       'claude-opus-5-5',
-      'Opus 5.5: el más capaz, pensado para tareas difíciles. Unas 40 veces más caro que Haiku; para recordatorios no hace falta.',
+      'Opus 5.5: el más capaz de Claude, pensado para tareas difíciles (programar, analizar documentos largos). Sale unas 40 veces más que Haiku; para recordatorios no hace falta.',
     ),
   ];
   @override
