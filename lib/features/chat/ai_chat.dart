@@ -344,6 +344,7 @@ class _LastView extends StatelessWidget {
             icon: Icons.edit_note,
             label: 'Cargar a mano',
             onPressed: onManual,
+            filled: true,
           ),
         ),
       ],
@@ -464,11 +465,15 @@ class _BoxButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onPressed,
+    this.filled = false,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
+
+  /// Fondo amarillo claro (el amarillo fuerte queda para el micrófono).
+  final bool filled;
 
   @override
   Widget build(BuildContext context) {
@@ -476,7 +481,15 @@ class _BoxButton extends StatelessWidget {
     return OutlinedButton.icon(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
-        side: BorderSide(color: scheme.primary.withValues(alpha: 0.5)),
+        backgroundColor: filled
+            ? scheme.secondary.withValues(alpha: 0.18)
+            : null,
+        foregroundColor: filled ? scheme.onSurface : null,
+        side: BorderSide(
+          color: filled
+              ? scheme.secondary.withValues(alpha: 0.7)
+              : scheme.primary.withValues(alpha: 0.5),
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       icon: Icon(icon),
