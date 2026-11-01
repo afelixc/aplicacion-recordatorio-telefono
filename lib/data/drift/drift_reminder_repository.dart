@@ -53,6 +53,7 @@ class DriftReminderRepository implements ReminderRepository {
       completedAt: Value(reminder.completedAt),
       lastDoneAt: Value(reminder.lastDoneAt),
       snoozedUntil: Value(reminder.snoozedUntil),
+      calendarEventId: Value(reminder.calendarEventId),
       updatedAt: Value(DateTime.now()),
     );
     if (reminder.id == null) {

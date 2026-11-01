@@ -8,6 +8,7 @@ import '../ai/ai_providers.dart';
 import '../help/modes_help.dart';
 import 'ai_section.dart';
 import 'backup_section.dart';
+import 'calendar_section.dart';
 import 'notifications_section.dart';
 import 'usage_section.dart';
 
@@ -104,14 +105,24 @@ class SettingsScreen extends StatelessWidget {
                   child: BackupSection(backup: scope.backup!),
                 ),
               ),
-            const _BoxedTile(
-              child: ListTile(
-                enabled: false,
-                leading: CircleAvatar(child: Icon(Icons.schedule)),
-                title: Text('Próximamente'),
-                subtitle: Text('Sincronizar con Google Calendar'),
+            if (scope.calendar != null)
+              _MenuItem(
+                icon: Icons.calendar_month,
+                title: 'Google Calendar',
+                subtitle: switch ((
+                  settings.calendarSend,
+                  settings.calendarAuto,
+                )) {
+                  (true, true) => 'Sincronizado en los dos sentidos',
+                  (true, false) => 'Envía tus recordatorios al calendario',
+                  (false, true) => 'Trae lo nuevo del calendario',
+                  _ => 'Traer y enviar al calendario del teléfono',
+                },
+                page: (_) => _Page(
+                  title: 'Google Calendar',
+                  child: CalendarSection(sync: scope.calendar!),
+                ),
               ),
-            ),
             const SizedBox(height: 16),
             const _VersionFooter(),
           ],

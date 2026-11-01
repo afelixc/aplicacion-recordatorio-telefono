@@ -168,6 +168,55 @@ class AppSettings extends ChangeNotifier {
     jsonEncode([for (final e in chatHistory) e.toJson()]),
   );
 
+  // --- Google Calendar (el calendario del teléfono) ---
+
+  String? calendarId;
+  String? calendarName;
+
+  /// De Recordame → al calendario.
+  bool calendarSend = false;
+
+  /// Del calendario → a Recordame, automático.
+  bool calendarAuto = false;
+
+  /// Eventos que ya se vieron (para traer solo los nuevos).
+  final Set<String> calendarKnown = {};
+
+  Future<void> setCalendar(String id, String name) async {
+    calendarId = id;
+    calendarName = name;
+    notifyListeners();
+    await _store.write('cal_id', id);
+    await _store.write('cal_name', name);
+  }
+
+  Future<void> setCalendarSend(bool value) async {
+    calendarSend = value;
+    notifyListeners();
+    await _store.write('cal_send', '$value');
+  }
+
+  Future<void> setCalendarAuto(
+    bool value, {
+    Iterable<String> known = const [],
+  }) async {
+    calendarAuto = value;
+    calendarKnown
+      ..clear()
+      ..addAll(known);
+    notifyListeners();
+    await _store.write('cal_auto', '$value');
+    await _saveKnown();
+  }
+
+  Future<void> addCalendarKnown(Iterable<String> ids) async {
+    calendarKnown.addAll(ids);
+    await _saveKnown();
+  }
+
+  Future<void> _saveKnown() =>
+      _store.write('cal_known', jsonEncode(calendarKnown.toList()));
+
   // --- Copia de seguridad ---
 
   /// Archivo elegido para la copia (dirección de Android) y su nombre.
@@ -232,6 +281,19 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> load(Iterable<String> providerIds) async {
+    calendarId = await _store.read('cal_id');
+    calendarName = await _store.read('cal_name');
+    calendarSend = await _store.read('cal_send') == 'true';
+    calendarAuto = await _store.read('cal_auto') == 'true';
+    try {
+      calendarKnown
+        ..clear()
+        ..addAll(
+          ((jsonDecode(await _store.read('cal_known') ?? '[]') as List)).map(
+            (e) => '$e',
+          ),
+        );
+    } catch (_) {}
     backupUri = await _store.read('backup_uri');
     backupName = await _store.read('backup_name');
     backupLast = DateTime.tryParse(await _store.read('backup_last') ?? '');

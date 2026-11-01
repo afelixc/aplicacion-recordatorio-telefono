@@ -94,36 +94,53 @@ class _BackupSectionState extends State<BackupSection> {
 
   Future<void> _confirmRestore(BackupContents contents) async {
     final pending = contents.reminders.where((r) => !r.done).length;
-    final yes = await showDialog<bool>(
+    final now = (await widget.backup.reminders.watchAll().first).length;
+    if (!mounted) return;
+    final total = contents.reminders.length;
+    final choice = await showDialog<_Restore>(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.restore),
         title: const Text('¿Recuperar esta copia?'),
         content: Text(
           'Copia del ${Fmt.day(contents.createdAt)} a las '
-          '${Fmt.time(contents.createdAt)}, con '
-          '${contents.reminders.length} recordatorios ($pending pendientes).\n\n'
-          'Los recordatorios que hay ahora en el teléfono se reemplazan por '
-          'los de la copia.',
+          '${Fmt.time(contents.createdAt)}, con $total recordatorios '
+          '($pending pendientes).\nAhora en el teléfono tenés $now.',
         ),
+        actionsOverflowDirection: VerticalDirection.down,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
+          _ChoiceButton(
+            key: const Key('restore-merge'),
+            primary: true,
+            title: 'Sumar los de la copia',
+            detail: 'No borra nada: agrega los que faltan',
+            onPressed: () => Navigator.pop(context, _Restore.merge),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sí, recuperar'),
+          _ChoiceButton(
+            key: const Key('restore-replace'),
+            title: 'Reemplazar todo por la copia',
+            detail: 'Borra los $now del teléfono y deja los $total de la copia',
+            onPressed: () => Navigator.pop(context, _Restore.replace),
+          ),
+          Center(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar (no cambia nada)'),
+            ),
           ),
         ],
       ),
     );
-    if (yes != true) return;
+    if (choice == null) return;
     await _run(() async {
-      await widget.backup.restore(contents);
+      final merge = choice == _Restore.merge;
+      final added = await widget.backup.restore(contents, merge: merge);
       _say(
-        'Listo ✓ Recuperé ${contents.reminders.length} recordatorios. '
-        'Si usás la IA, volvé a cargar la clave.',
+        merge
+            ? 'Listo ✓ Sumé $added de la copia. '
+                  '${total - added == 0 ? '' : 'Los ${total - added} que ya estaban no se repitieron.'}'
+            : 'Listo ✓ Ahora tenés los $total de la copia. '
+                  'Si usás la IA, volvé a cargar la clave.',
       );
     });
   }
@@ -285,6 +302,53 @@ class _Status extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+enum _Restore { merge, replace }
+
+/// Botón ancho con título y una línea que explica qué hace.
+class _ChoiceButton extends StatelessWidget {
+  const _ChoiceButton({
+    super.key,
+    required this.title,
+    required this.detail,
+    required this.onPressed,
+    this.primary = false,
+  });
+
+  final String title;
+  final String detail;
+  final VoidCallback onPressed;
+  final bool primary;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          Text(title, textAlign: TextAlign.center),
+          Text(
+            detail,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+          ),
+        ],
+      ),
+    );
+    final style = ButtonStyle(
+      minimumSize: const WidgetStatePropertyAll(Size.fromHeight(52)),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+    return SizedBox(
+      width: double.infinity,
+      child: primary
+          ? FilledButton(style: style, onPressed: onPressed, child: child)
+          : OutlinedButton(style: style, onPressed: onPressed, child: child),
     );
   }
 }

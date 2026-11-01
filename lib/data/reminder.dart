@@ -32,7 +32,8 @@ class Reminder {
   /// Aviso pospuesto de uno que se repite (en los que no se repiten se mueve [dueAt]).
   final DateTime? snoozedUntil;
 
-  /// Id del evento en Google Calendar (segunda etapa; por ahora siempre null).
+  /// Id del evento en el calendario del teléfono (varios separados por coma
+  /// en "días puntuales"), o null si no está en el calendario.
   final String? calendarEventId;
 
   bool get repeats => recurrence.repeats;
@@ -54,6 +55,8 @@ class Reminder {
     DateTime? lastDoneAt,
     DateTime? snoozedUntil,
     bool clearSnoozedUntil = false,
+    String? calendarEventId,
+    bool clearCalendarEventId = false,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -66,7 +69,9 @@ class Reminder {
       snoozedUntil: clearSnoozedUntil
           ? null
           : snoozedUntil ?? this.snoozedUntil,
-      calendarEventId: calendarEventId,
+      calendarEventId: clearCalendarEventId
+          ? null
+          : calendarEventId ?? this.calendarEventId,
     );
   }
 }

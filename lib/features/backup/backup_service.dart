@@ -216,13 +216,24 @@ class BackupService {
     );
   }
 
-  /// Reemplaza los recordatorios del teléfono por los de la copia.
-  Future<void> restore(BackupContents c) async {
-    for (final r in await reminders.watchAll().first) {
-      await reminders.delete(r.id!);
+  /// Recupera la copia. Con [merge] suma los que faltan sin borrar nada
+  /// (y deja las preferencias como están); si no, reemplaza todo.
+  /// Devuelve cuántos recordatorios agregó.
+  Future<int> restore(BackupContents c, {bool merge = false}) async {
+    final current = await reminders.watchAll().first;
+    if (!merge) {
+      for (final r in current) {
+        await reminders.delete(r.id!);
+      }
     }
+    String key(Reminder r) =>
+        '${r.title.trim().toLowerCase()}|${r.dueAt.toIso8601String()}';
+    final have = merge ? {for (final r in current) key(r)} : <String>{};
+    var added = 0;
     for (final r in c.reminders) {
+      if (!have.add(key(r))) continue;
       await reminders.save(r);
+      added++;
     }
     // El consumo se suma sin repetir las consultas que ya estaban.
     final had = {
@@ -232,7 +243,8 @@ class BackupService {
     for (final u in c.usage) {
       if (!had.contains(u.at.toIso8601String())) await usage.record(u);
     }
-    await settings.importPrefs(c.prefs, c.chat, _providerIds);
+    if (!merge) await settings.importPrefs(c.prefs, c.chat, _providerIds);
+    return added;
   }
 
   // --- Formato ---

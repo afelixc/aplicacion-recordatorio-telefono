@@ -199,7 +199,8 @@ void main() {
     await tester.tap(find.byKey(const Key('backup-restore')));
     await tester.pumpAndSettle();
     expect(find.text('¿Recuperar esta copia?'), findsOneWidget);
-    await tester.tap(find.text('Sí, recuperar'));
+    expect(find.text('Cancelar (no cambia nada)'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('restore-replace')));
     await tester.pumpAndSettle();
     expect((await repo.watchAll().first).single.title, 'Pagar la luz');
   });

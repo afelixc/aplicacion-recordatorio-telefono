@@ -13,6 +13,8 @@ import 'data/reminder.dart';
 import 'data/scheduling_reminder_repository.dart';
 import 'features/ai/ai_providers.dart';
 import 'features/backup/backup_service.dart';
+import 'features/calendar_sync/calendar_sync.dart';
+import 'features/calendar_sync/device_calendar.dart';
 import 'features/notifications/notification_service.dart';
 import 'features/notifications/reminder_actions.dart';
 import 'features/notifications/reminder_scheduler.dart';
@@ -46,8 +48,12 @@ Future<void> main() async {
   final notifications = NotificationService.instance;
   await notifications.init();
   final db = AppDatabase();
+  final calendar = CalendarSync(
+    calendar: AndroidDeviceCalendar(),
+    settings: settings,
+  );
   final reminders = SchedulingReminderRepository(
-    DriftReminderRepository(db),
+    CalendarSyncRepository(DriftReminderRepository(db), calendar),
     notifications,
   );
   notifications.foregroundActions = ReminderActions(reminders);
@@ -65,6 +71,7 @@ Future<void> main() async {
       settings: settings,
       usage: usage,
       backup: backup,
+      calendar: calendar,
       notifications: notifications,
       openedReminders: notifications.openedReminders,
       launchReminderId: notifications.launchReminderId,
@@ -75,9 +82,17 @@ Future<void> main() async {
   await notifications.requestPermission();
   await reminders.resync();
 
-  // Copia automática: una vez por día, al abrir o volver a la app.
-  await backup.autoBackup();
-  _lifecycle = AppLifecycleListener(onResume: backup.autoBackup);
+  // Al abrir o volver a la app: traer lo nuevo del calendario (si está
+  // prendido) y la copia automática una vez por día.
+  Future<void> refresh() async {
+    try {
+      await calendar.autoImport(reminders);
+    } catch (_) {}
+    await backup.autoBackup();
+  }
+
+  await refresh();
+  _lifecycle = AppLifecycleListener(onResume: refresh);
 }
 
 // ignore: unused_element

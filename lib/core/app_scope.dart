@@ -4,6 +4,7 @@ import '../data/reminder_repository.dart';
 import '../data/usage.dart';
 import '../features/ai/ai_provider.dart';
 import '../features/backup/backup_service.dart';
+import '../features/calendar_sync/calendar_sync.dart';
 import '../features/notifications/notification_service.dart';
 import 'settings.dart';
 
@@ -17,6 +18,7 @@ class AppScope extends InheritedWidget {
     this.notifications,
     this.aiProviderOverride,
     this.backup,
+    this.calendar,
     required super.child,
   });
 
@@ -32,6 +34,9 @@ class AppScope extends InheritedWidget {
   /// Copia de seguridad (null en la vista web).
   final BackupService? backup;
 
+  /// Google Calendar del teléfono (null en la vista web).
+  final CalendarSync? calendar;
+
   /// Solo para las pruebas: reemplaza al proveedor de IA real.
   final AiProvider? aiProviderOverride;
 
@@ -44,5 +49,6 @@ class AppScope extends InheritedWidget {
       settings != oldWidget.settings ||
       usage != oldWidget.usage ||
       notifications != oldWidget.notifications ||
-      backup != oldWidget.backup;
+      backup != oldWidget.backup ||
+      calendar != oldWidget.calendar;
 }
