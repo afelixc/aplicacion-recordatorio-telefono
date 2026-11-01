@@ -49,6 +49,11 @@ jobs:
             fi
             printf 'storeFile=app/firma.jks\nstorePassword=%s\nkeyAlias=recordame\nkeyPassword=%s\n' "$FIRMA_CLAVE" "$FIRMA_CLAVE" > android/key.properties
             echo "FIRMADO=si" >> "$GITHUB_ENV"
+            # Huella pública de la firma (no es secreta): la pide Google para
+            # autorizar la app a usar Google Calendar / Drive.
+            SHA1=$(keytool -list -v -keystore android/app/firma.jks -alias recordame -storepass "$FIRMA_CLAVE" | grep -m1 'SHA1:' | sed 's/.*SHA1: *//')
+            echo "::notice title=Huella SHA-1 de la firma::$SHA1"
+            echo "Huella SHA-1 de la firma: \`$SHA1\`" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "::warning::Falta el secret FIRMA_BASE64: el APK sale con firma de prueba, no se publica y no se podrá actualizar encima de otra versión."
           fi
