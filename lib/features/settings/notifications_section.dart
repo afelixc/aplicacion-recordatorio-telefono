@@ -5,6 +5,7 @@ import '../../data/reminder_repository.dart';
 import '../../data/scheduling_reminder_repository.dart';
 import '../notifications/notification_service.dart';
 import '../notifications/notification_sound.dart';
+import 'battery_help.dart';
 
 /// Estado de las notificaciones, accesos a los ajustes de Android y avisos de prueba.
 class NotificationsSection extends StatefulWidget {
@@ -130,10 +131,7 @@ class _NotificationsSectionState extends State<NotificationsSection>
                 OutlinedButton.icon(
                   icon: const Icon(Icons.battery_saver_outlined),
                   label: const Text('Evitar que el teléfono cierre la app'),
-                  onPressed: () => _run(
-                    service.openBatterySettings,
-                    'Elegí "Permitir" o "Sin restricciones".',
-                  ),
+                  onPressed: () => showBatteryHelp(context),
                 ),
                 const SizedBox(height: 16),
                 Text('Probar', style: theme.textTheme.labelLarge),

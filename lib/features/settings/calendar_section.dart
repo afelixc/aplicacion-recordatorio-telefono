@@ -6,6 +6,7 @@ import '../../core/settings.dart';
 import '../../data/reminder.dart';
 import '../calendar_sync/calendar_sync.dart';
 import '../calendar_sync/device_calendar.dart';
+import 'battery_help.dart';
 import 'settings_screen.dart';
 
 /// Configuración → Google Calendar: usa el calendario que ya está en el
@@ -202,7 +203,7 @@ class _CalendarSectionState extends State<CalendarSection> {
         );
       }
     } else {
-      await _settings.setCalendarAuto(false);
+      await widget.sync.stopAuto();
     }
   }
 
@@ -378,8 +379,8 @@ class _CalendarSectionState extends State<CalendarSection> {
                 s.calendarAuto
                     ? 'Prendido: lo nuevo que anotes en '
                           '${s.calendarName ?? 'tu calendario'}, aunque sea '
-                          'desde la compu, aparece en Recordame y te avisa. '
-                          'Se revisa cada vez que abrís la app.'
+                          'desde la compu, aparece en Recordame y te avisa, '
+                          'aunque la app esté cerrada.'
                     : 'Apagado: solo se trae lo que elijas arriba.',
               ),
               value: s.calendarAuto,
@@ -393,6 +394,7 @@ class _CalendarSectionState extends State<CalendarSection> {
                     '⇄ Con el 2 y el 4 prendidos queda sincronizado en los '
                     'dos sentidos.',
               ),
+            if (s.calendarAuto) const _BatteryHint(),
             if (s.calendarAuto)
               const _Box(
                 color: Color(0xFF6B5418),
@@ -571,6 +573,74 @@ class _Box extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+/// Si Android puede frenar a Recordame, lo avisa con un botón para arreglarlo.
+class _BatteryHint extends StatefulWidget {
+  const _BatteryHint();
+
+  @override
+  State<_BatteryHint> createState() => _BatteryHintState();
+}
+
+class _BatteryHintState extends State<_BatteryHint>
+    with WidgetsBindingObserver {
+  bool _free = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _check();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _check();
+  }
+
+  Future<void> _check() async {
+    final free = await AndroidDeviceCalendar.batteryFree();
+    if (mounted) setState(() => _free = free);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_free) return const SizedBox.shrink();
+    const color = Color(0xFF6B5418);
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4D6),
+        border: Border.all(color: color, width: 1.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Para que funcione con la app cerrada, el teléfono no tiene que '
+            'frenar a Recordame para ahorrar batería.',
+            style: TextStyle(color: color, fontWeight: FontWeight.w600),
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.battery_saver_outlined),
+            label: const Text('Evitar que el teléfono cierre la app'),
+            onPressed: () async {
+              await showBatteryHelp(context);
+              _check();
+            },
+          ),
+        ],
       ),
     );
   }

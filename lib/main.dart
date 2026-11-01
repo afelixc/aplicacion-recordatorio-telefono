@@ -1,4 +1,7 @@
+import 'dart:ui' show DartPluginRegistrant;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -86,6 +89,7 @@ Future<void> main() async {
   // prendido) y la copia automática una vez por día.
   Future<void> refresh() async {
     try {
+      await calendar.ensureBackground();
       await calendar.autoImport(reminders);
     } catch (_) {}
     await backup.autoBackup();
@@ -97,6 +101,40 @@ Future<void> main() async {
 
 // ignore: unused_element
 AppLifecycleListener? _lifecycle;
+
+/// Revisión del calendario con la app cerrada: la arranca Android
+/// (CalendarWorker.kt) cuando cambia el calendario y cada 15 minutos. Trae lo
+/// nuevo, programa sus avisos y termina.
+@pragma('vm:entry-point')
+Future<void> calendarBackground() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+  AppDatabase? db;
+  try {
+    await initializeDateFormatting(Fmt.locale);
+    final settings = AppSettings(PrefsSettingsStore(), SecureKeyStore());
+    await settings.load(aiProviders.map((p) => p.id));
+    final calendar = CalendarSync(
+      calendar: AndroidDeviceCalendar(),
+      settings: settings,
+    );
+    if (settings.calendarAuto) {
+      final notifications = NotificationService.instance;
+      await notifications.init();
+      db = AppDatabase();
+      final reminders = SchedulingReminderRepository(
+        CalendarSyncRepository(DriftReminderRepository(db), calendar),
+        notifications,
+      );
+      await calendar.autoImport(reminders);
+    }
+  } catch (_) {
+    // Se intenta de nuevo en la próxima revisión.
+  } finally {
+    await db?.close();
+    await const MethodChannel('recordame/fondo').invokeMethod('listo');
+  }
+}
 
 List<Reminder> _sampleReminders() {
   final now = DateTime.now();

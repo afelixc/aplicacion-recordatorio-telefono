@@ -132,6 +132,17 @@ class CalendarSync {
   Future<void> startAuto() async {
     final ids = (await upcoming(autoWindow)).map((e) => e.id);
     await settings.setCalendarAuto(true, known: ids);
+    await calendar.scheduleBackground();
+  }
+
+  Future<void> stopAuto() async {
+    await settings.setCalendarAuto(false);
+    await calendar.cancelBackground();
+  }
+
+  /// Al abrir la app: si está prendido, que siga revisando con la app cerrada.
+  Future<void> ensureBackground() async {
+    if (settings.calendarAuto) await calendar.scheduleBackground();
   }
 
   /// Trae lo nuevo del calendario (al abrir o volver a la app).

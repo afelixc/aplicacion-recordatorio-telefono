@@ -9,6 +9,7 @@ import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/data/reminder.dart';
 import 'package:recordame/features/calendar_sync/calendar_sync.dart';
 import 'package:recordame/features/calendar_sync/device_calendar.dart';
+import 'package:recordame/features/settings/battery_help.dart';
 
 /// Un calendario de mentira, en memoria.
 class FakeCalendar implements DeviceCalendar {
@@ -78,6 +79,11 @@ class FakeCalendar implements DeviceCalendar {
 
   @override
   Future<void> delete(String id) async => stored.remove(id);
+  bool background = false;
+  @override
+  Future<void> scheduleBackground() async => background = true;
+  @override
+  Future<void> cancelBackground() async => background = false;
 }
 
 Future<
@@ -182,6 +188,11 @@ void main() {
     await sync.settings.setCalendar('1', 'yo');
     cal.add('1', 'Viejo', at);
     await sync.startAuto();
+    expect(
+      cal.background,
+      isTrue,
+      reason: 'sigue revisando con la app cerrada',
+    );
     expect(await sync.autoImport(repo), 0);
     cal.add('2', 'Nuevo desde la compu', at.add(const Duration(hours: 2)));
     expect(await sync.autoImport(repo), 1);
@@ -239,5 +250,25 @@ void main() {
     final titles = (await repo.watchAll().first).map((r) => r.title);
     expect(titles, containsAll(['Uno', 'Dentista']));
     expect(titles, isNot(contains('Asado')));
+  });
+
+  testWidgets('batería: explica para qué sirve y se pone verde', (
+    tester,
+  ) async {
+    var free = false;
+    await tester.pumpWidget(
+      MaterialApp(home: BatteryHelpPage(check: () async => free)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Android puede frenar a Recordame'), findsOneWidget);
+    expect(
+      find.textContaining('Google Calendar con la app cerrada'),
+      findsOneWidget,
+    );
+    expect(find.text('Samsung', skipOffstage: false), findsOneWidget);
+    free = true;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text('Listo ✓ Sin restricciones'), findsOneWidget);
   });
 }

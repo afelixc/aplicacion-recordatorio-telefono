@@ -59,6 +59,10 @@ abstract class DeviceCalendar {
   );
   Future<bool> update(String id, String title, DateTime start, String? rrule);
   Future<void> delete(String id);
+
+  /// Revisar el calendario con la app cerrada (al cambiar y cada 15 minutos).
+  Future<void> scheduleBackground();
+  Future<void> cancelBackground();
 }
 
 class AndroidDeviceCalendar implements DeviceCalendar {
@@ -151,4 +155,19 @@ class AndroidDeviceCalendar implements DeviceCalendar {
 
   @override
   Future<void> delete(String id) => _channel.invokeMethod('borrar', {'id': id});
+
+  @override
+  Future<void> scheduleBackground() => _channel.invokeMethod('programarFondo');
+
+  @override
+  Future<void> cancelBackground() => _channel.invokeMethod('cancelarFondo');
+
+  /// Si Android deja a Recordame funcionar sin restricciones de batería.
+  static Future<bool> batteryFree() async {
+    try {
+      return await _channel.invokeMethod<bool>('bateriaLibre') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

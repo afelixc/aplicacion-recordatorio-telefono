@@ -2,11 +2,7 @@ package com.afelixc.recordame
 
 import android.Manifest
 import android.app.Activity
-import android.content.ContentUris
-import android.content.ContentValues
 import android.content.pm.PackageManager
-import android.provider.CalendarContract
-import java.util.TimeZone
 import android.content.Intent
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -88,143 +84,21 @@ class MainActivity : FlutterActivity() {
         checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED &&
             checkSelfPermission(Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED
 
-    private fun background(result: MethodChannel.Result, work: () -> Any?) {
-        Thread {
-            try {
-                val value = work()
-                handler.post { result.success(value) }
-            } catch (e: SecurityException) {
-                handler.post { result.error("sin_permiso", "Falta el permiso de calendario", null) }
-            } catch (e: Exception) {
-                handler.post { result.error("error", e.message, null) }
-            }
-        }.start()
-    }
-
     private fun onCalendar(method: String, call: io.flutter.plugin.common.MethodCall, result: MethodChannel.Result) {
-        when (method) {
-            "tienePermiso" -> result.success(hasCalendarPermission())
-            "pedirPermiso" -> {
-                if (hasCalendarPermission()) {
-                    result.success(true)
-                    return
-                }
-                pendingPermission?.success(false)
-                pendingPermission = result
-                requestPermissions(
-                    arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
-                    calendarPermissionRequest,
-                )
-            }
-            "calendarios" -> background(result) { listCalendars() }
-            "eventos" -> background(result) {
-                listEvents(
-                    (call.argument<Number>("calendario") ?: 0).toLong(),
-                    (call.argument<Number>("desde") ?: 0).toLong(),
-                    (call.argument<Number>("hasta") ?: 0).toLong(),
-                )
-            }
-            "crear" -> background(result) {
-                val values = eventValues(call)
-                values.put(CalendarContract.Events.CALENDAR_ID, (call.argument<Number>("calendario") ?: 0).toLong())
-                values.put(CalendarContract.Events.DESCRIPTION, "Creado por Recordame")
-                // Sin avisos de Google Calendar: avisa Recordame.
-                values.put(CalendarContract.Events.HAS_ALARM, 0)
-                val uri = contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
-                uri?.lastPathSegment
-            }
-            "actualizar" -> background(result) {
-                val id = (call.argument<String>("id") ?: "0").toLong()
-                val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id)
-                contentResolver.update(uri, eventValues(call), null, null) > 0
-            }
-            "borrar" -> background(result) {
-                val id = (call.argument<String>("id") ?: "0").toLong()
-                val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id)
-                contentResolver.delete(uri, null, null) > 0
-            }
-            else -> result.notImplemented()
+        if (method != "pedirPermiso") {
+            CalendarChannel(applicationContext).handle(call, result)
+            return
         }
-    }
-
-    private fun eventValues(call: io.flutter.plugin.common.MethodCall): ContentValues {
-        val start = (call.argument<Number>("inicio") ?: 0).toLong()
-        val rrule = call.argument<String>("rrule")
-        return ContentValues().apply {
-            put(CalendarContract.Events.TITLE, call.argument<String>("titulo") ?: "")
-            put(CalendarContract.Events.DTSTART, start)
-            put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getDefault().id)
-            if (rrule != null) {
-                put(CalendarContract.Events.RRULE, rrule)
-                put(CalendarContract.Events.DURATION, "PT30M")
-                putNull(CalendarContract.Events.DTEND)
-            } else {
-                putNull(CalendarContract.Events.RRULE)
-                putNull(CalendarContract.Events.DURATION)
-                put(CalendarContract.Events.DTEND, start + 30 * 60 * 1000)
-            }
+        if (hasCalendarPermission()) {
+            result.success(true)
+            return
         }
-    }
-
-    private fun listCalendars(): List<Map<String, Any?>> {
-        val out = mutableListOf<Map<String, Any?>>()
-        val projection = arrayOf(
-            CalendarContract.Calendars._ID,
-            CalendarContract.Calendars.CALENDAR_DISPLAY_NAME,
-            CalendarContract.Calendars.ACCOUNT_NAME,
-            CalendarContract.Calendars.IS_PRIMARY,
-            CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+        pendingPermission?.success(false)
+        pendingPermission = result
+        requestPermissions(
+            arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+            calendarPermissionRequest,
         )
-        contentResolver.query(CalendarContract.Calendars.CONTENT_URI, projection, null, null, null)?.use { c ->
-            while (c.moveToNext()) {
-                val access = c.getInt(4)
-                if (access < CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR) continue
-                out.add(
-                    mapOf(
-                        "id" to c.getLong(0),
-                        "nombre" to (c.getString(1) ?: ""),
-                        "cuenta" to (c.getString(2) ?: ""),
-                        "principal" to (c.getInt(3) == 1),
-                    ),
-                )
-            }
-        }
-        return out
-    }
-
-    private fun listEvents(calendar: Long, from: Long, to: Long): List<Map<String, Any?>> {
-        val out = mutableListOf<Map<String, Any?>>()
-        val uri = CalendarContract.Instances.CONTENT_URI.buildUpon().also {
-            ContentUris.appendId(it, from)
-            ContentUris.appendId(it, to)
-        }.build()
-        val projection = arrayOf(
-            CalendarContract.Instances.EVENT_ID,
-            CalendarContract.Instances.TITLE,
-            CalendarContract.Instances.BEGIN,
-            CalendarContract.Instances.ALL_DAY,
-            CalendarContract.Instances.RRULE,
-        )
-        contentResolver.query(
-            uri,
-            projection,
-            "${CalendarContract.Instances.CALENDAR_ID} = ?",
-            arrayOf(calendar.toString()),
-            "${CalendarContract.Instances.BEGIN} ASC",
-        )?.use { c ->
-            while (c.moveToNext()) {
-                out.add(
-                    mapOf(
-                        "id" to c.getLong(0).toString(),
-                        "titulo" to (c.getString(1) ?: ""),
-                        "inicio" to c.getLong(2),
-                        "todoElDia" to (c.getInt(3) == 1),
-                        "repite" to !c.getString(4).isNullOrEmpty(),
-                    ),
-                )
-            }
-        }
-        return out
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

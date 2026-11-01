@@ -173,20 +173,6 @@ class NotificationService implements ReminderScheduler {
     arguments: {'android.provider.extra.APP_PACKAGE': _package},
   ).launch();
 
-  /// Pide que Android no cierre la app para ahorrar batería.
-  Future<void> openBatterySettings() async {
-    try {
-      await const AndroidIntent(
-        action: 'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
-        data: 'package:$_package',
-      ).launch();
-    } catch (_) {
-      await const AndroidIntent(
-        action: 'android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS',
-      ).launch();
-    }
-  }
-
   /// Pide permiso para mostrar notificaciones (Android 13 en adelante).
   Future<bool> requestPermission() async =>
       await _android?.requestNotificationsPermission() ?? true;
