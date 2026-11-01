@@ -7,12 +7,20 @@ class PhoneCalendar {
     required this.name,
     required this.account,
     this.primary = false,
+    this.writable = true,
+    this.synced = true,
   });
 
   final String id;
   final String name;
   final String account;
   final bool primary;
+
+  /// Si se pueden anotar eventos. Los compartidos "solo para ver", no.
+  final bool writable;
+
+  /// Si el teléfono lo mantiene al día con la cuenta.
+  final bool synced;
 
   /// Cómo se muestra en la lista.
   String get label =>
@@ -86,6 +94,8 @@ class AndroidDeviceCalendar implements DeviceCalendar {
           name: '${c['nombre']}',
           account: '${c['cuenta']}',
           primary: c['principal'] == true,
+          writable: c['escribir'] != false,
+          synced: c['sincroniza'] != false,
         ),
     ];
   }

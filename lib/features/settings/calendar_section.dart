@@ -87,8 +87,9 @@ class _CalendarSectionState extends State<CalendarSection> {
       final current = list.where((c) => c.id == _settings.calendarId);
       if (current.isEmpty && list.isNotEmpty) {
         final pick = list.firstWhere(
-          (c) => c.primary,
-          orElse: () => list.first,
+          (c) => c.primary && c.writable,
+          orElse: () =>
+              list.firstWhere((c) => c.writable, orElse: () => list.first),
         );
         await _settings.setCalendar(pick.id, pick.label);
       }
@@ -255,7 +256,11 @@ class _CalendarSectionState extends State<CalendarSection> {
     }
 
     final calendars = _calendars;
-    final both = s.calendarSend && s.calendarAuto;
+    final current = calendars?.where((c) => c.id == s.calendarId);
+    final writable = current == null || current.isEmpty
+        ? true
+        : current.first.writable;
+    final both = s.calendarSend && writable && s.calendarAuto;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 16,
@@ -280,29 +285,14 @@ class _CalendarSectionState extends State<CalendarSection> {
                 'de Google tenga Calendar activado.',
               )
             else
-              DropdownButtonFormField<String>(
-                key: const Key('cal-pick'),
-                initialValue: calendars.any((c) => c.id == s.calendarId)
-                    ? s.calendarId
-                    : null,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Los calendarios de este teléfono',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  for (final c in calendars)
-                    DropdownMenuItem(
-                      value: c.id,
-                      child: Text(
-                        c.primary ? '${c.label} · el principal' : c.label,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-                onChanged: (id) async {
-                  final c = calendars.firstWhere((c) => c.id == id);
+              _CalendarPicker(
+                calendars: calendars,
+                selected: s.calendarId,
+                onPick: (c) async {
                   await s.setCalendar(c.id, c.label);
+                  if (!c.writable && s.calendarSend) {
+                    await s.setCalendarSend(false);
+                  }
                   await _loadEvents();
                 },
               ),
@@ -320,13 +310,19 @@ class _CalendarSectionState extends State<CalendarSection> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Enviar mis recordatorios al calendario'),
               subtitle: Text(
-                s.calendarSend
+                !writable
+                    ? 'Este calendario es solo para ver: no deja anotar. '
+                          'Podés traer de él (3 y 4), pero para enviar elegí '
+                          'otro en el 1.'
+                    : s.calendarSend
                     ? 'Prendido: lo que cargás, cambiás o borrás en Recordame '
                           'aparece en ${s.calendarName ?? 'tu calendario'}.'
                     : 'Apagado: el calendario no se toca.',
               ),
-              value: s.calendarSend,
-              onChanged: s.calendarId == null || _busy ? null : _toggleSend,
+              value: s.calendarSend && writable,
+              onChanged: s.calendarId == null || _busy || !writable
+                  ? null
+                  : _toggleSend,
             ),
           ],
         ),
@@ -639,6 +635,191 @@ class _BatteryHintState extends State<_BatteryHint>
               await showBatteryHelp(context);
               _check();
             },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Muestra el calendario elegido con el nombre entero; al tocarlo abre la
+/// lista completa (se puede deslizar) agrupada por cuenta.
+class _CalendarPicker extends StatelessWidget {
+  const _CalendarPicker({
+    required this.calendars,
+    required this.selected,
+    required this.onPick,
+  });
+
+  final List<PhoneCalendar> calendars;
+  final String? selected;
+  final Future<void> Function(PhoneCalendar) onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final current = calendars.where((c) => c.id == selected).firstOrNull;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: const Key('cal-pick'),
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _open(context),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: scheme.outline),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.event, color: scheme.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: current == null
+                    ? const Text('Tocá para elegir')
+                    : _CalendarText(calendar: current),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Cambiar',
+                style: TextStyle(
+                  color: scheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _open(BuildContext context) async {
+    final byAccount = <String, List<PhoneCalendar>>{};
+    for (final c in calendars) {
+      byAccount.putIfAbsent(c.account, () => []).add(c);
+    }
+    final picked = await showModalBottomSheet<PhoneCalendar>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final hint = theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        );
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          maxChildSize: 0.95,
+          builder: (context, scroll) => ListView(
+            controller: scroll,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            children: [
+              Text(
+                'Elegí el calendario (${calendars.length})',
+                style: theme.textTheme.titleLarge,
+              ),
+              const SizedBox(height: 4),
+              Text('Deslizá para ver todos.', style: hint),
+              for (final MapEntry(key: account, value: list)
+                  in byAccount.entries) ...[
+                const SizedBox(height: 16),
+                Text(
+                  account.isEmpty ? 'Sin cuenta' : account,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                for (final c in list)
+                  RadioListTile<String>(
+                    key: Key('cal-option-${c.id}'),
+                    contentPadding: EdgeInsets.zero,
+                    value: c.id,
+                    // ignore: deprecated_member_use
+                    groupValue: selected,
+                    // ignore: deprecated_member_use
+                    onChanged: (_) => Navigator.pop(context, c),
+                    title: Text(c.name.isEmpty ? '(sin nombre)' : c.name),
+                    subtitle: _tags(c).isEmpty ? null : Text(_tags(c)),
+                  ),
+              ],
+              const SizedBox(height: 16),
+              const _MissingHelp(),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) await onPick(picked);
+  }
+}
+
+String _tags(PhoneCalendar c) => [
+  if (c.primary) 'El principal',
+  if (!c.writable) 'Solo para ver: se puede traer, no anotar',
+  if (!c.synced) 'El teléfono no lo está sincronizando',
+].join(' · ');
+
+class _CalendarText extends StatelessWidget {
+  const _CalendarText({required this.calendar});
+
+  final PhoneCalendar calendar;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tags = _tags(calendar);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          calendar.name.isEmpty ? '(sin nombre)' : calendar.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        if (calendar.account.isNotEmpty && calendar.account != calendar.name)
+          Text(calendar.account, style: theme.textTheme.bodySmall),
+        if (tags.isNotEmpty)
+          Text(
+            tags,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MissingHelp extends StatelessWidget {
+  const _MissingHelp();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 4,
+        children: [
+          Text('¿No está el que buscás?', style: theme.textTheme.titleSmall),
+          const Text(
+            'Recordame ve los calendarios que el teléfono tiene guardados. '
+            'Si uno se ve en Google Calendar pero no acá:',
+          ),
+          const Text(
+            '•  Google Calendar → ☰ → Configuración → tocá ese calendario → '
+            'prendé "Sincronizar". Esperá un minuto y volvé a entrar acá.',
+          ),
+          const Text(
+            '•  Si es de Outlook o de la cuenta del trabajo con otra app, '
+            'en esa app buscá "Sincronizar calendarios" con el teléfono.',
           ),
         ],
       ),

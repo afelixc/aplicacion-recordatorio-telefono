@@ -112,16 +112,20 @@ class CalendarChannel(private val context: Context) {
             CalendarContract.Calendars.ACCOUNT_NAME,
             CalendarContract.Calendars.IS_PRIMARY,
             CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+            CalendarContract.Calendars.SYNC_EVENTS,
         )
+        // Todos, también los que solo se pueden ver (por ejemplo uno que
+        // comparten del laburo): de esos se puede traer pero no anotar.
         resolver.query(CalendarContract.Calendars.CONTENT_URI, projection, null, null, null)?.use { c ->
             while (c.moveToNext()) {
-                if (c.getInt(4) < CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR) continue
                 out.add(
                     mapOf(
                         "id" to c.getLong(0),
                         "nombre" to (c.getString(1) ?: ""),
                         "cuenta" to (c.getString(2) ?: ""),
                         "principal" to (c.getInt(3) == 1),
+                        "escribir" to (c.getInt(4) >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR),
+                        "sincroniza" to (c.isNull(5) || c.getInt(5) == 1),
                     ),
                 )
             }

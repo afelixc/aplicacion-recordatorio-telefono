@@ -34,6 +34,12 @@ class FakeCalendar implements DeviceCalendar {
       primary: true,
     ),
     PhoneCalendar(id: '2', name: 'Trabajo', account: 'yo@gmail.com'),
+    PhoneCalendar(
+      id: '3',
+      name: 'Termoplástica Rotar – Producción y entregas',
+      account: 'laburo@termoplastica.com',
+      writable: false,
+    ),
   ];
   @override
   Future<List<CalendarEvent>> events(
@@ -250,6 +256,22 @@ void main() {
     final titles = (await repo.watchAll().first).map((r) => r.title);
     expect(titles, containsAll(['Uno', 'Dentista']));
     expect(titles, isNot(contains('Asado')));
+
+    // El del laburo "solo para ver" aparece con el nombre entero; al elegirlo
+    // se apaga "enviar" (no deja anotar).
+    await tester.pump(const Duration(seconds: 6)); // que se vaya el cartel
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('cal-pick')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cal-pick')));
+    await tester.pumpAndSettle();
+    expect(find.text('Elegí el calendario (3)'), findsOneWidget);
+    expect(find.text('laburo@termoplastica.com'), findsOneWidget);
+    await tester.tap(find.text('Termoplástica Rotar – Producción y entregas'));
+    await tester.pumpAndSettle();
+    expect(sync.settings.calendarId, '3');
+    expect(sync.settings.calendarSend, isFalse);
+    expect(find.textContaining('solo para ver'), findsWidgets);
   });
 
   testWidgets('batería: explica para qué sirve y se pone verde', (
