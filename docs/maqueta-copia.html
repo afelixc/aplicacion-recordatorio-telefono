@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recordame · Copia de seguridad</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: una sola columna del tamaño de un teléfono, centrada; recuadros apilados como en Configuración de la app. */
+:root{
+  --bg:#EEF0F6; --surface:#FFFFFF; --surface2:#F5F6FA; --ink:#1C2440; --muted:#646C88;
+  --line:#DCE0EC; --brand:#2B3A67; --brand-ink:#FFFFFF; --accent:#E8A33D; --accent-soft:#FBEBD0;
+  --ok:#2E7D4F; --ok-soft:#DDF1E5; --warn-soft:#FFF4D6; --warn-line:#E8C77A;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1322; --surface:#181D31; --surface2:#20263D; --ink:#E8EBF5; --muted:#9AA2BF;
+  --line:#2C3350; --brand:#8FA2E0; --brand-ink:#10152A; --accent:#F0B357; --accent-soft:#3A2F1C;
+  --ok:#5CC189; --ok-soft:#1C3328; --warn-soft:#3A3120; --warn-line:#8A6F35; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1322; --surface:#181D31; --surface2:#20263D; --ink:#E8EBF5; --muted:#9AA2BF;
+  --line:#2C3350; --brand:#8FA2E0; --brand-ink:#10152A; --accent:#F0B357; --accent-soft:#3A2F1C;
+  --ok:#5CC189; --ok-soft:#1C3328; --warn-soft:#3A3120; --warn-line:#8A6F35; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4;padding:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{max-width:420px;margin:0 auto 10px;color:var(--muted);font-size:13px;text-align:center}
+.app{max-width:420px;height:min(860px,calc(100% - 30px));margin:0 auto;background:var(--surface);border:1px solid var(--line);
+  border-radius:28px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 20px 50px -25px rgba(20,30,70,.35)}
+header{padding:16px 18px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+header .back{background:none;border:0;padding:4px;display:grid;place-items:center}
+header h1{font-family:var(--display);font-weight:600;font-size:20px;margin:0;text-wrap:balance}
+main{flex:1;overflow-y:auto;min-height:0;padding:14px 14px 28px;display:flex;flex-direction:column;gap:14px}
+.card{border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.card h2{font-family:var(--display);font-weight:600;font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
+.card h2 .n{width:22px;height:22px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font:700 12px/22px var(--body);text-align:center;flex:none}
+.muted{color:var(--muted)} .small{font-size:13px}
+select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;width:100%}
+.ok-box{background:var(--ok-soft);border:1.5px solid var(--ok);color:var(--ok);border-radius:12px;padding:9px 12px;font-weight:600;font-size:14px}
+.warn-box{background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:12px;padding:9px 12px;font-size:13px}
+.switch-row{display:flex;align-items:center;gap:12px}
+.switch-row .txt{flex:1}
+.switch{width:52px;height:32px;border-radius:99px;border:2px solid var(--muted);background:var(--surface2);position:relative;flex:none;padding:0}
+.switch::after{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--brand);border-color:var(--brand)}
+.switch[aria-checked="true"]::after{left:24px;background:var(--brand-ink);width:20px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chip{border:1px solid var(--line);background:none;border-radius:99px;padding:7px 4px;font-size:13px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.listhead{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.link{background:none;border:0;color:var(--brand);font-weight:600;padding:4px 0}
+.events{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.ev{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:9px 10px;background:var(--surface2)}
+.ev input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--brand);flex:none}
+.ev .t{font-weight:600}
+.ev .w{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ev.have{background:var(--ok-soft);border-color:transparent}
+.ev.have .w{color:var(--ok)}
+.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:700;width:100%}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.primary:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:var(--surface2);border:1px solid var(--line)}
+.later{border:1.5px dashed var(--line);border-radius:16px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.later b{color:var(--ink)}
+.toast{position:absolute;left:14px;right:14px;bottom:14px;background:var(--ink);color:var(--surface);border-radius:12px;padding:12px 14px;font-size:14px;
+  transform:translateY(140%);transition:transform .2s}
+.toast.show{transform:none}
+.dialog{position:absolute;inset:0;background:rgba(10,15,35,.45);display:none;align-items:center;justify-content:center;padding:24px}
+.dialog.show{display:flex}
+.dialog .box{background:var(--surface);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;max-width:340px}
+.dialog h3{font-family:var(--display);font-weight:600;font-size:19px;margin:0;text-wrap:balance}
+.dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.dialog .acts button{border:0;border-radius:99px;padding:10px 16px;font-weight:700;background:none;color:var(--brand)}
+.dialog .acts .main{background:var(--brand);color:var(--brand-ink)}
+@media (prefers-reduced-motion:reduce){.switch::after,.toast{transition:none}}
+
+.status{display:flex;gap:10px;border-radius:12px;padding:12px;border:1.5px solid var(--muted);background:var(--surface2);color:var(--muted)}
+.status.ok{border-color:var(--ok);background:var(--ok-soft);color:var(--ok)}
+.status.err{border-color:#C2453A;background:#FBE3E0;color:#A3322A}
+.status b{display:block}
+.status .ic{font-size:20px;line-height:1}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.sim{max-width:420px;margin:10px auto 0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.sim button{border:1px dashed var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:12px;color:var(--muted)}
+.picker{position:absolute;inset:0;background:var(--surface);display:none;flex-direction:column}
+.picker.show{display:flex}
+.picker header{background:var(--surface2)}
+.picker .row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.picker .bar{display:flex;gap:8px;padding:12px 18px;align-items:center;border-top:1px solid var(--line);margin-top:auto}
+.picker input{flex:1;font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.picker .save{border:0;border-radius:99px;padding:10px 16px;font-weight:700;background:var(--brand);color:var(--brand-ink)}
+.crumb{padding:10px 18px;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<p class="note">Maqueta de Configuración → Copia de seguridad. Tocá los botones: es un dibujo, no guarda nada de verdad.</p>
+<div class="app">
+  <header>
+    <button class="back" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <h1>Copia de seguridad</h1>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Guardar copia</h2>
+      <div class="status" id="status"></div>
+      <div id="first">
+        <p style="margin:0 0 10px">Se guardan tus recordatorios, el chat y tus preferencias en un archivo, en la carpeta que elijas. Te recomiendo Google Drive: así no se pierde aunque se rompa el teléfono.</p>
+        <button class="btn primary" id="choose">Elegir carpeta y guardar</button>
+        <p class="hint" style="margin-top:8px">Se abre el selector de Android: tocá ☰ (arriba a la izquierda), elegí "Drive", entrá a la carpeta que quieras y tocá "Guardar".</p>
+      </div>
+      <div id="later" hidden style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn primary" id="now">Guardar copia ahora</button>
+        <button class="btn ghost" id="change">Cambiar dónde se guarda</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Recuperar copia</h2>
+      <p style="margin:0">Para un teléfono nuevo o si reinstalaste la app: elegí el archivo "Recordame-copia…" de tu Drive y vuelve todo.</p>
+      <button class="btn ghost" id="restore">Recuperar desde un archivo</button>
+    </section>
+
+    <p class="hint">🔒 La clave de la IA no se guarda en la copia: queda solo en este teléfono. Si recuperás en otro, cargala de nuevo.</p>
+  </main>
+
+  <div class="picker" id="picker" role="dialog" aria-label="Selector de archivos de Android">
+    <header><h1 style="font-size:17px">Guardar en · Drive</h1></header>
+    <div class="crumb">Mi unidad › <b id="folderName">Mi unidad</b></div>
+    <div id="folders"></div>
+    <div class="bar">
+      <input id="fname" aria-label="Nombre del archivo" value="Recordame-copia-2026-11-01.json">
+      <button class="save" id="pickSave">Guardar</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <div class="dialog" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <div class="box">
+      <h3 id="dlgTitle">¿Recuperar esta copia?</h3>
+      <p style="margin:0" class="muted">Copia del sábado 1 de noviembre a las 10:32, con 14 recordatorios (12 pendientes).<br><br>Los recordatorios que hay ahora en el teléfono se reemplazan por los de la copia.</p>
+      <div class="acts">
+        <button id="no">No</button>
+        <button class="main" id="yes">Sí, recuperar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="sim">
+  <button id="simErr">Simular: la copia automática falló</button>
+  <button id="simReset">Volver a empezar</button>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let state = 'none', last = null, folder = 'Mi unidad';
+function hm(d){return d.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}
+function render(){
+  const s = $('status');
+  if (state === 'none') { s.className='status'; s.innerHTML='<span class="ic">☁︎</span><div><b>Todavía no hay copia</b>Elegí dónde guardarla con el botón de abajo.</div>'; }
+  if (state === 'ok') { s.className='status ok'; s.innerHTML=`<span class="ic">✓</span><div><b>Copia al día ✓</b>${$('fname').value}<br>Última: hoy ${hm(last)}<br>Se actualiza sola una vez por día al usar la app.</div>`; }
+  if (state === 'err') { s.className='status err'; s.innerHTML='<span class="ic">!</span><div><b>La copia no se pudo actualizar</b>Puede que el archivo se haya borrado o movido: tocá "Cambiar dónde se guarda".</div>'; }
+  $('first').hidden = state !== 'none';
+  $('later').style.display = state === 'none' ? 'none' : 'flex';
+}
+let tt; function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),4000)}
+const folders=['Documentos','Copias','Fotos','Recordame'];
+function openPicker(){
+  folder='Mi unidad'; $('folderName').textContent=folder;
+  $('folders').innerHTML='';
+  for (const f of folders){const b=document.createElement('button');b.className='row';b.innerHTML='📁 <span></span>';b.querySelector('span').textContent=f;
+    b.onclick=()=>{folder='Mi unidad › '+f;$('folderName').textContent=f;};$('folders').appendChild(b);}
+  $('picker').classList.add('show');
+}
+$('choose').onclick=openPicker; $('change').onclick=openPicker;
+$('pickSave').onclick=()=>{$('picker').classList.remove('show');state='ok';last=new Date();render();toast('Listo ✓ Copia guardada. Desde ahora se actualiza sola cada día.');};
+$('now').onclick=()=>{state='ok';last=new Date();render();toast('Listo ✓ Copia actualizada.');};
+$('restore').onclick=()=>$('dlg').classList.add('show');
+$('no').onclick=()=>$('dlg').classList.remove('show');
+$('yes').onclick=()=>{$('dlg').classList.remove('show');toast('Listo ✓ Recuperé 14 recordatorios. Si usás la IA, volvé a cargar la clave.');};
+$('simErr').onclick=()=>{state='err';render();};
+$('simReset').onclick=()=>{state='none';render();};
+render();
+</script>
+</body>
+</html>
