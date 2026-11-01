@@ -189,10 +189,10 @@ void main() {
     },
   );
 
-  test('cambiar de calendario con "traer lo nuevo" prendido: no trae de golpe '
-      'lo que ya estaba', () async {
+  test('cambiar de calendario apaga el 2 y el 4 por seguridad', () async {
     final (sync, repo, cal, inner) = await make();
     await sync.settings.setCalendar('1', 'yo');
+    await sync.settings.setCalendarSend(true);
     await sync.startAuto();
     cal.stored['50'] = (
       cal: '2',
@@ -200,9 +200,30 @@ void main() {
       start: at,
       rrule: null,
     );
-    await sync.choose(
-      const PhoneCalendar(id: '2', name: 'Trabajo', account: 'yo@gmail.com'),
+    expect(
+      await sync.choose(
+        const PhoneCalendar(id: '1', name: 'yo', account: 'yo@gmail.com'),
+      ),
+      isFalse,
+      reason: 'el mismo calendario no cambia nada',
     );
+    expect(sync.settings.calendarAuto, isTrue);
+    expect(
+      await sync.choose(
+        const PhoneCalendar(id: '2', name: 'Trabajo', account: 'yo@gmail.com'),
+      ),
+      isTrue,
+    );
+    expect(sync.settings.calendarSend, isFalse);
+    expect(sync.settings.calendarAuto, isFalse);
+    expect(
+      cal.background,
+      isFalse,
+      reason: 'deja de revisar con la app cerrada',
+    );
+    expect(await sync.autoImport(repo), 0, reason: 'no trae nada');
+    // Al prenderlo de nuevo, lo que ya estaba no se trae.
+    await sync.startAuto();
     expect(await sync.autoImport(repo), 0);
     cal.stored['51'] = (cal: '2', title: 'Nuevo', start: at, rrule: null);
     expect(await sync.autoImport(repo), 1);
@@ -265,6 +286,21 @@ void main() {
     expect(sync.settings.calendarSend, isTrue);
     expect(cal.stored.values.map((e) => e.title), contains('Uno'));
 
+    // Prender el 4: pregunta con el nombre; Cancelar lo deja apagado.
+    await tester.ensureVisible(find.byKey(const Key('cal-auto')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cal-auto')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('¿Traer lo nuevo de'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(sync.settings.calendarAuto, isFalse);
+    await tester.tap(find.byKey(const Key('cal-auto')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('cal-auto-yes')));
+    await tester.pumpAndSettle();
+    expect(sync.settings.calendarAuto, isTrue);
+
     // Traer: marcar el dentista y agregar.
     await tester.ensureVisible(find.text('Dentista'));
     await tester.pumpAndSettle();
@@ -291,6 +327,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(sync.settings.calendarId, '3');
     expect(sync.settings.calendarSend, isFalse);
+    expect(find.textContaining('Por seguridad apagué'), findsOneWidget);
     expect(find.textContaining('solo para ver'), findsWidgets);
   });
 

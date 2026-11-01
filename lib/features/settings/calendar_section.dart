@@ -118,13 +118,13 @@ class _CalendarSectionState extends State<CalendarSection> {
   static String _key(CalendarEvent e) =>
       '${e.id}@${e.start.millisecondsSinceEpoch}';
 
-  void _say(String text) {
+  void _say(String text, {int seconds = 5}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(text),
-          duration: const Duration(seconds: 5),
+          duration: Duration(seconds: seconds),
           persist: false,
         ),
       );
@@ -140,44 +140,62 @@ class _CalendarSectionState extends State<CalendarSection> {
         .where((r) => !r.done && r.calendarEventId == null)
         .length;
     if (!mounted) return;
-    final choice = pending == 0
-        ? _Send.onlyNew
-        : await showDialog<_Send>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Enviar al calendario'),
-              content: Text(
-                'Desde ahora, lo que cargues en Recordame va a aparecer en tu '
-                'calendario.\n\nYa tenés $pending recordatorios pendientes '
-                'cargados de antes. ¿Qué hago con esos?',
+    final name = _settings.calendarName ?? 'tu calendario';
+    final choice = await showDialog<_Send>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enviar al calendario'),
+        content: Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: 'Desde ahora, lo que cargues en Recordame '),
+              const TextSpan(text: 'va a aparecer en:\n'),
+              TextSpan(
+                text: name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              actions: [
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.pop(context, _Send.all),
-                    child: Text('Mandar también esos $pending'),
-                  ),
+              if (pending > 0)
+                TextSpan(
+                  text:
+                      '\n\nYa tenés $pending recordatorios pendientes cargados '
+                      'de antes. ¿Qué hago con esos?',
                 ),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
+            ],
+          ),
+        ),
+        actions: [
+          if (pending > 0)
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => Navigator.pop(context, _Send.all),
+                child: Text('Mandar también esos $pending'),
+              ),
+            ),
+          SizedBox(
+            width: double.infinity,
+            child: pending > 0
+                ? OutlinedButton(
                     onPressed: () => Navigator.pop(context, _Send.onlyNew),
                     child: const Text(
                       'Esos no, solo lo que cargue desde ahora',
                       textAlign: TextAlign.center,
                     ),
+                  )
+                : FilledButton(
+                    onPressed: () => Navigator.pop(context, _Send.onlyNew),
+                    child: const Text('Sí, enviar'),
                   ),
-                ),
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar (no enviar nada)'),
-                  ),
-                ),
-              ],
+          ),
+          Center(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar (no enviar nada)'),
             ),
-          );
+          ),
+        ],
+      ),
+    );
     if (choice == null) {
       if (mounted) _say('No se envió nada. Queda apagado.');
       return;
@@ -197,6 +215,39 @@ class _CalendarSectionState extends State<CalendarSection> {
 
   Future<void> _toggleAuto(bool on) async {
     if (on) {
+      final name = _settings.calendarName ?? 'tu calendario';
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          icon: const Icon(Icons.sync),
+          title: Text('¿Traer lo nuevo de "$name"?'),
+          content: const Text(
+            'Desde ahora, lo que se anote en ese calendario te va a llegar a '
+            'Recordame, aunque la app esté cerrada.\n\nLo que ya está no lo '
+            'traigo (para eso usá el 3).',
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const Key('cal-auto-yes'),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Sí, traer lo nuevo'),
+              ),
+            ),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) {
+        if (mounted) _say('No se trae nada. Queda apagado.');
+        return;
+      }
       await widget.sync.startAuto();
       if (mounted) {
         _say(
@@ -289,7 +340,15 @@ class _CalendarSectionState extends State<CalendarSection> {
                 calendars: calendars,
                 selected: s.calendarId,
                 onPick: (c) async {
-                  await widget.sync.choose(c);
+                  final turnedOff = await widget.sync.choose(c);
+                  if (turnedOff && mounted) {
+                    _say(
+                      'Cambiaste a ${c.label}. Por seguridad apagué el envío '
+                      '(2) y la traída automática (4). Si es el correcto, '
+                      'prendelos de nuevo.',
+                      seconds: 8,
+                    );
+                  }
                   await _loadEvents();
                 },
               ),
