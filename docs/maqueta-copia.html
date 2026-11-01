@@ -127,8 +127,18 @@ select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid
   </main>
 
   <div class="picker" id="picker" role="dialog" aria-label="Selector de archivos de Android">
-    <header><h1 style="font-size:17px">Guardar en · Drive</h1></header>
-    <div class="crumb">Mi unidad › <b id="folderName">Mi unidad</b></div>
+    <header style="justify-content:space-between">
+      <h1 style="font-size:17px">Guardar en · Drive</h1>
+      <button class="link" id="pickCancel">✕ Cancelar</button>
+    </header>
+    <div class="crumb" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Mi unidad › <b id="folderName">Mi unidad</b></span>
+      <button class="link" id="newFolder">+ Nueva carpeta</button>
+    </div>
+    <div class="bar" id="newRow" hidden style="margin-top:0;border-top:0">
+      <input id="newName" aria-label="Nombre de la carpeta nueva" placeholder="Nombre de la carpeta">
+      <button class="save" id="newOk">Crear</button>
+    </div>
     <div id="folders"></div>
     <div class="bar">
       <input id="fname" aria-label="Nombre del archivo" value="Recordame-copia-2026-11-01.json">
@@ -141,10 +151,11 @@ select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid
   <div class="dialog" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
     <div class="box">
       <h3 id="dlgTitle">¿Recuperar esta copia?</h3>
-      <p style="margin:0" class="muted">Copia del sábado 1 de noviembre a las 10:32, con 14 recordatorios (12 pendientes).<br><br>Los recordatorios que hay ahora en el teléfono se reemplazan por los de la copia.</p>
-      <div class="acts">
-        <button id="no">No</button>
-        <button class="main" id="yes">Sí, recuperar</button>
+      <p style="margin:0" class="muted">Copia del sábado 1 de noviembre a las 10:32, con <b>14 recordatorios</b> (12 pendientes).<br>Ahora en el teléfono tenés <b>5</b>.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn primary" id="merge">Sumar los de la copia<br><span style="font-weight:500;font-size:13px">No borra nada: agrega los que faltan</span></button>
+        <button class="btn ghost" id="yes">Reemplazar todo por la copia<br><span style="font-weight:500;font-size:13px">Borra los 5 del teléfono y deja los 14 de la copia</span></button>
+        <button class="btn ghost" id="no" style="background:none;border:0;color:var(--brand)">Cancelar (no cambia nada)</button>
       </div>
     </div>
   </div>
@@ -175,11 +186,15 @@ function openPicker(){
   $('picker').classList.add('show');
 }
 $('choose').onclick=openPicker; $('change').onclick=openPicker;
+$('pickCancel').onclick=()=>{$('picker').classList.remove('show');toast('No se guardó nada.');};
+$('newFolder').onclick=()=>{$('newRow').hidden=false;$('newName').focus();};
+$('newOk').onclick=()=>{const n=$('newName').value.trim();if(!n)return;folders.push(n);$('newRow').hidden=true;$('newName').value='';openPicker();folder='Mi unidad › '+n;$('folderName').textContent=n;};
 $('pickSave').onclick=()=>{$('picker').classList.remove('show');state='ok';last=new Date();render();toast('Listo ✓ Copia guardada. Desde ahora se actualiza sola cada día.');};
 $('now').onclick=()=>{state='ok';last=new Date();render();toast('Listo ✓ Copia actualizada.');};
 $('restore').onclick=()=>$('dlg').classList.add('show');
 $('no').onclick=()=>$('dlg').classList.remove('show');
-$('yes').onclick=()=>{$('dlg').classList.remove('show');toast('Listo ✓ Recuperé 14 recordatorios. Si usás la IA, volvé a cargar la clave.');};
+$('yes').onclick=()=>{$('dlg').classList.remove('show');toast('Listo ✓ Ahora tenés los 14 de la copia. Si usás la IA, volvé a cargar la clave.');};
+$('merge').onclick=()=>{$('dlg').classList.remove('show');toast('Listo ✓ Sumé 11 de la copia. Los 3 que ya estaban no se repitieron.');};
 $('simErr').onclick=()=>{state='err';render();};
 $('simReset').onclick=()=>{state='none';render();};
 render();
