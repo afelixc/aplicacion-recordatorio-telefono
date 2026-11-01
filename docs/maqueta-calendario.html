@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recordame · Google Calendar</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: una sola columna del tamaño de un teléfono, centrada; recuadros apilados como en Configuración de la app. */
+:root{
+  --bg:#EEF0F6; --surface:#FFFFFF; --surface2:#F5F6FA; --ink:#1C2440; --muted:#646C88;
+  --line:#DCE0EC; --brand:#2B3A67; --brand-ink:#FFFFFF; --accent:#E8A33D; --accent-soft:#FBEBD0;
+  --ok:#2E7D4F; --ok-soft:#DDF1E5; --warn-soft:#FFF4D6; --warn-line:#E8C77A;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1322; --surface:#181D31; --surface2:#20263D; --ink:#E8EBF5; --muted:#9AA2BF;
+  --line:#2C3350; --brand:#8FA2E0; --brand-ink:#10152A; --accent:#F0B357; --accent-soft:#3A2F1C;
+  --ok:#5CC189; --ok-soft:#1C3328; --warn-soft:#3A3120; --warn-line:#8A6F35; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1322; --surface:#181D31; --surface2:#20263D; --ink:#E8EBF5; --muted:#9AA2BF;
+  --line:#2C3350; --brand:#8FA2E0; --brand-ink:#10152A; --accent:#F0B357; --accent-soft:#3A2F1C;
+  --ok:#5CC189; --ok-soft:#1C3328; --warn-soft:#3A3120; --warn-line:#8A6F35; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.4;padding:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{max-width:420px;margin:0 auto 10px;color:var(--muted);font-size:13px;text-align:center}
+.app{max-width:420px;height:min(860px,calc(100% - 30px));margin:0 auto;background:var(--surface);border:1px solid var(--line);
+  border-radius:28px;overflow:hidden;display:flex;flex-direction:column;position:relative;box-shadow:0 20px 50px -25px rgba(20,30,70,.35)}
+header{padding:16px 18px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+header .back{background:none;border:0;padding:4px;display:grid;place-items:center}
+header h1{font-family:var(--display);font-weight:600;font-size:20px;margin:0;text-wrap:balance}
+main{flex:1;overflow-y:auto;min-height:0;padding:14px 14px 28px;display:flex;flex-direction:column;gap:14px}
+.card{border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.card h2{font-family:var(--display);font-weight:600;font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
+.card h2 .n{width:22px;height:22px;border-radius:50%;background:var(--brand);color:var(--brand-ink);font:700 12px/22px var(--body);text-align:center;flex:none}
+.muted{color:var(--muted)} .small{font-size:13px}
+select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 11px;width:100%}
+.ok-box{background:var(--ok-soft);border:1.5px solid var(--ok);color:var(--ok);border-radius:12px;padding:9px 12px;font-weight:600;font-size:14px}
+.warn-box{background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:12px;padding:9px 12px;font-size:13px}
+.switch-row{display:flex;align-items:center;gap:12px}
+.switch-row .txt{flex:1}
+.switch{width:52px;height:32px;border-radius:99px;border:2px solid var(--muted);background:var(--surface2);position:relative;flex:none;padding:0}
+.switch::after{content:"";position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:var(--muted);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--brand);border-color:var(--brand)}
+.switch[aria-checked="true"]::after{left:24px;background:var(--brand-ink);width:20px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.chip{border:1px solid var(--line);background:none;border-radius:99px;padding:7px 4px;font-size:13px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:700}
+.listhead{display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.link{background:none;border:0;color:var(--brand);font-weight:600;padding:4px 0}
+.events{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto}
+.ev{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:9px 10px;background:var(--surface2)}
+.ev input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--brand);flex:none}
+.ev .t{font-weight:600}
+.ev .w{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ev.have{background:var(--ok-soft);border-color:transparent}
+.ev.have .w{color:var(--ok)}
+.btn{border:0;border-radius:12px;padding:12px 14px;font-weight:700;width:100%}
+.btn.primary{background:var(--brand);color:var(--brand-ink)}
+.btn.primary:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:var(--surface2);border:1px solid var(--line)}
+.later{border:1.5px dashed var(--line);border-radius:16px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.later b{color:var(--ink)}
+.toast{position:absolute;left:14px;right:14px;bottom:14px;background:var(--ink);color:var(--surface);border-radius:12px;padding:12px 14px;font-size:14px;
+  transform:translateY(140%);transition:transform .2s}
+.toast.show{transform:none}
+.dialog{position:absolute;inset:0;background:rgba(10,15,35,.45);display:none;align-items:center;justify-content:center;padding:24px}
+.dialog.show{display:flex}
+.dialog .box{background:var(--surface);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px;max-width:340px}
+.dialog h3{font-family:var(--display);font-weight:600;font-size:19px;margin:0;text-wrap:balance}
+.dialog .acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.dialog .acts button{border:0;border-radius:99px;padding:10px 16px;font-weight:700;background:none;color:var(--brand)}
+.dialog .acts .main{background:var(--brand);color:var(--brand-ink)}
+@media (prefers-reduced-motion:reduce){.switch::after,.toast{transition:none}}
+</style>
+</head>
+<body>
+<p class="note">Maqueta de Configuración → Google Calendar. Tocá todo: los eventos son de ejemplo y no se cambia nada de verdad.</p>
+<div class="app">
+  <header>
+    <button class="back" aria-label="Volver"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <h1>Google Calendar</h1>
+  </header>
+  <main>
+    <div class="ok-box">Permiso de calendario ✓ · Recordame puede ver y anotar en tus calendarios</div>
+
+    <section class="card">
+      <h2><span class="n">1</span>¿Qué calendario uso?</h2>
+      <label class="small muted" for="cal">Los calendarios que tenés en este teléfono</label>
+      <select id="cal">
+        <option>tucorreo@gmail.com (el principal)</option>
+        <option>Trabajo</option>
+        <option>Familia</option>
+      </select>
+      <p class="small muted" style="margin:0">Se usa el que ya tenés: no se crea ningún calendario nuevo.</p>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">2</span>Enviar al calendario</h2>
+      <div class="switch-row">
+        <div class="txt">
+          <div style="font-weight:600">Enviar mis recordatorios al calendario</div>
+          <div class="small muted" id="sendInfo">Apagado: el calendario no se toca.</div>
+        </div>
+        <button class="switch" id="send" role="switch" aria-checked="false" aria-label="Enviar mis recordatorios al calendario"></button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">3</span>Traer del calendario</h2>
+      <p class="small muted" style="margin:0">Elegí cuánto querés ver, marcá lo que necesita aviso y confirmá.</p>
+      <div class="chips" role="group" aria-label="Período">
+        <button class="chip" data-days="30" aria-pressed="true">30 días</button>
+        <button class="chip" data-days="182" aria-pressed="false">6 meses</button>
+        <button class="chip" data-days="365" aria-pressed="false">1 año</button>
+        <button class="chip" data-days="99999" aria-pressed="false">Todo</button>
+      </div>
+      <div class="listhead">
+        <span class="muted" id="countInfo"></span>
+        <button class="link" id="all">Marcar todos</button>
+      </div>
+      <div class="events" id="events"></div>
+      <button class="btn primary" id="add" disabled>Agregar seleccionados</button>
+    </section>
+
+    <section class="card">
+      <h2><span class="n">4</span>Sincronizar siempre</h2>
+      <div class="switch-row">
+        <div class="txt">
+          <div style="font-weight:600">Traer lo nuevo automáticamente</div>
+          <div class="small muted" id="autoInfo">Apagado: solo se trae lo que elijas arriba.</div>
+        </div>
+        <button class="switch" id="auto" role="switch" aria-checked="false" aria-label="Traer lo nuevo automáticamente"></button>
+      </div>
+      <div class="warn-box" id="autoWarn" hidden>Lo que viene del calendario te puede sonar dos veces: Google Calendar también avisa. Si te molesta, apagá los avisos de Google Calendar en el teléfono.</div>
+    </section>
+
+    <div class="later"><b>Para el segundo paso:</b> qué pasa en el calendario cuando marcás algo como hecho en Recordame (dejarlo con ✓, borrarlo o no tocarlo). Lo decidimos después de probar.</div>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <div class="dialog" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+    <div class="box">
+      <h3 id="dlgTitle">¿Mando también los 12 que ya tenés?</h3>
+      <p style="margin:0" class="muted">Desde ahora, todo lo nuevo que cargues en Recordame va al calendario. ¿Querés que mande también los 12 recordatorios pendientes que ya tenés?</p>
+      <div class="acts">
+        <button id="onlyNew">Solo los nuevos</button>
+        <button class="main" id="allOld">Sí, mandar los 12</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const today = new Date(2026, 10, 1);
+const d = (y, m, day, h, min) => ({ date: new Date(y, m - 1, day, h ?? 0, min ?? 0), allDay: h == null });
+const events = [
+  { t: 'Turno con el dentista', ...d(2026, 11, 4, 10, 30) },
+  { t: 'Asado con los chicos', ...d(2026, 11, 6, 21, 0) },
+  { t: 'Pagar la luz', ...d(2026, 11, 10, 9, 0), have: true },
+  { t: 'Reunión de consorcio', ...d(2026, 11, 12, 19, 0) },
+  { t: 'Cumpleaños de Laura', ...d(2026, 11, 20) },
+  { t: 'Service del auto', ...d(2026, 12, 3, 9, 0) },
+  { t: 'Vence la VTV', ...d(2027, 1, 15) },
+  { t: 'Viaje a Córdoba', ...d(2027, 3, 10, 7, 30) },
+  { t: 'Renovar el DNI', ...d(2027, 6, 18, 11, 0) },
+  { t: 'Aniversario', ...d(2027, 10, 2) },
+  { t: 'Control con el cardiólogo', ...d(2028, 2, 8, 16, 0) },
+];
+events.forEach((e, i) => { e.id = i; e.checked = false; });
+let days = 30;
+
+const fmt = new Intl.DateTimeFormat('es-AR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+const hm = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+const $ = (id) => document.getElementById(id);
+
+function visible() {
+  const end = new Date(today); end.setDate(end.getDate() + days);
+  return events.filter((e) => e.date >= today && e.date <= end);
+}
+
+function render() {
+  const list = visible();
+  const box = $('events');
+  box.innerHTML = '';
+  if (!list.length) box.innerHTML = '<p class="small muted">No hay nada anotado en ese período.</p>';
+  for (const e of list) {
+    const row = document.createElement('label');
+    row.className = 'ev' + (e.have ? ' have' : '');
+    row.htmlFor = 'ev' + e.id;
+    const when = fmt.format(e.date) + (e.allDay ? ' · todo el día (aviso a las 9:00)' : ' · ' + hm.format(e.date));
+    row.innerHTML = `<input type="checkbox" id="ev${e.id}" ${e.have ? 'checked disabled' : e.checked ? 'checked' : ''}>
+      <div><div class="t"></div><div class="w"></div></div>`;
+    row.querySelector('.t').textContent = e.t;
+    row.querySelector('.w').textContent = e.have ? '✓ Ya está en Recordame' : when;
+    row.querySelector('input').addEventListener('change', (ev) => { e.checked = ev.target.checked; update(); });
+    box.appendChild(row);
+  }
+  update();
+}
+
+function update() {
+  const list = visible();
+  const free = list.filter((e) => !e.have);
+  const sel = free.filter((e) => e.checked).length;
+  $('countInfo').textContent = `${list.length} en el calendario · ${sel} marcados`;
+  $('all').textContent = free.length && sel === free.length ? 'Desmarcar todos' : 'Marcar todos';
+  $('all').hidden = !free.length;
+  $('add').disabled = sel === 0;
+  $('add').textContent = sel ? `Agregar seleccionados (${sel})` : 'Agregar seleccionados';
+}
+
+let toastTimer;
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+document.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => {
+  document.querySelectorAll('.chip').forEach((o) => o.setAttribute('aria-pressed', o === c));
+  days = +c.dataset.days;
+  render();
+}));
+
+$('all').addEventListener('click', () => {
+  const free = visible().filter((e) => !e.have);
+  const allOn = free.every((e) => e.checked);
+  free.forEach((e) => { e.checked = !allOn; });
+  render();
+});
+
+$('add').addEventListener('click', () => {
+  const sel = visible().filter((e) => !e.have && e.checked);
+  sel.forEach((e) => { e.have = true; e.checked = false; });
+  render();
+  toast(`Listo ✓ Agregué ${sel.length} a Recordame. Te aviso a la hora de cada uno.`);
+});
+
+const cal = () => $('cal').value.replace(' (el principal)', '');
+
+$('send').addEventListener('click', () => {
+  const sw = $('send');
+  if (sw.getAttribute('aria-checked') === 'true') {
+    sw.setAttribute('aria-checked', 'false');
+    $('sendInfo').textContent = 'Apagado: el calendario no se toca.';
+    return;
+  }
+  $('dlg').classList.add('show');
+  $('onlyNew').focus();
+});
+function closeDlg(all) {
+  $('dlg').classList.remove('show');
+  $('send').setAttribute('aria-checked', 'true');
+  $('sendInfo').textContent = `Prendido: lo que cargás, cambiás o borrás en Recordame aparece en ${cal()}.`;
+  toast(all ? 'Listo ✓ Mandé tus 12 recordatorios al calendario.' : 'Listo ✓ Desde ahora, lo nuevo va al calendario.');
+}
+$('onlyNew').addEventListener('click', () => closeDlg(false));
+$('allOld').addEventListener('click', () => closeDlg(true));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('dlg').classList.remove('show'); });
+
+$('auto').addEventListener('click', () => {
+  const sw = $('auto');
+  const on = sw.getAttribute('aria-checked') !== 'true';
+  sw.setAttribute('aria-checked', on);
+  $('autoWarn').hidden = !on;
+  $('autoInfo').textContent = on
+    ? `Prendido: lo nuevo que anotes en ${cal()}, aunque sea desde la compu, aparece solo en Recordame y te avisa.`
+    : 'Apagado: solo se trae lo que elijas arriba.';
+});
+$('cal').addEventListener('change', () => {
+  if ($('send').getAttribute('aria-checked') === 'true')
+    $('sendInfo').textContent = `Prendido: lo que cargás, cambiás o borrás en Recordame aparece en ${cal()}.`;
+  if ($('auto').getAttribute('aria-checked') === 'true')
+    $('autoInfo').textContent = `Prendido: lo nuevo que anotes en ${cal()}, aunque sea desde la compu, aparece solo en Recordame y te avisa.`;
+});
+
+render();
+</script>
+</body>
+</html>
