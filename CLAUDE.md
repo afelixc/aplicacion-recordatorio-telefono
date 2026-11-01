@@ -28,6 +28,7 @@
 - Almanaque: deslizar a la izquierda = mes siguiente, a la derecha = anterior.
 - Configuración es un menú de recuadros: cada opción abre su pantalla.
 - Inteligencia artificial: recuadro "Proveedor y clave" (al entrar prueba la clave sola; verde = funcionando, rojo = error; Borrar pide confirmación), recuadro "Modelo" con los recomendados como tarjetas con explicación y costo cada 100 recordatorios, y "Ayuda".
+- Copia de seguridad (`lib/features/backup/backup_service.dart`, Configuración → Copia de seguridad): archivo JSON `Recordame-copia-AAAA-MM-DD.json` (recordatorios, preferencias, chat, consumo; **nunca** las claves) en la carpeta que el usuario elige con el selector de Android (Google Drive), canal `recordame/copia` en `MainActivity.kt` (crear / escribir / abrir, con permiso persistente). Se actualiza sola cada 24 h al abrir o volver a la app; recuperar reemplaza los recordatorios (pide confirmación). El usuario NO quiso Google Cloud ni pasos de configuración. Además la copia automática de Android incluye solo `app_flutter/` y `FlutterSharedPreferences.xml` (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`), nunca el almacenamiento cifrado.
 - Antes de subir: `flutter analyze` y `flutter test` sin errores.
 
 ## Plan por etapas
@@ -43,4 +44,4 @@
 
 Ideas a futuro (el usuario dijo que por ahora no): solapa "Charlar con la IA" (chat general con la misma clave y saldo), mandar el audio a la IA en vez de usar el reconocimiento de voz de Android.
 
-Segunda etapa (no implementar todavía): Google Calendar (`calendarEventId` ya existe en la tabla) y copia en Google Drive.
+Segunda etapa (no implementar todavía): Google Calendar (`calendarEventId` ya existe en la tabla). Idea acordada: usar el calendario que ya está en el teléfono (CalendarContract, permiso de calendario, sin Google Cloud), con el calendario que el usuario ya tiene (NO crear uno aparte). Falta definir con el usuario: solo enviar de la app al calendario / traer del calendario a la app / sincronizar siempre.

@@ -168,7 +168,75 @@ class AppSettings extends ChangeNotifier {
     jsonEncode([for (final e in chatHistory) e.toJson()]),
   );
 
+  // --- Copia de seguridad ---
+
+  /// Archivo elegido para la copia (dirección de Android) y su nombre.
+  String? backupUri;
+  String? backupName;
+  DateTime? backupLast;
+
+  /// Por qué falló la última copia automática (null si anduvo).
+  String? backupError;
+
+  Future<void> setBackupTarget(String uri, String name) async {
+    backupUri = uri;
+    backupName = name;
+    notifyListeners();
+    await _store.write('backup_uri', uri);
+    await _store.write('backup_name', name);
+  }
+
+  Future<void> setBackupResult({DateTime? at, String? error}) async {
+    if (at != null) backupLast = at;
+    backupError = error;
+    notifyListeners();
+    if (at != null) await _store.write('backup_last', at.toIso8601String());
+    await _store.write('backup_error', error ?? '');
+  }
+
+  /// Las preferencias que viajan en la copia (sin claves de API).
+  Map<String, String> exportPrefs(Iterable<String> providerIds) => {
+    'mode': mode.name,
+    'provider': providerId,
+    'language': language,
+    for (final id in providerIds)
+      if (_models[id] != null) 'model_$id': _models[id]!,
+    for (final id in providerIds)
+      if (_balances[id] != null)
+        'balance_$id':
+            '${_balances[id]!.$1}|${_balances[id]!.$2.toIso8601String()}',
+  };
+
+  /// Restaura preferencias y chat de una copia.
+  Future<void> importPrefs(
+    Map<String, String> prefs,
+    List<ChatEntry> chat,
+    Iterable<String> providerIds,
+  ) async {
+    for (final e in prefs.entries) {
+      if (e.key == 'mode' ||
+          e.key == 'provider' ||
+          e.key == 'language' ||
+          e.key.startsWith('model_') ||
+          e.key.startsWith('balance_')) {
+        await _store.write(e.key, e.value);
+      }
+    }
+    chatHistory
+      ..clear()
+      ..addAll(
+        chat.length > maxChat ? chat.sublist(chat.length - maxChat) : chat,
+      );
+    await _saveChat();
+    await load(providerIds);
+  }
+
   Future<void> load(Iterable<String> providerIds) async {
+    backupUri = await _store.read('backup_uri');
+    backupName = await _store.read('backup_name');
+    backupLast = DateTime.tryParse(await _store.read('backup_last') ?? '');
+    final backupErr = await _store.read('backup_error');
+    backupError = (backupErr?.isEmpty ?? true) ? null : backupErr;
     final chat = await _store.read('chat_history');
     if (chat != null) {
       try {

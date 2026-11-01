@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import '../data/reminder_repository.dart';
 import '../data/usage.dart';
 import '../features/ai/ai_provider.dart';
+import '../features/backup/backup_service.dart';
 import '../features/notifications/notification_service.dart';
 import 'settings.dart';
 
@@ -15,6 +16,7 @@ class AppScope extends InheritedWidget {
     required this.usage,
     this.notifications,
     this.aiProviderOverride,
+    this.backup,
     required super.child,
   });
 
@@ -27,6 +29,9 @@ class AppScope extends InheritedWidget {
   /// Null en la vista web y en las pruebas, donde no hay notificaciones.
   final NotificationService? notifications;
 
+  /// Copia de seguridad (null en la vista web).
+  final BackupService? backup;
+
   /// Solo para las pruebas: reemplaza al proveedor de IA real.
   final AiProvider? aiProviderOverride;
 
@@ -38,5 +43,6 @@ class AppScope extends InheritedWidget {
       reminders != oldWidget.reminders ||
       settings != oldWidget.settings ||
       usage != oldWidget.usage ||
-      notifications != oldWidget.notifications;
+      notifications != oldWidget.notifications ||
+      backup != oldWidget.backup;
 }

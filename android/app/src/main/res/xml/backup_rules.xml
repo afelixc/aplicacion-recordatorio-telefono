@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copia automática de Android (Android 11 o anterior): solo la base de
+     recordatorios y las preferencias. Las claves de API cifradas no viajan
+     (no se pueden abrir en otro teléfono). -->
+<full-backup-content>
+    <include domain="file" path="app_flutter/" />
+    <include domain="sharedpref" path="FlutterSharedPreferences.xml" />
+</full-backup-content>

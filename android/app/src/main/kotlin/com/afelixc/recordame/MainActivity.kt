@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,12 +16,21 @@ import io.flutter.plugin.common.MethodChannel
 /**
  * Canal "recordame/sonido": abre el selector de sonidos de Android y
  * reproduce un sonido para probarlo.
+ *
+ * Canal "recordame/copia": guarda y abre la copia de seguridad con el
+ * selector de archivos de Android (Google Drive, el teléfono, etc.).
  */
 class MainActivity : FlutterActivity() {
     private val pickRequest = 4711
+    private val createRequest = 4712
+    private val openRequest = 4713
     private var pendingPick: MethodChannel.Result? = null
+    private var pendingCreate: MethodChannel.Result? = null
+    private var pendingCreateData: ByteArray? = null
+    private var pendingOpen: MethodChannel.Result? = null
     private var playing: Ringtone? = null
     private val handler = Handler(Looper.getMainLooper())
+    private val stopSound = Runnable { stop() }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -40,6 +50,134 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "recordame/copia")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "crear" -> createBackup(
+                        call.argument<String>("nombre") ?: "Recordame-copia.json",
+                        call.argument<ByteArray>("datos") ?: ByteArray(0),
+                        result,
+                    )
+                    "escribir" -> {
+                        val uri = call.argument<String>("uri")
+                        val data = call.argument<ByteArray>("datos") ?: ByteArray(0)
+                        Thread {
+                            val ok = uri != null && writeTo(Uri.parse(uri), data)
+                            handler.post { result.success(ok) }
+                        }.start()
+                    }
+                    "abrir" -> openBackup(result)
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    private fun createBackup(name: String, data: ByteArray, result: MethodChannel.Result) {
+        pendingCreate?.success(null)
+        pendingCreate = result
+        pendingCreateData = data
+        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(Intent.EXTRA_TITLE, name)
+        }
+        try {
+            startActivityForResult(intent, createRequest)
+        } catch (e: Exception) {
+            pendingCreate = null
+            result.error("sin_selector", "Este teléfono no tiene selector de archivos", null)
+        }
+    }
+
+    private fun openBackup(result: MethodChannel.Result) {
+        pendingOpen?.success(null)
+        pendingOpen = result
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+        }
+        try {
+            startActivityForResult(intent, openRequest)
+        } catch (e: Exception) {
+            pendingOpen = null
+            result.error("sin_selector", "Este teléfono no tiene selector de archivos", null)
+        }
+    }
+
+    /** Sobrescribe el archivo. Algunos proveedores no aceptan "wt": se prueba "w". */
+    private fun writeTo(uri: Uri, data: ByteArray): Boolean {
+        for (mode in listOf("wt", "w")) {
+            try {
+                val out = contentResolver.openOutputStream(uri, mode) ?: continue
+                out.use { it.write(data) }
+                return true
+            } catch (e: Exception) {
+                // Se prueba el otro modo.
+            }
+        }
+        return false
+    }
+
+    private fun displayName(uri: Uri): String? = try {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun onBackupResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        val uri = if (resultCode == Activity.RESULT_OK) data?.data else null
+        if (requestCode == createRequest) {
+            val result = pendingCreate ?: return
+            val bytes = pendingCreateData ?: ByteArray(0)
+            pendingCreate = null
+            pendingCreateData = null
+            if (uri == null) {
+                result.success(null)
+                return
+            }
+            // Para poder actualizar la copia sola los días siguientes.
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                )
+            } catch (e: Exception) {
+                // Algunos lugares no lo permiten; la copia de hoy igual se guarda.
+            }
+            Thread {
+                val ok = writeTo(uri, bytes)
+                val name = displayName(uri) ?: "Recordame-copia.json"
+                handler.post {
+                    if (ok) {
+                        result.success(mapOf("uri" to uri.toString(), "nombre" to name))
+                    } else {
+                        result.error("no_se_pudo", "No se pudo guardar en ese lugar", null)
+                    }
+                }
+            }.start()
+        } else {
+            val result = pendingOpen ?: return
+            pendingOpen = null
+            if (uri == null) {
+                result.success(null)
+                return
+            }
+            Thread {
+                val bytes = try {
+                    contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                } catch (e: Exception) {
+                    null
+                }
+                handler.post {
+                    if (bytes != null) {
+                        result.success(bytes)
+                    } else {
+                        result.error("no_se_pudo", "No se pudo leer ese archivo", null)
+                    }
+                }
+            }.start()
+        }
     }
 
     private fun pick(current: String?, result: MethodChannel.Result) {
@@ -69,6 +207,10 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Se usa startActivityForResult por simpleza")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == createRequest || requestCode == openRequest) {
+            onBackupResult(requestCode, resultCode, data)
+            return
+        }
         if (requestCode != pickRequest) return
         val result = pendingPick ?: return
         pendingPick = null
@@ -105,11 +247,11 @@ class MainActivity : FlutterActivity() {
         playing = RingtoneManager.getRingtone(this, target)
         playing?.play()
         // Que no suene para siempre si se eligió un tono de llamada.
-        handler.postDelayed({ stop() }, 4000)
+        handler.postDelayed(stopSound, 4000)
     }
 
     private fun stop() {
-        handler.removeCallbacksAndMessages(null)
+        handler.removeCallbacks(stopSound)
         playing?.stop()
         playing = null
     }

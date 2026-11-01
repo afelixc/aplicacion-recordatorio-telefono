@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/app_scope.dart';
+import '../../core/formatting.dart';
 import '../../core/settings.dart';
 import '../ai/ai_providers.dart';
 import '../help/modes_help.dart';
 import 'ai_section.dart';
+import 'backup_section.dart';
 import 'notifications_section.dart';
 import 'usage_section.dart';
 
@@ -85,14 +87,29 @@ class SettingsScreen extends StatelessWidget {
                     : NotificationsSection(service: scope.notifications!),
               ),
             ),
+            if (scope.backup != null)
+              _MenuItem(
+                icon: Icons.add_to_drive,
+                title: 'Copia de seguridad',
+                subtitle: settings.backupUri == null
+                    ? 'Guardar todo en Google Drive'
+                    : settings.backupError != null
+                    ? 'La última copia falló'
+                    : settings.backupLast == null
+                    ? 'En Google Drive'
+                    : 'Última copia: ${Fmt.when(settings.backupLast!)}',
+                warn: settings.backupError != null,
+                page: (_) => _Page(
+                  title: 'Copia de seguridad',
+                  child: BackupSection(backup: scope.backup!),
+                ),
+              ),
             const _BoxedTile(
               child: ListTile(
                 enabled: false,
                 leading: CircleAvatar(child: Icon(Icons.schedule)),
                 title: Text('Próximamente'),
-                subtitle: Text(
-                  'Sincronizar con Google Calendar y copia de seguridad en Google Drive',
-                ),
+                subtitle: Text('Sincronizar con Google Calendar'),
               ),
             ),
             const SizedBox(height: 16),

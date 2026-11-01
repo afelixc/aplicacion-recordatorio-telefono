@@ -12,6 +12,7 @@ import 'data/memory_reminder_repository.dart';
 import 'data/reminder.dart';
 import 'data/scheduling_reminder_repository.dart';
 import 'features/ai/ai_providers.dart';
+import 'features/backup/backup_service.dart';
 import 'features/notifications/notification_service.dart';
 import 'features/notifications/reminder_actions.dart';
 import 'features/notifications/reminder_scheduler.dart';
@@ -50,12 +51,20 @@ Future<void> main() async {
     notifications,
   );
   notifications.foregroundActions = ReminderActions(reminders);
+  final usage = DriftUsageRepository(db);
+  final backup = BackupService(
+    reminders: reminders,
+    usage: usage,
+    settings: settings,
+    files: AndroidBackupFiles(),
+  );
 
   runApp(
     RecordameApp(
       reminders: reminders,
       settings: settings,
-      usage: DriftUsageRepository(db),
+      usage: usage,
+      backup: backup,
       notifications: notifications,
       openedReminders: notifications.openedReminders,
       launchReminderId: notifications.launchReminderId,
@@ -65,7 +74,14 @@ Future<void> main() async {
   // Después de mostrar la app: pedir permiso y dejar todos los avisos al día.
   await notifications.requestPermission();
   await reminders.resync();
+
+  // Copia automática: una vez por día, al abrir o volver a la app.
+  await backup.autoBackup();
+  _lifecycle = AppLifecycleListener(onResume: backup.autoBackup);
 }
+
+// ignore: unused_element
+AppLifecycleListener? _lifecycle;
 
 List<Reminder> _sampleReminders() {
   final now = DateTime.now();
