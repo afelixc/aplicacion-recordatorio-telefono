@@ -189,6 +189,26 @@ void main() {
     },
   );
 
+  test('cambiar de calendario con "traer lo nuevo" prendido: no trae de golpe '
+      'lo que ya estaba', () async {
+    final (sync, repo, cal, inner) = await make();
+    await sync.settings.setCalendar('1', 'yo');
+    await sync.startAuto();
+    cal.stored['50'] = (
+      cal: '2',
+      title: 'Viejo del otro',
+      start: at,
+      rrule: null,
+    );
+    await sync.choose(
+      const PhoneCalendar(id: '2', name: 'Trabajo', account: 'yo@gmail.com'),
+    );
+    expect(await sync.autoImport(repo), 0);
+    cal.stored['51'] = (cal: '2', title: 'Nuevo', start: at, rrule: null);
+    expect(await sync.autoImport(repo), 1);
+    expect((await inner.watchAll().first).single.title, 'Nuevo');
+  });
+
   test('traer lo nuevo automáticamente: solo lo anotado después', () async {
     final (sync, repo, cal, inner) = await make();
     await sync.settings.setCalendar('1', 'yo');

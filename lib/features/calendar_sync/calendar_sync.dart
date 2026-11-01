@@ -40,6 +40,23 @@ class CalendarSync {
 
   bool get sending => settings.calendarSend && settings.calendarId != null;
 
+  /// Cambiar de calendario. Lo ya enviado queda en el calendario anterior
+  /// (y sus cambios siguen yendo ahí); lo nuevo va al elegido. Si "traer lo
+  /// nuevo" está prendido, lo que ya tiene el elegido no se trae de golpe.
+  Future<void> choose(PhoneCalendar c) async {
+    await settings.setCalendar(c.id, c.label);
+    if (!c.writable && settings.calendarSend) {
+      await settings.setCalendarSend(false);
+    }
+    if (settings.calendarAuto) {
+      try {
+        await settings.addCalendarKnown(
+          (await upcoming(autoWindow)).map((e) => e.id),
+        );
+      } catch (_) {}
+    }
+  }
+
   // --- De Recordame → al calendario ---
 
   /// Crea o actualiza el evento; devuelve el id (o ids) para guardar.

@@ -289,10 +289,7 @@ class _CalendarSectionState extends State<CalendarSection> {
                 calendars: calendars,
                 selected: s.calendarId,
                 onPick: (c) async {
-                  await s.setCalendar(c.id, c.label);
-                  if (!c.writable && s.calendarSend) {
-                    await s.setCalendarSend(false);
-                  }
+                  await widget.sync.choose(c);
                   await _loadEvents();
                 },
               ),
