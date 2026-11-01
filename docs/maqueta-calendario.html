@@ -100,7 +100,7 @@ select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid
     </section>
 
     <section class="card">
-      <h2><span class="n">2</span>Enviar al calendario</h2>
+      <h2><span class="n">2</span>De Recordame → al calendario</h2>
       <div class="switch-row">
         <div class="txt">
           <div style="font-weight:600">Enviar mis recordatorios al calendario</div>
@@ -128,7 +128,7 @@ select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid
     </section>
 
     <section class="card">
-      <h2><span class="n">4</span>Sincronizar siempre</h2>
+      <h2><span class="n">4</span>Del calendario → a Recordame, siempre</h2>
       <div class="switch-row">
         <div class="txt">
           <div style="font-weight:600">Traer lo nuevo automáticamente</div>
@@ -136,6 +136,7 @@ select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid
         </div>
         <button class="switch" id="auto" role="switch" aria-checked="false" aria-label="Traer lo nuevo automáticamente"></button>
       </div>
+      <div class="ok-box" id="both" hidden>⇄ Con el 2 y el 4 prendidos queda sincronizado en los dos sentidos.</div>
       <div class="warn-box" id="autoWarn" hidden>Lo que viene del calendario te puede sonar dos veces: Google Calendar también avisa. Si te molesta, apagá los avisos de Google Calendar en el teléfono.</div>
     </section>
 
@@ -146,11 +147,12 @@ select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid
 
   <div class="dialog" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
     <div class="box">
-      <h3 id="dlgTitle">¿Mando también los 12 que ya tenés?</h3>
-      <p style="margin:0" class="muted">Desde ahora, todo lo nuevo que cargues en Recordame va al calendario. ¿Querés que mande también los 12 recordatorios pendientes que ya tenés?</p>
-      <div class="acts">
-        <button id="onlyNew">Solo los nuevos</button>
-        <button class="main" id="allOld">Sí, mandar los 12</button>
+      <h3 id="dlgTitle">Enviar al calendario</h3>
+      <p style="margin:0" class="muted">Desde ahora, lo que cargues en Recordame va a aparecer en tu calendario.<br><br>Ya tenés <b>12 recordatorios pendientes</b> cargados de antes. ¿Qué hago con esos?</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn primary" id="allOld">Mandar también esos 12</button>
+        <button class="btn ghost" id="onlyNew">Esos no, solo lo que cargue desde ahora</button>
+        <button class="btn ghost" id="cancelDlg" style="background:none;border:0;color:var(--brand)">Cancelar (no enviar nada)</button>
       </div>
     </div>
   </div>
@@ -249,6 +251,7 @@ $('send').addEventListener('click', () => {
   if (sw.getAttribute('aria-checked') === 'true') {
     sw.setAttribute('aria-checked', 'false');
     $('sendInfo').textContent = 'Apagado: el calendario no se toca.';
+    both();
     return;
   }
   $('dlg').classList.add('show');
@@ -259,8 +262,10 @@ function closeDlg(all) {
   $('send').setAttribute('aria-checked', 'true');
   $('sendInfo').textContent = `Prendido: lo que cargás, cambiás o borrás en Recordame aparece en ${cal()}.`;
   toast(all ? 'Listo ✓ Mandé tus 12 recordatorios al calendario.' : 'Listo ✓ Desde ahora, lo nuevo va al calendario.');
+  both();
 }
 $('onlyNew').addEventListener('click', () => closeDlg(false));
+$('cancelDlg').addEventListener('click', () => { $('dlg').classList.remove('show'); toast('No se envió nada. Queda apagado.'); });
 $('allOld').addEventListener('click', () => closeDlg(true));
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('dlg').classList.remove('show'); });
 
@@ -269,6 +274,7 @@ $('auto').addEventListener('click', () => {
   const on = sw.getAttribute('aria-checked') !== 'true';
   sw.setAttribute('aria-checked', on);
   $('autoWarn').hidden = !on;
+  both();
   $('autoInfo').textContent = on
     ? `Prendido: lo nuevo que anotes en ${cal()}, aunque sea desde la compu, aparece solo en Recordame y te avisa.`
     : 'Apagado: solo se trae lo que elijas arriba.';
@@ -280,6 +286,9 @@ $('cal').addEventListener('change', () => {
     $('autoInfo').textContent = `Prendido: lo nuevo que anotes en ${cal()}, aunque sea desde la compu, aparece solo en Recordame y te avisa.`;
 });
 
+function both() {
+  $('both').hidden = !($('send').getAttribute('aria-checked') === 'true' && $('auto').getAttribute('aria-checked') === 'true');
+}
 render();
 </script>
 </body>
