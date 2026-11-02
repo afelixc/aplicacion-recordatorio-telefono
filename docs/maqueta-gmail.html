@@ -3,105 +3,140 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Roboto:wght@400;500;700&display=swap">
 <style>
-/* Layout: título + dos "pantallas" lado a lado (teléfono / barra de Gmail), debajo los pasos. */
+/* Layout: título, dos pantallas enlazadas (teléfono / Gmail) con una franja de sincronización, y abajo cómo funciona. */
 :root{
   --bg:#EEF0F5; --paper:#FFFFFF; --ink:#1C2333; --muted:#5D6578; --line:#D7DBE5;
   --brand:#2B3A67; --accent:#E8A33D; --soft:#E3EBFF; --warn:#B3261E; --warnsoft:#FCE8E6;
-  --done:#FFF4D6; --doneline:#E8C77A; --gbar:#F6F8FC;
+  --done:#FFF4D6; --doneline:#E8C77A; --gbar:#F6F8FC; --okbg:#E3F3E6; --okfg:#1E5B2A;
   --display:"Fraunces", Georgia, serif; --body:"Roboto", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#10131C; --paper:#1A1F2E; --ink:#E7EAF2; --muted:#A3AABC; --line:#323A50;
   --brand:#8FA2E0; --accent:#F0B357; --soft:#26314F; --warn:#F2B8B5; --warnsoft:#3A2222;
-  --done:#3A3320; --doneline:#8A7440; --gbar:#141826; color-scheme:dark}}
+  --done:#3A3320; --doneline:#8A7440; --gbar:#141826; --okbg:#1F3324; --okfg:#BFE6C5; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#10131C; --paper:#1A1F2E; --ink:#E7EAF2; --muted:#A3AABC; --line:#323A50;
   --brand:#8FA2E0; --accent:#F0B357; --soft:#26314F; --warn:#F2B8B5; --warnsoft:#3A2222;
-  --done:#3A3320; --doneline:#8A7440; --gbar:#141826; color-scheme:dark}
+  --done:#3A3320; --doneline:#8A7440; --gbar:#141826; --okbg:#1F3324; --okfg:#BFE6C5; color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
-.wrap{max-width:1040px;margin:0 auto;display:grid;gap:28px}
-h1{font-family:var(--display);font-size:clamp(26px,4vw,36px);margin:0;color:var(--brand);text-wrap:balance}
-.lead{margin:6px 0 0;color:var(--muted);max-width:62ch}
-.stage{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:28px;align-items:start}
-@media (max-width:820px){.stage{grid-template-columns:minmax(0,1fr)}}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:24px}
+h1{font-family:var(--display);font-size:clamp(26px,4vw,36px);margin:0;color:var(--brand);text-wrap:balance;display:flex;align-items:center;gap:12px}
+h1 img{width:44px;height:44px;border-radius:10px}
+.lead{margin:6px 0 0;color:var(--muted);max-width:68ch}
+.stage{display:grid;grid-template-columns:minmax(0,330px) 60px minmax(0,1fr);gap:12px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:minmax(0,1fr)}.sync{flex-direction:row!important;height:auto!important;padding:8px 0}}
 .label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:500}
+button{font:inherit}
+/* Franja de sincronización */
+.sync{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;height:600px;margin-top:26px;color:var(--muted);font-size:11px;text-align:center}
+.sync .dot{width:36px;height:36px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:grid;place-items:center;font-size:16px}
+.sync.busy .dot{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 25%,transparent)}
+@media (prefers-reduced-motion:no-preference){.sync.busy .dot{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}}
 /* Teléfono */
-.phone{background:var(--paper);border:10px solid #22283A;border-radius:34px;overflow:hidden;max-width:340px;min-height:600px;display:flex;flex-direction:column}
-.ptop{background:var(--brand);color:#fff;padding:14px 16px;font-weight:700;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.phone{background:var(--paper);border:10px solid #22283A;border-radius:34px;overflow:hidden;max-width:330px;height:600px;display:flex;flex-direction:column;position:relative}
+.ptop{background:var(--brand);color:#fff;padding:12px 14px;font-weight:700;letter-spacing:.06em;display:flex;align-items:center;gap:10px;font-size:14px}
+:root[data-theme="dark"] .ptop{color:#10131C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ptop{color:#10131C}}
 .ptop button{all:unset;cursor:pointer;font-size:20px;line-height:1}
-.pbody{padding:14px;display:grid;gap:10px;flex:1;align-content:start}
-.tile{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;gap:12px;align-items:center;background:var(--paper);cursor:default}
-.tile .ic{width:34px;height:34px;border-radius:10px;background:var(--soft);display:grid;place-items:center;font-size:18px;flex:none}
-.tile b{display:block;font-weight:500}
-.tile small{color:var(--muted)}
-.tile.new{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent);cursor:pointer}
-.ver{all:unset;cursor:pointer;text-align:center;color:var(--muted);font-size:13px;padding:10px;border-radius:10px;user-select:none}
-.ver:focus-visible,.tile.new:focus-visible{outline:2px solid var(--brand)}
-.toast{background:#2F3445;color:#fff;border-radius:10px;padding:10px 12px;font-size:13px}
-.sec{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:8px}
-.sec h3{margin:0;font-size:15px}
-.sec p{margin:0;font-size:13px;color:var(--muted)}
-.btn{all:unset;cursor:pointer;background:var(--brand);color:#fff;border-radius:20px;padding:9px 16px;font-size:14px;font-weight:500;text-align:center}
+.pbody{padding:12px;display:grid;gap:8px;flex:1;align-content:start;overflow:auto}
+.ptabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--gbar)}
+.ptabs button{all:unset;cursor:pointer;text-align:center;font-size:11px;padding:8px 0;color:var(--muted)}
+.ptabs button[aria-current="true"]{color:var(--brand);font-weight:700}
+.ptabs i{display:block;font-style:normal;font-size:16px}
+.tile{border:1px solid var(--line);border-radius:14px;padding:11px 12px;display:flex;gap:12px;align-items:center;background:var(--paper)}
+.tile .ic{width:32px;height:32px;border-radius:10px;background:var(--soft);display:grid;place-items:center;font-size:17px;flex:none}
+.tile b{display:block;font-weight:500;font-size:14px}
+.tile small{color:var(--muted);font-size:12px}
+.tile.new{border-color:var(--accent);cursor:pointer}
+.ver{all:unset;cursor:pointer;text-align:center;color:var(--muted);font-size:13px;padding:8px;border-radius:10px;user-select:none}
+.toast{position:absolute;left:10px;right:10px;bottom:52px;background:#2F3445;color:#fff;border-radius:10px;padding:10px 12px;font-size:13px}
+.sec{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:8px}
+.sec h3{margin:0;font-size:14px}
+.sec p{margin:0;font-size:12.5px;color:var(--muted)}
+.btn{all:unset;cursor:pointer;background:var(--brand);color:#fff;border-radius:20px;padding:8px 14px;font-size:13px;font-weight:500;text-align:center}
+:root[data-theme="dark"] .btn{color:#10131C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn{color:#10131C}}
 .btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--line)}
-.ok{display:flex;gap:8px;align-items:center;font-size:13px;background:#E3F3E6;color:#1E5B2A;border-radius:10px;padding:8px 10px}
-:root[data-theme="dark"] .ok{background:#1F3324;color:#BFE6C5}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .ok{background:#1F3324;color:#BFE6C5}}
+.ok{display:flex;gap:8px;align-items:center;font-size:12.5px;background:var(--okbg);color:var(--okfg);border-radius:10px;padding:8px 10px}
 .row{display:flex;gap:8px;flex-wrap:wrap}
+.chips{display:flex;gap:6px}
+.chip{flex:1;text-align:center;font-size:12px;padding:5px 0;border-radius:14px;border:1px solid var(--line)}
+.chip.on{background:var(--soft);border-color:transparent;font-weight:500}
+.psearch{border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:13px;color:var(--muted)}
+/* tarjetas de recordatorio, compartidas por las dos pantallas */
+.rem{border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;gap:10px;align-items:flex-start;background:var(--paper);transition:background .4s}
+.rem.done{background:var(--done);border-color:var(--doneline)}
+.rem.done b{text-decoration:line-through;color:var(--muted);font-weight:400}
+.rem.flash{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 55%,transparent)}
+.rem b{font-weight:500;font-size:13.5px;display:block}
+.rem small{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.rem.late small{color:var(--warn)}
+.rem .from{display:inline-block;font-size:10.5px;background:var(--soft);color:var(--brand);border-radius:8px;padding:0 6px;margin-left:4px}
+.chk{all:unset;cursor:pointer;flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--muted);display:grid;place-items:center;margin-top:1px;font-size:12px;color:#fff}
+.done .chk{background:var(--brand);border-color:var(--brand)}
+.chk:focus-visible,.tab:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 /* Gmail */
-.gmail{background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 320px 52px;min-height:600px}
-@media (max-width:820px){.gmail{grid-template-columns:minmax(0,1fr) 52px}.inbox{display:none}}
-.inbox{padding:14px 16px;display:grid;gap:0;align-content:start;background:var(--paper)}
+.gmail{background:var(--paper);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 330px 52px;height:600px}
+@media (max-width:1100px){.gmail{grid-template-columns:minmax(0,1fr) 52px}.inbox{display:none}}
+.inbox{padding:14px 16px;align-content:start;display:grid}
 .mail{display:flex;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);min-width:0}
 .mail b{color:var(--ink);font-weight:500;flex:none;width:110px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .mail span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
-.panel{border-left:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column;min-width:0}
-.phead{display:flex;align-items:center;gap:10px;padding:14px 14px 10px;border-bottom:1px solid var(--line)}
-.logo{width:26px;height:26px;border-radius:8px;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px}
-.phead b{flex:1;font-weight:500}
-.phead small{color:var(--muted);font-size:11px;display:block}
+.panel{border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0;position:relative}
+.phead{display:flex;align-items:center;gap:10px;padding:12px 12px 10px;border-bottom:1px solid var(--line)}
+.phead img{width:30px;height:30px;border-radius:8px}
+.phead b{flex:1;font-weight:500;font-size:15px}
+.phead small{color:var(--muted);font-size:11px;display:block;font-weight:400}
 .icon{all:unset;cursor:pointer;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:var(--muted)}
 .icon:hover{background:var(--soft)}
-.search{margin:10px 14px 6px;display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:20px;padding:6px 12px;color:var(--muted)}
+.tools{display:flex;gap:8px;margin:10px 12px 6px;align-items:center}
+.search{flex:1;display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:20px;padding:6px 12px;color:var(--muted);min-width:0}
 .search input{all:unset;flex:1;color:var(--ink);font-size:14px;min-width:0}
 .tabs{display:flex;gap:4px;padding:4px 10px 8px;flex-wrap:wrap}
-.tab{all:unset;cursor:pointer;font-size:12px;padding:5px 10px;border-radius:14px;border:1px solid var(--line);color:var(--ink)}
+.tab{all:unset;cursor:pointer;font-size:12px;padding:5px 9px;border-radius:14px;border:1px solid var(--line)}
 .tab[aria-pressed="true"]{background:var(--soft);border-color:transparent;font-weight:500}
 .tab.warn[aria-pressed="true"]{background:var(--warnsoft)}
-.list{padding:0 12px 12px;display:grid;gap:8px;overflow:auto;max-height:460px}
-.item{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;display:grid;gap:3px}
-.item b{font-weight:500;font-size:14px}
-.item small{color:var(--muted);font-variant-numeric:tabular-nums}
-.item.late small{color:var(--warn)}
-.item.done{background:var(--done);border-color:var(--doneline)}
-.item.done b{text-decoration:line-through;color:var(--muted)}
+.list{padding:0 12px 12px;display:grid;gap:8px;overflow:auto;align-content:start;flex:1}
 .empty{color:var(--muted);font-size:13px;text-align:center;padding:24px 8px}
-.foot{margin-top:auto;padding:8px 14px;font-size:11px;color:var(--muted);border-top:1px solid var(--line)}
+.foot{padding:8px 12px;font-size:11px;color:var(--muted);border-top:1px solid var(--line)}
 .rail{background:var(--gbar);display:grid;align-content:start;justify-items:center;gap:14px;padding:14px 0;border-left:1px solid var(--line)}
 .rail div{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px}
-.rail .on{background:var(--brand);color:#fff;font-weight:700;outline:3px solid color-mix(in srgb,var(--accent) 60%,transparent)}
-/* Pasos */
+.rail img{width:30px;height:30px;border-radius:8px;outline:3px solid color-mix(in srgb,var(--accent) 70%,transparent);outline-offset:2px}
+/* Formulario "Nuevo" en Gmail */
+.form{position:absolute;inset:0;background:var(--paper);display:flex;flex-direction:column}
+.form .fbody{padding:12px;display:grid;gap:10px;overflow:auto}
+.form label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.form input,.form select{font:inherit;font-size:14px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form .err{color:var(--warn);font-size:12px;margin:0}
+.form .fend{margin-top:auto;padding:10px 12px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+/* Cómo funciona */
 .steps{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px 22px;display:grid;gap:14px}
 .steps h2{font-family:var(--display);color:var(--brand);margin:0;font-size:22px}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
 .cols h3{margin:0 0 6px;font-size:15px}
-ol{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px}
-.note{font-size:13px;color:var(--muted);margin:0}
+.cols p,.cols li{font-size:14px}
+.cols p{margin:0 0 6px}
+ol,ul{margin:0;padding-left:20px;display:grid;gap:6px}
 .q{border-left:3px solid var(--accent);padding:4px 0 4px 12px;font-size:14px}
-@media (prefers-reduced-motion:no-preference){.tile.new{animation:pop .35s ease}@keyframes pop{from{transform:scale(.96);opacity:.5}}}
+.try{display:flex;flex-wrap:wrap;gap:8px;font-size:13px;color:var(--muted)}
+.try span{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:4px 10px}
 </style>
 
 <div class="wrap">
   <header>
-    <h1>Recordame en la barra de Gmail</h1>
-    <p class="lead">Maqueta para mirar y tocar: nada de esto está instalado todavía. A la izquierda, el teléfono; a la derecha, Gmail en la compu con el ícono de Recordame abierto.</p>
+    <h1><img src="data:image/png;base64,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" alt="">Recordame en Gmail</h1>
+    <p class="lead">Maqueta para tocar, nada está instalado todavía. Las dos pantallas están enlazadas: lo que hacés de un lado aparece del otro, como pasaría de verdad a través de tu Google Drive.</p>
   </header>
+  <div class="try"><span>Probá: tildá uno en Gmail y mirá el teléfono</span><span>Tocá <b>+ Nuevo</b> en Gmail</span><span>Tildá uno en el teléfono</span><span>Configuración → 5 toques en la versión</span></div>
 
   <div class="stage">
     <section>
-      <p class="label">En el teléfono · Configuración</p>
+      <p class="label">En el teléfono</p>
       <div class="phone" id="phone"></div>
     </section>
+    <div class="sync" id="sync"><div class="dot">⇄</div><span id="syncText">Drive<br>al día</span></div>
     <section style="min-width:0">
       <p class="label">En la compu · Gmail</p>
       <div class="gmail">
@@ -112,141 +147,208 @@ ol{margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px}
           <div class="mail"><b>Chies Hnos. S.A.</b><span>Lista de precios 30.10.2026</span></div>
           <div class="mail"><b>asociacion mutual</b><span>Valor cuota a partir de noviembre 2026</span></div>
           <div class="mail"><b>info</b><span>Avances de Resultado de los EMP - Anual</span></div>
+          <div class="mail"><b>Anthropic</b><span>Security alert: new passkey added…</span></div>
         </div>
-        <aside class="panel">
+        <aside class="panel" id="panel">
           <div class="phead">
-            <div class="logo">R</div>
-            <b>Recordame<small id="upd">Actualizado hace 2 min</small></b>
+            <img src="data:image/png;base64,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" alt="">
+            <b>Recordame<small id="upd">Al día con el teléfono</small></b>
             <button class="icon" id="refresh" title="Actualizar" aria-label="Actualizar">⟳</button>
           </div>
-          <label class="search"><span aria-hidden="true">🔍</span><input id="q" placeholder="Buscar…" aria-label="Buscar"></label>
+          <div class="tools">
+            <label class="search"><span aria-hidden="true">🔍</span><input id="q" placeholder="Buscar…" aria-label="Buscar"></label>
+            <button class="btn" id="newBtn">+ Nuevo</button>
+          </div>
           <div class="tabs" id="tabs"></div>
           <div class="list" id="list"></div>
-          <div class="foot">Solo para ver. Para cambiar algo, usá el teléfono.</div>
+          <div class="foot">Tildá para marcar como hecho. Se pasa solo al teléfono.</div>
         </aside>
         <nav class="rail" aria-hidden="true">
           <div style="background:#E8F0FE;color:#1A73E8;font-weight:700">31</div>
           <div>💡</div>
           <div>✔️</div>
           <div>👤</div>
-          <div class="on">R</div>
+          <img src="data:image/png;base64,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" alt="">
         </nav>
       </div>
     </section>
   </div>
 
   <section class="steps">
-    <h2>Lo que haría cada uno</h2>
+    <h2>Cómo funcionaría de verdad</h2>
     <div class="cols">
       <div>
-        <h3>Yo (programación)</h3>
-        <ol>
-          <li>El recuadro escondido "Gmail en la compu" en Configuración.</li>
-          <li>Que Recordame guarde el archivo <b>Recordame-gmail.json</b> en tu Drive cada vez que cambia algo.</li>
-          <li>El complemento de Gmail (2 archivos listos para copiar y pegar).</li>
-        </ol>
+        <h3>Del teléfono a la compu</h3>
+        <p>Cada vez que cargás, cambiás o tildás algo, Recordame actualiza el archivo <b>Recordame-gmail.json</b> en tu Drive. Gmail lo lee al abrir el ícono o al tocar ⟳.</p>
       </div>
       <div>
-        <h3>Vos (una vez, unos 10 minutos en la compu)</h3>
-        <ol>
-          <li>Entrar a <b>script.google.com</b> con la cuenta de tu Gmail → <b>Nuevo proyecto</b> → nombre "Recordame".</li>
-          <li>Ruedita ⚙ → tildar <b>Mostrar el archivo de manifiesto</b>.</li>
-          <li>Pegar los 2 archivos que te paso.</li>
-          <li><b>Implementar → Implementaciones de prueba → Instalar</b>.</li>
-          <li>Recargar Gmail → tocar el ícono <b>R</b> → <b>Configuración avanzada → Ir a Recordame → Permitir</b> (una sola vez).</li>
-        </ol>
+        <h3>De la compu al teléfono</h3>
+        <p>Lo que tildás o creás en Gmail se anota en un segundo archivo, <b>Recordame-gmail-cambios.json</b>. El teléfono lo levanta al abrir o volver a Recordame, y también con la app cerrada cada 15 minutos más o menos (como ya hace con el calendario). Ahí programa el aviso.</p>
+        <p style="color:var(--muted)">Por eso, uno creado en la compu para "dentro de 5 minutos" puede llegar tarde al teléfono. Para algo con fecha y hora más adelante, no hay problema.</p>
+      </div>
+      <div>
+        <h3>Para armarlo</h3>
+        <ul>
+          <li><b>Yo:</b> el recuadro escondido, los dos archivos en Drive y el complemento de Gmail con su logo.</li>
+          <li><b>Vos (una vez, 10 minutos):</b> script.google.com → Nuevo proyecto → pegar 2 archivos → Implementar → Implementaciones de prueba → Instalar → Permitir.</li>
+          <li>Sin Google Cloud y sin revisión de Google. Queda solo en tu cuenta.</li>
+        </ul>
       </div>
     </div>
-    <p class="note">Sin Google Cloud y sin revisión de Google: queda solo en tu cuenta. Al principio es solo para ver; tildar como hecho desde la compu se puede sumar después.</p>
-    <div class="q"><b>Para pulir:</b> ¿te gustan las solapas Vencidos / Hoy / Próximos / Hechos? ¿Querés ver algo más en cada recordatorio (por ejemplo, si se repite)? ¿Está bien esconderlo tocando 5 veces la versión?</div>
+    <div class="q"><b>Para pulir:</b> en el formulario de Gmail puse Título, Fecha, Hora y Repetir (una vez, todos los días, todas las semanas, todos los meses, todos los años). ¿Algo más? ¿Querés que también se pueda <b>borrar</b> o <b>cambiar la fecha</b> desde la compu, o con tildar y crear alcanza por ahora?</div>
   </section>
 </div>
 
 <script>
-const D = 86400000, now = new Date(2026,10,3,10,15);
-const at = (d,h,m)=>new Date(now.getFullYear(),now.getMonth(),now.getDate()+d,h,m);
-const data = [
-  {t:"Pagar la cuota de la mutual",w:at(-1,9,0)},
-  {t:"Responder a CCIR de Armstrong por el RIMI",w:at(-2,11,0)},
-  {t:"Mandar un mensaje a Fabricio Gandini, tema puerta",w:at(0,8,30),done:true},
-  {t:"Llamar a Chies por la lista de precios nueva",w:at(0,15,0)},
-  {t:"Reunión Centro Industrial — relevamiento Comex",w:at(0,18,30)},
-  {t:"Revisar avances EMP contrato 674357",w:at(1,9,0)},
-  {t:"Cargar combustible al utilitario",w:at(2,7,30),rep:"Todos los lunes"},
-  {t:"Cumpleaños de mamá",w:at(9,9,0),rep:"Todos los años"},
-  {t:"Pedir presupuesto de paneles solares",w:at(-3,10,0),done:true},
+const LOGO="data:image/png;base64,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";
+const D=86400000, now=new Date(2026,10,3,10,15);
+const at=(d,h,m)=>new Date(now.getFullYear(),now.getMonth(),now.getDate()+d,h,m);
+let nextId=100;
+const data=[
+  {id:1,t:"Pagar la cuota de la mutual",w:at(-1,9,0)},
+  {id:2,t:"Responder a CCIR de Armstrong por el RIMI",w:at(-2,11,0)},
+  {id:3,t:"Mandar un mensaje a Fabricio Gandini, tema puerta",w:at(0,8,30),done:true},
+  {id:4,t:"Llamar a Chies por la lista de precios nueva",w:at(0,15,0)},
+  {id:5,t:"Reunión Centro Industrial, relevamiento Comex",w:at(0,18,30)},
+  {id:6,t:"Revisar avances EMP contrato 674357",w:at(1,9,0)},
+  {id:7,t:"Cargar combustible al utilitario",w:at(2,7,30),rep:"Todos los lunes"},
+  {id:8,t:"Cumpleaños de mamá",w:at(9,9,0),rep:"Todos los años"},
+  {id:9,t:"Pedir presupuesto de paneles solares",w:at(-3,10,0),done:true},
 ];
-const days=["dom","lun","mar","mié","jue","vie","sáb"], mon=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+// Lo que ve cada lado (copias): el otro se entera después de "sincronizar".
+let pc=JSON.parse(JSON.stringify(data)), ph=JSON.parse(JSON.stringify(data));
+[pc,ph].forEach(a=>a.forEach(r=>r.w=new Date(r.w)));
+const days=["dom","lun","mar","mié","jue","vie","sáb"],mon=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 const pad=n=>String(n).padStart(2,"0");
 const sameDay=(a,b)=>a.toDateString()===b.toDateString();
 function when(d){const h=`${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if(sameDay(d,now))return `Hoy ${h}`; if(sameDay(d,new Date(now.getTime()+D)))return `Mañana ${h}`;
-  if(sameDay(d,new Date(now.getTime()-D)))return `Ayer ${h}`;
-  return `${days[d.getDay()]} ${d.getDate()} ${mon[d.getMonth()]} ${h}`;}
+  if(sameDay(d,now))return `Hoy ${h}`;if(sameDay(d,new Date(now.getTime()+D)))return `Mañana ${h}`;
+  if(sameDay(d,new Date(now.getTime()-D)))return `Ayer ${h}`;return `${days[d.getDay()]} ${d.getDate()} ${mon[d.getMonth()]} ${h}`;}
 const plain=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
-const groups={
-  late:{n:"Vencidos",f:r=>!r.done&&r.w<now},
-  today:{n:"Hoy",f:r=>!r.done&&sameDay(r.w,now)&&r.w>=now},
-  next:{n:"Próximos",f:r=>!r.done&&r.w>now&&!sameDay(r.w,now)},
-  done:{n:"Hechos",f:r=>r.done},
-};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const late=r=>!r.done&&!r.rep&&r.w<now;
+let flashPc=null, flashPh=null;
+
+/* ---- sincronización simulada ---- */
+const sync=document.getElementById("sync"), syncText=document.getElementById("syncText");
+let pending=0;
+function send(dir,apply,msg){
+  pending++;sync.classList.add("busy");
+  syncText.innerHTML=dir==="toPhone"?"Compu → Drive<br>→ teléfono":"Teléfono → Drive<br>→ compu";
+  setTimeout(()=>{apply();pending--;
+    if(!pending){sync.classList.remove("busy");syncText.innerHTML="Drive<br>al día";}
+    if(msg)toast(msg);drawPhone();drawPc();
+    const fe=phone.querySelector(".rem.flash");if(fe)fe.scrollIntoView({block:"center",behavior:"smooth"});},1600);
+}
+function setDone(arr,id,v){const r=arr.find(x=>x.id===id);if(r)r.done=v;}
+
+/* ---- Gmail ---- */
+const groups={late:{n:"Vencidos",f:late},today:{n:"Hoy",f:r=>!r.done&&!late(r)&&sameDay(r.w,now)},
+  next:{n:"Próximos",f:r=>!r.done&&!late(r)&&!sameDay(r.w,now)},done:{n:"Hechos",f:r=>r.done}};
 let tab="today";
-function draw(){
+function card(r,side,showLate){
+  const fl=(side==="pc"?flashPc:flashPh)===r.id;
+  return `<div class="rem${r.done?" done":""}${showLate&&late(r)?" late":""}${fl?" flash":""}">
+    <button class="chk" data-side="${side}" data-id="${r.id}" aria-label="${r.done?"Desmarcar":"Marcar como hecho"}: ${esc(r.t)}">${r.done?"✓":""}</button>
+    <div><b>${esc(r.t)}</b><small>${when(r.w)}${showLate&&late(r)?" · vencido":""}${r.rep?" · "+r.rep:""}</small>${r.pcMade?`<span class="from">creado en la compu</span>`:""}</div></div>`;
+}
+function drawPc(){
+  if(document.getElementById("form"))return;
   const q=plain(document.getElementById("q").value.trim()).split(/\s+/).filter(Boolean);
   const hit=r=>q.every(w=>plain(r.t).includes(w));
   document.getElementById("tabs").innerHTML=Object.entries(groups).map(([k,g])=>
-    `<button class="tab${k==="late"?" warn":""}" aria-pressed="${k===tab}" data-k="${k}">${g.n} (${data.filter(r=>g.f(r)&&hit(r)).length})</button>`).join("");
-  const items=data.filter(r=>groups[tab].f(r)&&hit(r)).sort((a,b)=>tab==="done"?b.w-a.w:a.w-b.w);
-  document.getElementById("list").innerHTML=items.length?items.map(r=>
-    `<div class="item${r.done?" done":""}${tab==="late"?" late":""}"><b>${r.t}</b><small>${when(r.w)}${tab==="late"?" · vencido":""}${r.rep?" · "+r.rep:""}</small></div>`).join("")
+    `<button class="tab${k==="late"?" warn":""}" aria-pressed="${k===tab}" data-k="${k}">${g.n} (${pc.filter(r=>g.f(r)&&hit(r)).length})</button>`).join("");
+  const items=pc.filter(r=>groups[tab].f(r)&&hit(r)).sort((a,b)=>tab==="done"?b.w-a.w:a.w-b.w);
+  document.getElementById("list").innerHTML=items.length?items.map(r=>card(r,"pc",true)).join("")
     :`<div class="empty">${q.length?"No encontré nada acá. Probá otra solapa.":"Nada por acá."}</div>`;
 }
-document.getElementById("tabs").addEventListener("click",e=>{const k=e.target.dataset.k;if(k){tab=k;draw();}});
-document.getElementById("q").addEventListener("input",draw);
+document.getElementById("tabs").addEventListener("click",e=>{const k=e.target.dataset.k;if(k){tab=k;drawPc();}});
+document.getElementById("q").addEventListener("input",drawPc);
 document.getElementById("refresh").addEventListener("click",()=>{document.getElementById("upd").textContent="Actualizado recién";});
-draw();
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".chk");if(!b)return;
+  const id=+b.dataset.id, side=b.dataset.side;
+  if(side==="pc"){const r=pc.find(x=>x.id===id);r.done=!r.done;const v=r.done;drawPc();
+    send("toPhone",()=>{setDone(ph,id,v);flashPh=id;},v?"Llegó de la compu: tildado como hecho.":"Llegó de la compu: vuelve a pendiente.");}
+  else{const r=ph.find(x=>x.id===id);r.done=!r.done;const v=r.done;drawPhone();
+    send("toPc",()=>{setDone(pc,id,v);flashPc=id;});}
+});
+document.getElementById("newBtn").addEventListener("click",openForm);
+function openForm(){
+  const p=document.getElementById("panel");
+  const f=document.createElement("div");f.className="form";f.id="form";
+  f.innerHTML=`<div class="phead"><img src="${LOGO}" alt=""><b>Nuevo recordatorio<small>Se pasa solo al teléfono</small></b></div>
+  <div class="fbody">
+    <label for="ft">Qué hay que recordar<input id="ft" value="Llamar al contador por el balance"></label>
+    <div class="two"><label for="fd">Fecha<input id="fd" type="date" value="2026-11-05"></label>
+    <label for="fh">Hora<input id="fh" type="time" value="09:30"></label></div>
+    <label for="fr">Repetir<select id="fr"><option value="">Una sola vez</option><option>Todos los días</option><option>Todas las semanas</option><option>Todos los meses</option><option>Todos los años</option></select></label>
+    <p class="err" id="ferr" hidden>Escribí qué hay que recordar.</p>
+  </div>
+  <div class="fend"><button class="btn ghost" id="fc">Cancelar</button><button class="btn" id="fs">Guardar</button></div>`;
+  p.appendChild(f);document.getElementById("ft").focus();
+  document.getElementById("fc").onclick=()=>{f.remove();drawPc();};
+  document.getElementById("fs").onclick=()=>{
+    const t=document.getElementById("ft").value.trim();
+    if(!t){document.getElementById("ferr").hidden=false;return;}
+    const [y,m,d]=document.getElementById("fd").value.split("-").map(Number);
+    const [h,mi]=document.getElementById("fh").value.split(":").map(Number);
+    const r={id:nextId++,t,w:new Date(y,m-1,d,h||9,mi||0),rep:document.getElementById("fr").value||undefined,pcMade:true};
+    pc.push(r);f.remove();
+    tab=late(r)?"late":sameDay(r.w,now)?"today":"next";flashPc=r.id;drawPc();
+    send("toPhone",()=>{ph.push({...r,w:new Date(r.w)});flashPh=r.id;phScreen="list";},"Llegó de la compu: “"+t+"”. Aviso programado.");
+  };
+}
 
-/* Teléfono */
-let screen="menu", taps=0, unlocked=false, folder=false;
+/* ---- Teléfono ---- */
+let phScreen="list", taps=0, unlocked=false, folder=true, toastMsg="", toastT;
 const phone=document.getElementById("phone");
+function toast(m){toastMsg=m;clearTimeout(toastT);toastT=setTimeout(()=>{toastMsg="";drawPhone();},3500);}
 function tile(ic,t,s,cls="",id=""){return `<div class="tile ${cls}" ${id?`id="${id}" tabindex="0" role="button"`:""}><div class="ic">${ic}</div><div><b>${t}</b><small>${s}</small></div></div>`;}
-function drawPhone(msg){
-  if(screen==="menu"){
-    phone.innerHTML=`<div class="ptop">TE RECORDARÉ</div><div class="pbody">
-      ${tile("🤖","Inteligencia artificial","Proveedor, clave y modelo")}
+function drawPhone(){
+  let body="", title="TE RECORDARÉ", back=false;
+  if(phScreen==="list"){
+    const items=[...ph].sort((a,b)=>a.w-b.w);
+    body=`<div class="chips"><span class="chip">Pendientes</span><span class="chip">Hechos</span><span class="chip on">Todos</span></div>
+      <div class="psearch">🔍 Buscar…</div>
+      <div style="display:flex;gap:10px;align-items:center;font-size:11.5px;color:var(--muted);padding:0 2px"><span style="width:12px;height:12px;border-radius:50%;background:var(--soft);border:1.5px solid var(--brand)"></span>Pendientes<span style="width:12px;height:12px;border-radius:50%;background:var(--done);border:1.5px solid var(--doneline)"></span>Hechos</div>
+      ${items.map(r=>card(r,"ph",true)).join("")}`;
+  } else if(phScreen==="menu"){
+    title="Configuración";
+    body=`${tile("🤖","Inteligencia artificial","Proveedor, clave y modelo")}
       ${tile("🔔","Notificaciones","Sonido de los avisos")}
       ${tile("📅","Google Calendar","Enviar y traer")}
       ${tile("☁️","Copia de seguridad","En tu Google Drive")}
-      ${unlocked?tile("✉️","Gmail en la compu","Ver tus recordatorios en Gmail","new","open"):""}
-      ${msg?`<div class="toast">${msg}</div>`:""}
-      <button class="ver" id="ver">Versión 1.0.34 (34)${!unlocked?`<br><small>(en la maqueta: tocá acá 5 veces)</small>`:""}</button>
-    </div>`;
-    document.getElementById("ver").onclick=()=>{
-      if(unlocked){drawPhone("Ya está a la vista.");return;}
-      taps++; if(taps>=5){unlocked=true;drawPhone("Listo: apareció \"Gmail en la compu\".");}
-      else drawPhone(taps>=2?`Te faltan ${5-taps} toques.`:"");
-    };
-    const o=document.getElementById("open"); if(o){o.onclick=()=>{screen="gmail";drawPhone();};o.onkeydown=e=>{if(e.key==="Enter")o.click();};}
+      ${unlocked?tile(`<img src="${LOGO}" alt="" style="width:32px;height:32px;border-radius:9px">`,"Gmail en la compu","Enlazado · al día","new","open"):""}
+      <button class="ver" id="ver">Versión 1.0.35 (35)${!unlocked?`<br><small>(en la maqueta: tocá acá 5 veces)</small>`:""}</button>`;
+  } else if(phScreen==="gmail"){
+    title="Gmail en la compu";back=true;
+    body=`<div class="sec"><h3>Carpeta de Drive</h3>
+        <p>Acá van los dos archivos que comparten el teléfono y Gmail.</p>
+        <div class="ok">✓ Mi unidad › Recordame · al día</div>
+        <div class="row"><button class="btn ghost" id="now">Actualizar ahora</button><button class="btn ghost">Cambiar carpeta</button></div></div>
+      <div class="sec"><h3>Lo que llega de la compu</h3>
+        <p>Tildados y nuevos se traen al abrir Recordame y, con la app cerrada, cada 15 minutos más o menos.</p>
+        <p>Último: hoy 10:14 · ${ph.filter(r=>r.pcMade).length} creado(s) en la compu</p></div>
+      <div class="sec"><h3>El complemento de Gmail</h3>
+        <p>Se instala una sola vez desde la compu, con la misma cuenta del Drive.</p>
+        <button class="btn ghost">Ayuda paso a paso</button></div>`;
   } else {
-    phone.innerHTML=`<div class="ptop"><button id="back" aria-label="Volver">←</button>Gmail en la compu</div><div class="pbody">
-      <div class="sec"><h3>1 · Carpeta de Drive</h3>
-        <p>Recordame guarda ahí el archivo <b>Recordame-gmail.json</b> y lo actualiza solo cada vez que cargás, cambiás o tildás algo.</p>
-        ${folder?`<div class="ok">✓ Mi unidad › Recordame · actualizado recién</div><div class="row"><button class="btn ghost" id="now">Actualizar ahora</button><button class="btn ghost" id="pick">Cambiar carpeta</button></div>`
-                :`<button class="btn" id="pick">Elegir carpeta de Drive</button>`}
-      </div>
-      <div class="sec"><h3>2 · El complemento de Gmail</h3>
-        <p>Se instala una sola vez desde la compu, con la misma cuenta del Drive. Los pasos están en "Ayuda".</p>
-        <button class="btn ghost">Ayuda paso a paso</button>
-      </div>
-      <div class="sec"><h3>Qué va en el archivo</h3>
-        <p>Los pendientes y los hechos de los últimos 7 días: título, fecha y hora, y si se repite. Nunca las claves.</p>
-      </div>
-      ${msg?`<div class="toast">${msg}</div>`:""}
-    </div>`;
-    document.getElementById("back").onclick=()=>{screen="menu";drawPhone();};
-    document.getElementById("pick").onclick=()=>{folder=true;drawPhone("Carpeta elegida. Archivo creado.");};
-    const n=document.getElementById("now"); if(n)n.onclick=()=>drawPhone("Listo, actualizado.");
+    title=phScreen==="chat"?"Chat":"Almanaque";
+    body=`<div class="empty">En la maqueta mirá Listado y Configuración.</div>`;
   }
+  phone.innerHTML=`<div class="ptop">${back?`<button id="back" aria-label="Volver">←</button>`:""}${title}</div>
+    <div class="pbody">${body}</div>
+    ${toastMsg?`<div class="toast" role="status">${esc(toastMsg)}</div>`:""}
+    <nav class="ptabs">${[["chat","💬","Chat"],["cal","📅","Almanaque"],["list","☰","Listado"],["menu","⚙️","Config."]].map(([k,i,n])=>
+      `<button data-ps="${k}" aria-current="${phScreen===k||(k==="menu"&&phScreen==="gmail")}"><i>${i}</i>${n}</button>`).join("")}</nav>`;
+  phone.querySelectorAll("[data-ps]").forEach(b=>b.onclick=()=>{phScreen=b.dataset.ps;drawPhone();});
+  const v=document.getElementById("ver");
+  if(v)v.onclick=()=>{if(unlocked){toast("Ya está a la vista.");drawPhone();return;}
+    taps++;if(taps>=5){unlocked=true;toast("Listo: apareció “Gmail en la compu”.");}else if(taps>=2)toast(`Te faltan ${5-taps} toques.`);drawPhone();};
+  const o=document.getElementById("open");if(o){o.onclick=()=>{phScreen="gmail";drawPhone();};o.onkeydown=e=>{if(e.key==="Enter")o.click();};}
+  const bk=document.getElementById("back");if(bk)bk.onclick=()=>{phScreen="menu";drawPhone();};
+  const n=document.getElementById("now");if(n)n.onclick=()=>{toast("Listo, actualizado.");drawPhone();};
 }
-drawPhone();
+drawPhone();drawPc();
 </script>
