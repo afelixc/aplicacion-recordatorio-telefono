@@ -1,0 +1,206 @@
+<title>Colores de Recordame</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Roboto:wght@400;500;700&display=swap">
+<style>
+/* Layout: título; a la izquierda el teléfono con la pantalla "Colores", a la derecha otro teléfono que muestra cómo queda. */
+:root{
+  --bg:#EEF0F5; --paper:#FFFFFF; --ink:#1C2333; --muted:#5D6578; --line:#D7DBE5; --brand:#2B3A67; --accent:#E8A33D; --soft:#E3EBFF;
+  --display:"Fraunces", Georgia, serif; --body:"Roboto", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10131C; --paper:#1A1F2E; --ink:#E7EAF2; --muted:#A3AABC; --line:#323A50; --brand:#8FA2E0; --accent:#F0B357; --soft:#26314F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10131C; --paper:#1A1F2E; --ink:#E7EAF2; --muted:#A3AABC; --line:#323A50; --brand:#8FA2E0; --accent:#F0B357; --soft:#26314F; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+button{font:inherit}
+.wrap{max-width:900px;margin:0 auto;display:grid;gap:22px}
+h1{font-family:var(--display);font-size:clamp(26px,4vw,36px);margin:0;color:var(--brand)}
+.lead{margin:6px 0 0;color:var(--muted);max-width:66ch}
+.stage{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;justify-items:center;align-items:start}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:500}
+.phone{width:min(340px,100%);height:660px;border:10px solid #22283A;border-radius:34px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+/* Pantalla de configuración (usa los colores de la página) */
+.set{background:var(--paper);color:var(--ink)}
+.ptop{padding:12px 14px;font-weight:700;letter-spacing:.04em;display:flex;gap:10px;align-items:center;font-size:15px}
+.scroll{flex:1;overflow:auto;padding:12px;display:grid;gap:12px;align-content:start}
+.box{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:10px}
+.box h3{margin:0;font-size:14px}
+.box p{margin:0;font-size:12.5px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.seg button{all:unset;cursor:pointer;flex:1;text-align:center;font-size:13px;padding:7px 4px}
+.seg button[aria-pressed="true"]{background:var(--soft);font-weight:700}
+.seg button+button{border-left:1px solid var(--line)}
+.pick{display:grid;gap:6px}
+.pick span{font-size:12.5px}
+.dots{display:flex;flex-wrap:wrap;gap:8px}
+.dot{all:unset;cursor:pointer;width:28px;height:28px;border-radius:50%;box-sizing:border-box;display:grid;place-items:center;font-size:13px;font-weight:700}
+.dot[aria-pressed="true"]{outline:3px solid var(--brand);outline-offset:2px}
+.dot:focus-visible,.seg button:focus-visible,.link:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.link{all:unset;cursor:pointer;color:var(--brand);font-size:13px;font-weight:500;padding:4px 0}
+.mini{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+/* Vista previa (usa los colores elegidos) */
+.prev{background:var(--p-bg);color:var(--p-ink)}
+.prev .ptop{background:var(--p-main);color:var(--p-onmain)}
+.ptabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--p-line);background:var(--p-bar)}
+.ptabs button{all:unset;cursor:pointer;text-align:center;font-size:11px;padding:8px 0;color:var(--p-muted)}
+.ptabs button[aria-current="true"]{color:var(--p-main2);font-weight:700}
+.ptabs i{display:block;font-style:normal;font-size:16px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;font-size:13px}
+.cal .h{font-size:11px;color:var(--p-muted);padding:4px 0}
+.cal .d{aspect-ratio:1;border-radius:10px;display:grid;place-items:center;align-content:center;gap:2px;font-variant-numeric:tabular-nums;border:2px solid transparent}
+.cal .d i{display:flex;gap:2px;height:4px}
+.cal .d i b{width:4px;height:4px;border-radius:50%}
+.mhead{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:15px;padding:2px 4px 8px}
+.occ{border:1px solid var(--p-line);border-radius:12px;padding:8px 10px;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.occ small{color:var(--p-muted)}
+.rem{border-radius:12px;padding:9px 10px;display:flex;gap:10px;align-items:center;font-size:13.5px;border:1px solid}
+.rem .c{width:18px;height:18px;border-radius:50%;border:2px solid var(--p-muted);flex:none;display:grid;place-items:center;font-size:11px;color:#fff}
+.rem.done .c{background:var(--p-main2);border-color:var(--p-main2)}
+.rem.done span{text-decoration:line-through;opacity:.7}
+.rem small{display:block;color:var(--p-muted);font-size:11.5px}
+.chips{display:flex;gap:6px}
+.chips span{flex:1;text-align:center;font-size:12px;padding:5px 0;border-radius:14px;border:1px solid var(--p-line)}
+.chips .on{background:var(--p-chip);border-color:transparent;font-weight:700}
+.fab{position:absolute;right:14px;bottom:62px;background:var(--p-main);color:var(--p-onmain);border-radius:16px;padding:10px 14px;font-size:13px;font-weight:700}
+.notes{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:grid;gap:10px;font-size:14px}
+.notes h2{margin:0;font-family:var(--display);color:var(--brand);font-size:21px}
+.notes ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.q{border-left:3px solid var(--accent);padding:4px 0 4px 12px}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Colores de Recordame</h1>
+    <p class="lead">Maqueta para tocar. Un recuadro nuevo en Configuración, <b>Colores</b>, con todo junto: la app, el almanaque y el listado, y por separado para el <b>día</b> y la <b>noche</b>. El teléfono de la derecha muestra al instante cómo queda.</p>
+  </header>
+
+  <div class="stage">
+    <section>
+      <p class="label">Configuración → Colores</p>
+      <div class="phone set" id="set"></div>
+    </section>
+    <section>
+      <p class="label" id="prevLabel">Así queda</p>
+      <div class="phone prev" id="prev"></div>
+    </section>
+  </div>
+
+  <section class="notes">
+    <h2>Cómo funcionaría</h2>
+    <ul>
+      <li><b>Día / Noche:</b> "Como el teléfono" cambia sola cuando el teléfono pasa a modo oscuro. También podés dejarla siempre de día o siempre de noche.</li>
+      <li><b>Cada modo con sus colores:</b> arriba elegís si estás pintando los de día ☀️ o los de noche 🌙. Los de noche son tonos más oscuros, para que no encandilen.</li>
+      <li><b>Color de la app:</b> la barra de arriba, los botones y el botón "Nuevo".</li>
+      <li><b>Almanaque:</b> el día de hoy, los días que tienen recordatorios y el borde del día que tocaste.</li>
+      <li><b>Listado:</b> pendientes y hechos (lo que ya tenés). El botón "Colores" del Listado te trae directo acá.</li>
+      <li>"Volver a los de siempre" deja todo como está hoy. Los colores van en la copia de seguridad.</li>
+    </ul>
+    <div class="q"><b>Para pulir:</b> ¿te alcanzan estos colores o querés más? ¿Le sumamos color al fondo (por ejemplo, un fondo apenas cremita de día)? ¿Algo más que quieras pintar?</div>
+  </section>
+</div>
+
+<script>
+// Paletas: cada color tiene versión de día (claro) y de noche (oscuro).
+const MAIN={ // color de la app
+  tinta:{n:"Azul tinta",d:"#2B3A67",x:"#8FA2E0"}, verde:{n:"Verde",d:"#2E6B4F",x:"#8CCFA8"},
+  bordo:{n:"Bordó",d:"#7A2E3A",x:"#E59AA6"}, violeta:{n:"Violeta",d:"#5B3F8C",x:"#BBA3E8"},
+  petroleo:{n:"Petróleo",d:"#1F5F6B",x:"#86C9D6"}, grafito:{n:"Grafito",d:"#3A3F4A",x:"#B8BEC9"},
+  naranja:{n:"Naranja",d:"#B5541C",x:"#F2A774"}};
+const SOFT={ // rellenos (almanaque y listado): fondo + borde
+  azul:{n:"Azul",d:["#E3EBFF","#8FA2E0"],x:["#26314F","#5D74C2"]},
+  celeste:{n:"Celeste",d:["#DDF4FA","#7CC7DB"],x:["#1E3A44","#4C9BB0"]},
+  verde:{n:"Verde",d:["#E2F5E4","#86C38E"],x:["#203827","#5A9B64"]},
+  amarillo:{n:"Amarillo",d:["#FFF4D6","#E8C77A"],x:["#3A3320","#A88A43"]},
+  naranja:{n:"Naranja",d:["#FFE8D6","#F0A868"],x:["#3F2A1C","#C07A3C"]},
+  rosa:{n:"Rosa",d:["#FCE4EC","#E8A0B8"],x:["#3D2230","#B5698A"]},
+  violeta:{n:"Violeta",d:["#EDE4FB","#B49BE0"],x:["#2E2545","#8169B5"]},
+  gris:{n:"Gris",d:["#EEEEEE","#BDBDBD"],x:["#2A2D35","#6B7080"]}};
+const TODAY={ // hoy en el almanaque: color fuerte
+  ambar:{n:"Ámbar",d:"#E8A33D",x:"#F0B357"}, rojo:{n:"Rojo",d:"#D2453B",x:"#F08A80"},
+  verde:{n:"Verde",d:"#2E9A5A",x:"#7FD3A0"}, azul:{n:"Azul",d:"#2F6FE0",x:"#8FB2F5"},
+  violeta:{n:"Violeta",d:"#7A4FD0",x:"#C0A6F2"}, rosa:{n:"Rosa",d:"#D64F8A",x:"#F29AC0"}};
+const DEF={day:{main:"tinta",today:"ambar",has:"azul",sel:"tinta",pend:"azul",done:"amarillo"},
+           night:{main:"tinta",today:"ambar",has:"azul",sel:"tinta",pend:"azul",done:"amarillo"}};
+let cfg=JSON.parse(JSON.stringify(DEF)), mode="auto", editing="day", view="cal", selDay=12;
+const sysDark=()=>matchMedia("(prefers-color-scheme: dark)").matches;
+const shown=()=>mode==="day"?"day":mode==="night"?"night":editing; // en "Como el teléfono", la vista sigue lo que estás pintando
+
+function dot(group,key,val,c){
+  const night=editing==="night";
+  let bg,bd,fg="#fff";
+  if(group==="soft"){[bg,bd]=night?SOFT[val].x:SOFT[val].d;fg=night?"#fff":"#1C2333";}
+  else{bg=bd=(group==="main"||group==="sel"?MAIN:TODAY)[val][night?"x":"d"];fg=night?"#10131C":"#fff";}
+  const on=cfg[editing][key]===val;
+  const name=(group==="soft"?SOFT:group==="today"?TODAY:MAIN)[val].n;
+  return `<button class="dot" title="${name}" aria-label="${name}" aria-pressed="${on}" data-k="${key}" data-v="${val}" style="background:${bg};border:2px solid ${bd};color:${fg}">${on?"✓":""}</button>`;
+}
+const row=(label,key,group,list)=>`<div class="pick"><span>${label}</span><div class="dots">${Object.keys(list).map(v=>dot(group,key,v)).join("")}</div></div>`;
+
+function drawSet(){
+  const s=document.getElementById("set");
+  const top=getComputedStyle(document.documentElement).getPropertyValue("--brand");
+  s.innerHTML=`<div class="ptop" style="background:var(--brand);color:var(--paper)">← Colores</div>
+  <div class="scroll">
+    <div class="box"><h3>Día y noche</h3>
+      <div class="seg" role="group" aria-label="Modo">${[["auto","Como el teléfono"],["day","☀️ Siempre día"],["night","🌙 Siempre noche"]].map(([k,n])=>`<button data-mode="${k}" aria-pressed="${mode===k}">${n}</button>`).join("")}</div>
+      <p>${mode==="auto"?"Cambia sola cuando el teléfono pasa a modo oscuro.":mode==="day"?"Siempre con los colores de día.":"Siempre con los colores de noche."}</p></div>
+    <div class="box"><h3>Estoy eligiendo los colores de…</h3>
+      <div class="seg" role="group" aria-label="Qué colores">${[["day","☀️ Día"],["night","🌙 Noche"]].map(([k,n])=>`<button data-edit="${k}" aria-pressed="${editing===k}">${n}</button>`).join("")}</div></div>
+    <div class="box"><h3>La app</h3><p>Barra de arriba, botones y "Nuevo".</p>${row("Color principal","main","main",MAIN)}</div>
+    <div class="box"><h3>Almanaque</h3>
+      ${row("Hoy","today","today",TODAY)}
+      ${row("Días con recordatorios","has","soft",SOFT)}
+      ${row("Día que tocaste (borde)","sel","sel",MAIN)}</div>
+    <div class="box"><h3>Listado → Todos</h3>
+      ${row("Los que faltan hacer","pend","soft",SOFT)}
+      ${row("Los hechos","done","soft",SOFT)}</div>
+    <div class="box"><button class="link" id="reset">Volver a los de siempre (${editing==="day"?"día":"noche"})</button>
+      <button class="link" id="copy">${editing==="day"?"Usar estos mismos de noche":"Usar los de día también de noche"}</button></div>
+  </div>`;
+  s.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;if(mode!=="auto")editing=mode;drawAll();});
+  s.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editing=b.dataset.edit;if(mode!=="auto")mode=editing;drawAll();});
+  s.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{cfg[editing][b.dataset.k]=b.dataset.v;drawAll(b.dataset.k);});
+  document.getElementById("reset").onclick=()=>{cfg[editing]={...DEF[editing]};drawAll();};
+  document.getElementById("copy").onclick=()=>{if(editing==="day")cfg.night={...cfg.day};else cfg.night={...cfg.day};drawAll();};
+}
+
+function drawPrev(focus){
+  const m=shown(), n=m==="night", c=cfg[m], p=document.getElementById("prev");
+  document.getElementById("prevLabel").textContent=n?"Así queda de noche 🌙":"Así queda de día ☀️";
+  const main=MAIN[c.main][n?"x":"d"], sel=MAIN[c.sel][n?"x":"d"], today=TODAY[c.today][n?"x":"d"];
+  const has=SOFT[c.has][n?"x":"d"], pend=SOFT[c.pend][n?"x":"d"], done=SOFT[c.done][n?"x":"d"];
+  const V=n?{bg:"#141826",ink:"#E7EAF2",muted:"#A3AABC",line:"#323A50",bar:"#1A1F2E",onmain:"#10131C"}
+           :{bg:"#FFFFFF",ink:"#1C2333",muted:"#5D6578",line:"#D7DBE5",bar:"#F6F8FC",onmain:"#FFFFFF"};
+  Object.entries({bg:V.bg,ink:V.ink,muted:V.muted,line:V.line,bar:V.bar,main:n?"#1A1F2E":main,onmain:n?main:V.onmain,main2:main,chip:has[0]})
+    .forEach(([k,v])=>p.style.setProperty("--p-"+k,v));
+  if(focus==="pend"||focus==="done")view="list"; else if(focus&&focus!=="main")view="cal";
+  let body;
+  if(view==="cal"){
+    const counts={3:1,5:2,9:1,12:3,18:1,21:2,26:1,28:4};
+    let cells=["L","M","M","J","V","S","D"].map(h=>`<div class="h">${h}</div>`).join("")+`<div></div><div></div><div></div><div></div><div></div>`;
+    for(let d=1;d<=30;d++){
+      const isT=d===3, k=counts[d]||0, isS=d===selDay;
+      const bg=isT?today:k?has[0]:"transparent", fg=isT?(n?"#10131C":"#fff"):V.ink;
+      const dotc=isT?fg:main;
+      cells+=`<div class="d" data-day="${d}" style="cursor:pointer;background:${bg};color:${fg};font-weight:${isT||k?700:400};border-color:${isS?sel:"transparent"}">${d}<i>${`<b style="background:${dotc}"></b>`.repeat(Math.min(k,5))}</i></div>`;
+    }
+    const occ={3:["Pagar la cuota de la mutual 09:00"],12:["Revisar avances EMP 09:00","Llamar a Chies 15:00","Reunión Centro Industrial 18:30"],28:["Cumpleaños de mamá 09:00"]}[selDay]||[];
+    body=`<div class="mhead"><span>‹</span>noviembre 2026<span>›</span></div><div class="cal">${cells}</div>
+      <div style="font-size:13px;font-weight:700;margin-top:6px">${selDay} de noviembre</div>
+      ${occ.map(o=>`<div class="occ"><span>${o.replace(/ \d\d:\d\d$/,"")}</span><small>${o.slice(-5)}</small></div>`).join("")||`<div class="occ"><small>Toca otro día con puntitos</small></div>`}`;
+  } else {
+    const items=[["Pedir presupuesto de paneles solares","sáb 31 oct 10:00",1],["Pagar la cuota de la mutual","Ayer 09:00",0],["Mandar un mensaje a Fabricio Gandini, tema puerta","Hoy 08:30",1],["Llamar a Chies por la lista de precios","Hoy 15:00",0],["Revisar avances EMP contrato 674357","Mañana 09:00",0],["Cumpleaños de mamá","jue 12 nov 09:00",0]];
+    body=`<div class="chips"><span>Pendientes</span><span>Hechos</span><span class="on">Todos</span></div>
+      <div style="border:1px solid var(--p-line);border-radius:20px;padding:6px 12px;font-size:13px;color:var(--p-muted)">🔍 Buscar…</div>
+      ${items.map(([t,w,d])=>{const [f,b]=d?done:pend;return `<div class="rem${d?" done":""}" style="background:${f};border-color:${b}"><div class="c">${d?"✓":""}</div><div><span>${t}</span><small>${w}</small></div></div>`;}).join("")}`;
+  }
+  p.innerHTML=`<div class="ptop">TE RECORDARÉ</div><div class="scroll">${body}</div>
+    <div class="fab">＋ Nuevo</div>
+    <nav class="ptabs">${[["chat","💬","Chat"],["cal","📅","Almanaque"],["list","☰","Listado"],["set","⚙️","Config."]].map(([k,i,t])=>`<button data-v="${k}" aria-current="${view===k}"><i>${i}</i>${t}</button>`).join("")}</nav>`;
+  p.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{if(b.dataset.v==="cal"||b.dataset.v==="list"){view=b.dataset.v;drawPrev();}});
+  p.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{selDay=+b.dataset.day;drawPrev();});
+}
+function drawAll(focus){drawSet();drawPrev(focus);}
+drawAll();
+</script>
