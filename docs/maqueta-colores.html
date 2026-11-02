@@ -73,7 +73,10 @@ h1{font-family:var(--display);font-size:clamp(26px,4vw,36px);margin:0;color:var(
 .zone.night{background:#161B33;border-color:#3A4470}
 .zone .zt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;text-align:center}
 .zone.day .zt{color:#7A5300}.zone.night .zt{color:#C9D2FF}
-.zone .box{background:var(--paper)}
+.zone .box{background:var(--paper);overflow:hidden}
+.zone .box h3{margin:-12px -12px 2px;padding:11px 14px;font-size:18px;font-weight:700;letter-spacing:.01em;background:#EEF2FF;color:#2B3A67;border-bottom:2px solid #C9D3F2;display:flex;align-items:center;gap:8px}
+.zone.night .box h3{background:#2A3360;color:#FFFFFF;border-bottom-color:#4A5590}
+.zone .box h3 small{font-size:12px;font-weight:400;opacity:.75;margin-left:auto}
 .zone.night .box{background:#1F2647;color:#E7EAF2;border-color:#3A4470}
 .zone.night .box p,.zone.night .pick span{color:#B8C0DD}
 .zone.night .link{color:#C9D2FF}
@@ -182,21 +185,22 @@ function drawSet(){
     <div class="box"><h3>Día y noche</h3>
       <div class="seg" role="group" aria-label="Modo">${[["auto","Como el teléfono"],["day","☀️ Siempre día"],["night","🌙 Siempre noche"]].map(([k,n])=>`<button data-mode="${k}" aria-pressed="${mode===k}">${n}</button>`).join("")}</div>
       <p>${mode==="auto"?"Cambia sola cuando el teléfono pasa a modo oscuro.":mode==="day"?"Siempre con los colores de día.":"Siempre con los colores de noche."}</p></div>
-    <div class="box"><h3>Ícono del teléfono</h3><p>El dibujito de Recordame en la pantalla de inicio. Es uno solo para día y noche.</p>
+    <div class="box"><h3>Ícono del teléfono</h3><p>El dibujito de Recordame en la pantalla de inicio. Elegís uno de estos, ya vienen preparados. Es uno solo para día y noche.</p>
       <div class="icons">${Object.keys(ICONS).map(k=>`<button data-icon="${k}" aria-pressed="${icon===k}" title="${ICONS[k].n}" aria-label="${ICONS[k].n}">${bell(k)}</button>`).join("")}</div>
-      <div class="home"><figure><div class="other"></div>Fotos</figure><figure>${bell(icon)}Recordame</figure><figure><div class="other"></div>WhatsApp</figure></div></div>
+      <p style="margin-top:4px">Así se vería en la pantalla de inicio de tu teléfono (los cuadritos grises son tus otras apps):</p>
+      <div class="home"><figure><div class="other"></div>Otra app</figure><figure>${bell(icon)}Recordame</figure><figure><div class="other"></div>Otra app</figure></div></div>
     <div>
       <div class="tabs2" role="group" aria-label="Qué colores">${[["day","☀️ Colores de DÍA","tday"],["night","🌙 Colores de NOCHE","tnight"]].map(([k,n,c])=>`<button class="${c}" data-edit="${k}" aria-pressed="${editing===k}">${n}</button>`).join("")}</div>
       <div class="zone ${editing}">
         <div class="zt">${editing==="day"?"Estás pintando los colores de día":"Estás pintando los colores de noche"}</div>
-        <div class="box"><h3>Fondo</h3>
+        <div class="box"><h3>🖼️ FONDO</h3>
           <div class="sw"><span style="font-size:13px">${editing==="day"?"Fondo cremita (en vez de blanco)":"Fondo cálido (en vez de azul oscuro)"}</span><button id="cream" aria-pressed="${cfg[editing].cream}" aria-label="Fondo cremita"></button></div></div>
-        <div class="box"><h3>La app</h3><p>Barra de arriba, botones y "Nuevo".</p>${row("Color principal","main","main",MAIN)}</div>
-        <div class="box"><h3>Almanaque</h3>
+        <div class="box"><h3>📱 LA APP</h3><p>Barra de arriba, botones y "Nuevo".</p>${row("Color principal","main","main",MAIN)}</div>
+        <div class="box"><h3>📅 ALMANAQUE</h3>
           ${row("Hoy","today","today",TODAY)}
           ${row("Días con recordatorios","has","soft",SOFT)}
           ${row("Día que tocaste (borde)","sel","sel",MAIN)}</div>
-        <div class="box"><h3>Listado → Todos</h3>
+        <div class="box"><h3>☰ LISTADO <small>solapa Todos</small></h3>
           ${row("Los que faltan hacer","pend","soft",SOFT)}
           ${row("Los hechos","done","soft",SOFT)}</div>
         <div class="box"><button class="link" id="reset">Volver a los de siempre (${editing==="day"?"día":"noche"})</button>
