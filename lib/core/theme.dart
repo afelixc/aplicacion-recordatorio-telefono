@@ -15,7 +15,7 @@ class AppTheme {
         seedColor: main,
         primary: main,
         secondary: _accent,
-        surface: backgroundFor(night: false, cream: colors.cream),
+        surface: backgroundColor(colors.background).day,
       ),
     );
   }
@@ -28,7 +28,7 @@ class AppTheme {
         brightness: Brightness.dark,
         primary: main,
         secondary: const Color(0xFFF0B357),
-        surface: backgroundFor(night: true, cream: colors.cream),
+        surface: backgroundColor(colors.background).night,
       ),
     );
   }

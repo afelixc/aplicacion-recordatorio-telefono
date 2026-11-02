@@ -451,13 +451,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(settings.dayNight, DayNight.night);
     expect(find.text('ESTÁS PINTANDO LOS COLORES DE NOCHE'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('cream')));
+    await tester.tap(find.byKey(const Key('bg-lavanda')));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('main-bordo')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('main-bordo')));
     await tester.pumpAndSettle();
-    expect(settings.nightColors.cream, isTrue);
+    expect(settings.nightColors.background, 'lavanda');
     expect(settings.nightColors.main, 'bordo');
     // Los de día no se tocaron.
     expect(settings.dayColors, const ColorSet());
@@ -480,13 +480,15 @@ void main() {
     expect(a.nightColors.done, 'rosa');
 
     await a.setColors(
-      a.dayColors.copyWith(cream: true, today: 'rojo'),
+      a.dayColors.copyWith(background: 'cremita', today: 'rojo'),
       night: false,
     );
     await a.setDayNight(DayNight.day);
     final b = AppSettings(store, MemoryKeyStore());
     await b.load(const []);
-    expect(b.dayColors.cream, isTrue);
+    expect(b.dayColors.background, 'cremita');
+    // El formato viejo (fondo sí/no) se entiende como cremita.
+    expect(ColorSet.decode('{"fondo":true}').background, 'cremita');
     expect(b.dayColors.today, 'rojo');
     expect(b.dayColors.pending, 'verde');
     expect(b.dayNight, DayNight.day);

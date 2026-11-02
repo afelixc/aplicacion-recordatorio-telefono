@@ -165,10 +165,20 @@ StrongColor todayColor(String id) => _find(todayColors, id, (c) => c.id);
 SoftColor softColor(String id) => _find(softColors, id, (c) => c.id);
 AppIcon appIcon(String id) => _find(appIcons, id, (c) => c.id);
 
-/// Fondos: normal o cremita, de día y de noche.
-Color backgroundFor({required bool night, required bool cream}) => night
-    ? (cream ? const Color(0xFF1E1A14) : const Color(0xFF181D31))
-    : (cream ? const Color(0xFFFBF5E8) : Colors.white);
+/// Fondos sutiles. "normal" es el de siempre (blanco de día, azul oscuro de
+/// noche); los demás son apenas teñidos.
+const backgroundColors = <StrongColor>[
+  StrongColor('normal', 'Normal', Colors.white, Color(0xFF181D31)),
+  StrongColor('cremita', 'Cremita', Color(0xFFFBF5E8), Color(0xFF1E1A14)),
+  StrongColor('perla', 'Gris perla', Color(0xFFF4F5F7), Color(0xFF1C1D21)),
+  StrongColor('celeste', 'Celeste', Color(0xFFEEF5FB), Color(0xFF14202B)),
+  StrongColor('verde', 'Verde agua', Color(0xFFEEF7F1), Color(0xFF15201B)),
+  StrongColor('rosa', 'Rosa', Color(0xFFFBF0F2), Color(0xFF221519)),
+  StrongColor('lavanda', 'Lavanda', Color(0xFFF3F1FA), Color(0xFF1C1828)),
+];
+
+StrongColor backgroundColor(String id) =>
+    _find(backgroundColors, id, (c) => c.id);
 
 /// Día / noche: como el teléfono, siempre día o siempre noche.
 enum DayNight { auto, day, night }
@@ -176,7 +186,7 @@ enum DayNight { auto, day, night }
 /// Los colores elegidos para un modo (día o noche).
 class ColorSet {
   const ColorSet({
-    this.cream = false,
+    this.background = 'normal',
     this.main = 'tinta',
     this.today = 'ambar',
     this.withReminders = 'azul',
@@ -185,7 +195,8 @@ class ColorSet {
     this.done = 'amarillo',
   });
 
-  final bool cream;
+  /// Fondo (id de `backgroundColors`).
+  final String background;
   final String main;
   final String today;
   final String withReminders;
@@ -194,7 +205,7 @@ class ColorSet {
   final String done;
 
   ColorSet copyWith({
-    bool? cream,
+    String? background,
     String? main,
     String? today,
     String? withReminders,
@@ -202,7 +213,7 @@ class ColorSet {
     String? pending,
     String? done,
   }) => ColorSet(
-    cream: cream ?? this.cream,
+    background: background ?? this.background,
     main: main ?? this.main,
     today: today ?? this.today,
     withReminders: withReminders ?? this.withReminders,
@@ -212,7 +223,7 @@ class ColorSet {
   );
 
   String encode() => jsonEncode({
-    'fondo': cream,
+    'fondo': background,
     'app': main,
     'hoy': today,
     'dias': withReminders,
@@ -228,7 +239,8 @@ class ColorSet {
       final j = jsonDecode(text) as Map;
       String s(String k, String def) => j[k] is String ? j[k] as String : def;
       return ColorSet(
-        cream: j['fondo'] == true,
+        // Antes era sí/no (cremita o normal).
+        background: j['fondo'] == true ? 'cremita' : s('fondo', d.background),
         main: s('app', d.main),
         today: s('hoy', d.today),
         withReminders: s('dias', d.withReminders),

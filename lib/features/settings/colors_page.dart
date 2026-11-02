@@ -170,16 +170,10 @@ class _ColorsPageState extends State<ColorsPage> {
                       title: 'Fondo',
                       icon: Icons.wallpaper,
                       children: [
-                        SwitchListTile(
-                          key: const Key('cream'),
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            _night
-                                ? 'Fondo cálido (en vez de azul oscuro)'
-                                : 'Fondo cremita (en vez de blanco)',
-                          ),
-                          value: c.cream,
-                          onChanged: (v) => set(c.copyWith(cream: v)),
+                        _BackgroundRow(
+                          selected: c.background,
+                          night: _night,
+                          onPick: (id) => set(c.copyWith(background: id)),
                         ),
                       ],
                     ),
@@ -196,6 +190,7 @@ class _ColorsPageState extends State<ColorsPage> {
                           night: _night,
                           onPick: (id) => set(c.copyWith(main: id)),
                         ),
+                        const _Hint('Muestra (no se toca):'),
                         _AppSample(color: mainColor(c.main), night: _night),
                       ],
                     ),
@@ -613,6 +608,70 @@ class _SoftRow extends StatelessWidget {
       ),
     ],
   );
+}
+
+/// Fondos sutiles: cuadraditos con el nombre abajo.
+class _BackgroundRow extends StatelessWidget {
+  const _BackgroundRow({
+    required this.selected,
+    required this.night,
+    required this.onPick,
+  });
+
+  final String selected;
+  final bool night;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (final b in backgroundColors)
+          InkWell(
+            key: Key('bg-${b.id}'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => onPick(b.id),
+            child: SizedBox(
+              width: 66,
+              child: Column(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: b.of(night),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: b.id == selected
+                            ? scheme.primary
+                            : scheme.outline,
+                        width: b.id == selected ? 3.5 : 1.5,
+                      ),
+                    ),
+                    child: b.id == selected
+                        ? Icon(Icons.check, color: scheme.primary)
+                        : null,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    b.id == 'normal'
+                        ? (night ? 'Azul oscuro' : 'Blanco')
+                        : b.name,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: b.id == selected ? FontWeight.w800 : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 /// Muestra: la barra de arriba y el botón "Nuevo".
