@@ -310,6 +310,51 @@ void main() {
     expect(all.firstWhere((r) => r.title == 'Pelota').dueAt.hour, 18);
   });
 
+  testWidgets('Chat: "Empezar de nuevo" olvida la pregunta pendiente', (
+    tester,
+  ) async {
+    final repo = MemoryReminderRepository();
+    final settings = AppSettings(
+      MemorySettingsStore(),
+      MemoryKeyStore({'claude': 'sk-ant-prueba'}),
+    );
+    await settings.load(['claude']);
+    await settings.setMode(UsageMode.ai);
+    const ask =
+        '{"reminders":[{"ok":false,"title":"","date":"","time":"",'
+        '"repeat":"none","weekdays":[],"dates":[],"in_minutes":0,'
+        '"message":"¿Cuándo?"}],"message":"¿Cuándo?"}';
+    final fake = _FakeProvider(ask, [ask, ask]);
+    await tester.pumpWidget(
+      RecordameApp(
+        reminders: repo,
+        settings: settings,
+        aiProviderOverride: fake,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('chat-input')), 'descargar');
+    await tester.tap(find.byTooltip('Enviar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('chat-input')), 'eh');
+    await tester.tap(find.byTooltip('Enviar'));
+    await tester.pumpAndSettle();
+    // No se anida "Pedido anterior" dentro de otro.
+    await tester.enterText(find.byKey(const Key('chat-input')), 'mmm');
+    await tester.tap(find.byTooltip('Enviar'));
+    await tester.pumpAndSettle();
+    expect('Pedido anterior'.allMatches(fake.lastUser!).length, 1);
+    expect(fake.lastUser, contains('Después dijo: eh'));
+
+    await tester.tap(find.byKey(const Key('start-over')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('chat-input')), 'nuevo');
+    await tester.tap(find.byTooltip('Enviar'));
+    await tester.pumpAndSettle();
+    expect(fake.lastUser, 'nuevo');
+  });
+
   testWidgets('Ejemplos: se leen, pero tocarlos no crea nada', (tester) async {
     final repo = MemoryReminderRepository();
     final settings = AppSettings(

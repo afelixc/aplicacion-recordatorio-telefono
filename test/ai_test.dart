@@ -149,6 +149,9 @@ void main() {
         'es-AR',
       );
       expect(prompt, contains('viernes 2026-10-30 10:00'));
+      // Dictado: el cuándo puede ir antes y la IA no ofrece hacer la tarea.
+      expect(prompt, contains('NO hacés las cosas'));
+      expect(prompt, contains('"11 de la noche" = 23:00'));
     });
   });
 

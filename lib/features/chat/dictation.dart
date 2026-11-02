@@ -20,6 +20,9 @@ class Dictation extends ChangeNotifier {
   /// Lo que se está diciendo en este momento (todavía puede cambiar).
   String _partial = '';
 
+  /// El último tramo que se guardó (para no repetirlo).
+  String _lastChunk = '';
+
   bool get active => _active;
 
   /// Todo lo dicho hasta ahora.
@@ -41,6 +44,7 @@ class Dictation extends ChangeNotifier {
     if (!_ready) return false;
     _committed = initialText.trim();
     _partial = '';
+    _lastChunk = '';
     _active = true;
     notifyListeners();
     await _listen();
@@ -59,8 +63,16 @@ class Dictation extends ChangeNotifier {
         cancelOnError: false,
       ),
       onResult: (result) {
+        // A veces el resultado final de un tramo llega después de que ya se
+        // guardó al reiniciar: no se repite.
+        if (_lastChunk.isNotEmpty &&
+            result.recognizedWords.trim() == _lastChunk &&
+            _committed.endsWith(_lastChunk)) {
+          return;
+        }
         _partial = result.recognizedWords;
         if (result.finalResult) {
+          _lastChunk = _partial.trim();
           _committed = [
             _committed,
             _partial,
@@ -83,6 +95,7 @@ class Dictation extends ChangeNotifier {
   void _restartSoon() {
     if (!_active) return;
     if (_partial.isNotEmpty) {
+      _lastChunk = _partial.trim();
       _committed = [_committed, _partial].join(' ').trim();
       _partial = '';
     }

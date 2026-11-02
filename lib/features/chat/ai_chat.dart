@@ -151,7 +151,11 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
               'Mandame el resto en otro mensaje.',
         ?question,
       ];
-      if (question != null) {
+      if (question != null && _previousRequest != null && saved.isEmpty) {
+        // Otra vuelta sin entenderse: se suma lo dicho sin anidar
+        // "Pedido anterior" dentro de otro (eso la confundía).
+        _previousRequest = '$_previousRequest\nDespués dijo: $text';
+      } else if (question != null) {
         _alreadySaved.addAll(saved.map((r) => r.title.toLowerCase()));
         _previousRequest = _alreadySaved.isEmpty
             ? request
@@ -188,6 +192,19 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
         error: true,
       );
     }
+  }
+
+  /// Olvida la pregunta pendiente: el próximo mensaje es un pedido nuevo.
+  void _startOver() {
+    _previousRequest = null;
+    _alreadySaved.clear();
+    setState(() => _last = null);
+    widget.settings.addChat(
+      ChatEntry(
+        'Listo, empezamos de nuevo. Decime qué querés que te recuerde y cuándo.',
+        at: DateTime.now(),
+      ),
+    );
   }
 
   void _show(_Last last, String message, {bool error = false}) {
@@ -301,6 +318,7 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
                 onModify: _modify,
                 onCancel: _cancel,
                 onRestore: _restore,
+                onStartOver: _startOver,
               ),
               _HistoryView(
                 messages: _history,
@@ -355,6 +373,7 @@ class _LastView extends StatelessWidget {
     required this.onModify,
     required this.onCancel,
     required this.onRestore,
+    required this.onStartOver,
   });
 
   final _Last? last;
@@ -364,12 +383,22 @@ class _LastView extends StatelessWidget {
   final ValueChanged<int> onModify;
   final ValueChanged<int> onCancel;
   final ValueChanged<int> onRestore;
+  final VoidCallback onStartOver;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final last = this.last;
+    final startOver = Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        key: const Key('start-over'),
+        icon: const Icon(Icons.restart_alt),
+        label: const Text('Empezar de nuevo (olvidar esta pregunta)'),
+        onPressed: onStartOver,
+      ),
+    );
 
     final shortcuts = Row(
       children: [
@@ -448,13 +477,15 @@ class _LastView extends StatelessWidget {
                 text: last.text ?? '',
                 error: last.status == _Status.error,
               ),
-              if (last.status == _Status.question)
+              if (last.status == _Status.question) ...[
                 Text(
                   'Respondeme con el micrófono o escribiendo.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
+                startOver,
+              ],
             ],
           ),
           _Status.saved => Column(
@@ -506,6 +537,7 @@ class _LastView extends StatelessWidget {
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
+                startOver,
               ],
             ],
           ),
