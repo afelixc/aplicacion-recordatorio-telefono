@@ -128,6 +128,17 @@ void main() {
     expect(cal.stored, isEmpty);
   });
 
+  test('hecho: en el calendario queda con ✓ y al destildar se saca', () async {
+    final (sync, repo, cal, _) = await make();
+    await sync.settings.setCalendar('1', 'yo');
+    await sync.settings.setCalendarSend(true);
+    final r = await repo.save(Reminder(title: 'Luz', dueAt: at));
+    await repo.setDone(r.id!, true);
+    expect(cal.stored.values.single.title, '✓ Luz');
+    await repo.setDone(r.id!, false);
+    expect(cal.stored.values.single.title, 'Luz');
+  });
+
   test('enviar: crea, actualiza sin duplicar y borra', () async {
     final (sync, repo, cal, _) = await make();
     await sync.settings.setCalendar('1', 'yo');

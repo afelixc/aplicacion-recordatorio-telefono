@@ -20,6 +20,9 @@ const appLanguages = <(String, String)>[
 abstract class SettingsStore {
   Future<String?> read(String key);
   Future<void> write(String key, String value);
+
+  /// Vuelve a leer del disco (lo que escribió la revisión con la app cerrada).
+  Future<void> reload();
 }
 
 class PrefsSettingsStore implements SettingsStore {
@@ -30,6 +33,10 @@ class PrefsSettingsStore implements SettingsStore {
   @override
   Future<void> write(String key, String value) async =>
       (await SharedPreferences.getInstance()).setString(key, value);
+
+  @override
+  Future<void> reload() async =>
+      (await SharedPreferences.getInstance()).reload();
 }
 
 class MemorySettingsStore implements SettingsStore {
@@ -40,6 +47,9 @@ class MemorySettingsStore implements SettingsStore {
 
   @override
   Future<void> write(String key, String value) async => _values[key] = value;
+
+  @override
+  Future<void> reload() async {}
 }
 
 /// Dónde se guardan las claves de API: cifradas, solo en el teléfono.
@@ -277,6 +287,73 @@ class AppSettings extends ChangeNotifier {
     await _store.write('backup_error', error ?? '');
   }
 
+  // --- Gmail en la compu (recuadro escondido) ---
+
+  /// Se tocó 5 veces la versión: se muestra el recuadro "Gmail en la compu".
+  bool gmailUnlocked = false;
+
+  /// Los dos archivos en Drive: la lista que escribe el teléfono y los
+  /// cambios que anota Gmail. [gmailPair] los une (el complemento busca el
+  /// par).
+  String? gmailMainUri;
+  String? gmailChangesUri;
+  String? gmailPair;
+  DateTime? gmailLast;
+  String? gmailError;
+
+  bool get gmailOn => gmailMainUri != null && gmailChangesUri != null;
+
+  Future<void> setGmailUnlocked(bool value) async {
+    gmailUnlocked = value;
+    notifyListeners();
+    await _store.write('gmail_visible', '$value');
+  }
+
+  Future<void> setGmailFiles(String main, String changes, String pair) async {
+    gmailMainUri = main;
+    gmailChangesUri = changes;
+    gmailPair = pair;
+    gmailError = null;
+    notifyListeners();
+    await _store.write('gmail_main_uri', main);
+    await _store.write('gmail_changes_uri', changes);
+    await _store.write('gmail_par', pair);
+    await _store.write('gmail_error', '');
+  }
+
+  Future<void> clearGmail() async {
+    gmailMainUri = gmailChangesUri = gmailPair = gmailError = null;
+    gmailLast = null;
+    notifyListeners();
+    for (final k in [
+      'gmail_main_uri',
+      'gmail_changes_uri',
+      'gmail_par',
+      'gmail_error',
+      'gmail_last',
+      'gmail_hash',
+    ]) {
+      await _store.write(k, '');
+    }
+  }
+
+  Future<void> setGmailResult({DateTime? at, String? error}) async {
+    if (at != null) gmailLast = at;
+    gmailError = error;
+    notifyListeners();
+    if (at != null) await _store.write('gmail_last', at.toIso8601String());
+    await _store.write('gmail_error', error ?? '');
+  }
+
+  /// Datos internos de Gmail (cambios ya aplicados, etc.), leídos frescos
+  /// porque también los escribe la revisión con la app cerrada.
+  Future<String?> readFresh(String key) async {
+    await _store.reload();
+    return _store.read(key);
+  }
+
+  Future<void> writeRaw(String key, String value) => _store.write(key, value);
+
   /// Las preferencias que viajan en la copia (sin claves de API).
   Map<String, String> exportPrefs(Iterable<String> providerIds) => {
     'mode': mode.name,
@@ -351,6 +428,13 @@ class AppSettings extends ChangeNotifier {
       dayColors = dayColors.copyWith(pending: oldPending, done: oldDone);
       nightColors = nightColors.copyWith(pending: oldPending, done: oldDone);
     }
+    String? nonEmpty(String? v) => (v?.isEmpty ?? true) ? null : v;
+    gmailUnlocked = await _store.read('gmail_visible') == 'true';
+    gmailMainUri = nonEmpty(await _store.read('gmail_main_uri'));
+    gmailChangesUri = nonEmpty(await _store.read('gmail_changes_uri'));
+    gmailPair = nonEmpty(await _store.read('gmail_par'));
+    gmailLast = DateTime.tryParse(await _store.read('gmail_last') ?? '');
+    gmailError = nonEmpty(await _store.read('gmail_error'));
     backupUri = await _store.read('backup_uri');
     backupName = await _store.read('backup_name');
     backupLast = DateTime.tryParse(await _store.read('backup_last') ?? '');

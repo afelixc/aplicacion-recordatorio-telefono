@@ -71,16 +71,8 @@ class MainActivity : FlutterActivity() {
                         call.argument<ByteArray>("datos") ?: ByteArray(0),
                         result,
                     )
-                    "escribir" -> {
-                        val uri = call.argument<String>("uri")
-                        val data = call.argument<ByteArray>("datos") ?: ByteArray(0)
-                        Thread {
-                            val ok = uri != null && writeTo(Uri.parse(uri), data)
-                            handler.post { result.success(ok) }
-                        }.start()
-                    }
                     "abrir" -> openBackup(result)
-                    else -> result.notImplemented()
+                    else -> if (!DriveFiles.handle(applicationContext, call, result)) result.notImplemented()
                 }
             }
     }
@@ -148,19 +140,7 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    /** Sobrescribe el archivo. Algunos proveedores no aceptan "wt": se prueba "w". */
-    private fun writeTo(uri: Uri, data: ByteArray): Boolean {
-        for (mode in listOf("wt", "w")) {
-            try {
-                val out = contentResolver.openOutputStream(uri, mode) ?: continue
-                out.use { it.write(data) }
-                return true
-            } catch (e: Exception) {
-                // Se prueba el otro modo.
-            }
-        }
-        return false
-    }
+    private fun writeTo(uri: Uri, data: ByteArray) = DriveFiles.write(applicationContext, uri, data)
 
     private fun displayName(uri: Uri): String? = try {
         contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)

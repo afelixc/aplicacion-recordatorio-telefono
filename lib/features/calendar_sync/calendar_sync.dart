@@ -56,9 +56,13 @@ class CalendarSync {
 
   // --- De Recordame → al calendario ---
 
+  /// Título del evento: los hechos van con ✓ adelante.
+  static String eventTitle(Reminder r) => r.done ? '✓ ${r.title}' : r.title;
+
   /// Crea o actualiza el evento; devuelve el id (o ids) para guardar.
   Future<String?> push(Reminder r) async {
     final cal = settings.calendarId!;
+    final title = eventTitle(r);
     final ids = r.calendarEventId?.split(',') ?? const <String>[];
     if (r.recurrence.kind == RepeatKind.dates) {
       for (final id in ids) {
@@ -73,20 +77,20 @@ class CalendarSync {
           r.dueAt.hour,
           r.dueAt.minute,
         );
-        final id = await calendar.create(cal, r.title, at, null);
+        final id = await calendar.create(cal, title, at, null);
         if (id != null) created.add(id);
       }
       return created.isEmpty ? null : created.join(',');
     }
     final rrule = rruleFor(r);
     if (ids.length == 1 &&
-        await calendar.update(ids.first, r.title, r.dueAt, rrule)) {
+        await calendar.update(ids.first, title, r.dueAt, rrule)) {
       return ids.first;
     }
     for (final id in ids) {
       await calendar.delete(id);
     }
-    return calendar.create(cal, r.title, r.dueAt, rrule);
+    return calendar.create(cal, title, r.dueAt, rrule);
   }
 
   Future<void> remove(Reminder r) async {
@@ -151,12 +155,16 @@ class CalendarSync {
 
   Future<void> stopAuto() async {
     await settings.setCalendarAuto(false);
-    await calendar.cancelBackground();
+    // La misma revisión levanta lo de Gmail: sigue si eso está prendido.
+    if (!settings.gmailOn) await calendar.cancelBackground();
   }
 
-  /// Al abrir la app: si está prendido, que siga revisando con la app cerrada.
+  /// Al abrir la app: si está prendido el 4 o Gmail, que siga revisando con
+  /// la app cerrada.
   Future<void> ensureBackground() async {
-    if (settings.calendarAuto) await calendar.scheduleBackground();
+    if (settings.calendarAuto || settings.gmailOn) {
+      await calendar.scheduleBackground();
+    }
   }
 
   /// Trae lo nuevo del calendario (al abrir o volver a la app).
@@ -209,7 +217,9 @@ class CalendarSyncRepository implements ReminderRepository {
       reminder = reminder.copyWith(clearCalendarEventId: true);
     }
     var saved = await _inner.save(reminder);
-    if (!sync.sending || saved.done) return saved;
+    if (!sync.sending) return saved;
+    // Los hechos que nunca estuvieron en el calendario no se mandan.
+    if (saved.done && saved.calendarEventId == null) return saved;
     final unchanged =
         saved.calendarEventId != null &&
         (previous == null || _same(previous, saved));
@@ -227,8 +237,26 @@ class CalendarSyncRepository implements ReminderRepository {
     return saved;
   }
 
+  /// Hecho / pendiente: en el calendario el evento queda con "✓" adelante
+  /// (o se lo saca), así se ve igual que en Recordame.
   @override
-  Future<void> setDone(int id, bool done) => _inner.setDone(id, done);
+  Future<void> setDone(int id, bool done) async {
+    await _inner.setDone(id, done);
+    if (!sync.sending) return;
+    final r = await _inner.getById(id);
+    if (r == null || r.calendarEventId == null) return;
+    try {
+      final eventId = await sync.push(r);
+      if (eventId != r.calendarEventId) {
+        await _inner.save(
+          r.copyWith(
+            calendarEventId: eventId,
+            clearCalendarEventId: eventId == null,
+          ),
+        );
+      }
+    } catch (_) {}
+  }
 
   @override
   Future<void> delete(int id) async {

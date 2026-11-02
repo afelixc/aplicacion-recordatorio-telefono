@@ -7,6 +7,7 @@ import 'core/settings.dart';
 import 'features/ai/ai_provider.dart';
 import 'features/backup/backup_service.dart';
 import 'features/calendar_sync/calendar_sync.dart';
+import 'features/gmail/gmail_sync.dart';
 import 'core/theme.dart';
 import 'data/reminder_repository.dart';
 import 'data/usage.dart';
@@ -24,6 +25,7 @@ class RecordameApp extends StatelessWidget {
     this.aiProviderOverride,
     this.backup,
     this.calendar,
+    this.gmail,
     this.openedReminders = const Stream.empty(),
     this.launchReminderId,
   });
@@ -37,6 +39,7 @@ class RecordameApp extends StatelessWidget {
   final AiProvider? aiProviderOverride;
   final BackupService? backup;
   final CalendarSync? calendar;
+  final GmailSync? gmail;
 
   /// Recordatorios cuya notificación se tocó con la app abierta.
   final Stream<int> openedReminders;
@@ -54,6 +57,7 @@ class RecordameApp extends StatelessWidget {
       aiProviderOverride: aiProviderOverride,
       backup: backup,
       calendar: calendar,
+      gmail: gmail,
       child: ListenableBuilder(
         listenable: settings,
         builder: (context, _) => MaterialApp(
