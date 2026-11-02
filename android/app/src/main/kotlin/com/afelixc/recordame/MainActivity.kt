@@ -54,6 +54,13 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "recordame/icono")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "cambiar" -> result.success(setIcon(call.argument<String>("id") ?: "clasico"))
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "recordame/calendario")
             .setMethodCallHandler { call, result -> onCalendar(call.method, call, result) }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "recordame/copia")
@@ -291,5 +298,31 @@ class MainActivity : FlutterActivity() {
         handler.removeCallbacks(stopSound)
         playing?.stop()
         playing = null
+    }
+
+    /** Prende el ícono elegido (activity-alias) y apaga los demás. */
+    private fun setIcon(id: String): Boolean {
+        val ids = listOf("clasico", "rojo", "naranja", "verde", "violeta", "negro", "blanco", "celeste")
+        if (id !in ids) return false
+        return try {
+            val pm = packageManager
+            fun alias(n: String) = android.content.ComponentName(
+                this, "$packageName.Icono${n.replaceFirstChar { it.uppercase() }}"
+            )
+            // Primero el nuevo, así nunca queda la app sin ícono.
+            pm.setComponentEnabledSetting(
+                alias(id), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
+            )
+            for (other in ids) {
+                if (other != id) {
+                    pm.setComponentEnabledSetting(
+                        alias(other), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP
+                    )
+                }
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 }

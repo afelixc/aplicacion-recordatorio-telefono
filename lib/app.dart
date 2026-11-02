@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_scope.dart';
+import 'core/palette.dart';
 import 'core/settings.dart';
 import 'features/ai/ai_provider.dart';
 import 'features/backup/backup_service.dart';
@@ -53,19 +54,26 @@ class RecordameApp extends StatelessWidget {
       aiProviderOverride: aiProviderOverride,
       backup: backup,
       calendar: calendar,
-      child: MaterialApp(
-        title: 'Recordame',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
-        locale: const Locale('es', 'AR'),
-        supportedLocales: const [Locale('es', 'AR'), Locale('es')],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: UpdatePrompt(
-          child: HomeShell(
-            openedReminders: openedReminders,
-            launchReminderId: launchReminderId,
+      child: ListenableBuilder(
+        listenable: settings,
+        builder: (context, _) => MaterialApp(
+          title: 'Recordame',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(settings.dayColors),
+          darkTheme: AppTheme.dark(settings.nightColors),
+          themeMode: switch (settings.dayNight) {
+            DayNight.auto => ThemeMode.system,
+            DayNight.day => ThemeMode.light,
+            DayNight.night => ThemeMode.dark,
+          },
+          locale: const Locale('es', 'AR'),
+          supportedLocales: const [Locale('es', 'AR'), Locale('es')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          home: UpdatePrompt(
+            child: HomeShell(
+              openedReminders: openedReminders,
+              launchReminderId: launchReminderId,
+            ),
           ),
         ),
       ),

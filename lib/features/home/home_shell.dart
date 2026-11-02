@@ -104,8 +104,14 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final tab = appTabs[_index];
+    final scheme = Theme.of(context).colorScheme;
+    final night = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
+        // Barra con el color de la app (Configuración → Colores). De noche,
+        // fondo oscuro y letras de ese color, para que no encandile.
+        backgroundColor: night ? scheme.surfaceContainer : scheme.primary,
+        foregroundColor: night ? scheme.primary : scheme.onPrimary,
         centerTitle: true,
         title: const Text(
           'TE RECORDARÉ',

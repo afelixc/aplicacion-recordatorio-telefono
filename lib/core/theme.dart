@@ -1,28 +1,37 @@
 import 'package:flutter/material.dart';
 
-/// Colores de la app: azul tinta con detalles en ámbar.
+import 'palette.dart';
+
+/// Colores de la app. De entrada, azul tinta con detalles en ámbar; el
+/// usuario los cambia en Configuración → Colores (por separado de día y de
+/// noche).
 class AppTheme {
-  static const _brand = Color(0xFF2B3A67);
   static const _accent = Color(0xFFE8A33D);
 
-  static ThemeData get light => _build(
-    ColorScheme.fromSeed(
-      seedColor: _brand,
-      primary: _brand,
-      secondary: _accent,
-      surface: Colors.white,
-    ),
-  );
+  static ThemeData light([ColorSet colors = const ColorSet()]) {
+    final main = mainColor(colors.main).day;
+    return _build(
+      ColorScheme.fromSeed(
+        seedColor: main,
+        primary: main,
+        secondary: _accent,
+        surface: backgroundFor(night: false, cream: colors.cream),
+      ),
+    );
+  }
 
-  static ThemeData get dark => _build(
-    ColorScheme.fromSeed(
-      seedColor: _brand,
-      brightness: Brightness.dark,
-      primary: const Color(0xFF8FA2E0),
-      secondary: const Color(0xFFF0B357),
-      surface: const Color(0xFF181D31),
-    ),
-  );
+  static ThemeData dark([ColorSet colors = const ColorSet()]) {
+    final main = mainColor(colors.main).night;
+    return _build(
+      ColorScheme.fromSeed(
+        seedColor: main,
+        brightness: Brightness.dark,
+        primary: main,
+        secondary: const Color(0xFFF0B357),
+        surface: backgroundFor(night: true, cream: colors.cream),
+      ),
+    );
+  }
 
   static ThemeData _build(ColorScheme scheme) => ThemeData(
     colorScheme: scheme,
@@ -34,3 +43,7 @@ class AppTheme {
     ),
   );
 }
+
+/// Los colores elegidos para el modo que se está viendo ahora (día o noche).
+ColorSet currentColors(BuildContext context, ColorSet day, ColorSet night) =>
+    Theme.of(context).brightness == Brightness.dark ? night : day;

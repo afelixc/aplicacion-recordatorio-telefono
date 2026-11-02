@@ -10,7 +10,7 @@ import 'package:recordame/data/memory_reminder_repository.dart';
 import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/data/usage.dart';
 import 'package:recordame/data/reminder.dart';
-import 'package:recordame/features/reminders/list_colors.dart';
+import 'package:recordame/core/palette.dart';
 import 'package:recordame/features/reminders/reminders_screen.dart';
 
 void main() {
@@ -410,19 +410,87 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Pagar la luz'), findsOneWidget);
 
-    // Colores: elegir verde para los pendientes.
+    // Colores: el botón lleva a Configuración → Colores; verde para los
+    // pendientes de día.
     await tester.tap(find.byKey(const Key('list-colors')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('color-p-verde')));
+    expect(find.text('ESTÁS PINTANDO LOS COLORES DE DÍA'), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('pend-verde')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Listo'));
+    await tester.tap(find.byKey(const Key('pend-verde')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     final card = tester.widget<Card>(
       find
           .ancestor(of: find.text('Pagar la luz'), matching: find.byType(Card))
           .first,
     );
-    expect(card.color, listColor('verde').fill);
+    expect(card.color, softColor('verde').dayFill);
+  });
+
+  testWidgets('Colores: día y noche por separado, fondo y almanaque', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    await tester.pumpWidget(
+      RecordameApp(reminders: MemoryReminderRepository(), settings: settings),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Configuración').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Colores'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Siempre noche'));
+    // Siempre noche: la app pasa a oscuro y se pinta la solapa de noche.
+    await tester.tap(find.text('Siempre noche'));
+    await tester.pumpAndSettle();
+    expect(settings.dayNight, DayNight.night);
+    expect(find.text('ESTÁS PINTANDO LOS COLORES DE NOCHE'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cream')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('main-bordo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('main-bordo')));
+    await tester.pumpAndSettle();
+    expect(settings.nightColors.cream, isTrue);
+    expect(settings.nightColors.main, 'bordo');
+    // Los de día no se tocaron.
+    expect(settings.dayColors, const ColorSet());
+
+    // Ícono: se guarda la elección (en la prueba no hay Android).
+    await tester.ensureVisible(find.byKey(const Key('icon-rojo')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('icon-rojo')));
+    await tester.pumpAndSettle();
+    expect(settings.appIconId, 'rojo');
+  });
+
+  test('Colores: se guardan y se leen; migra los del listado viejo', () async {
+    final store = MemorySettingsStore();
+    await store.write('color_pending', 'verde');
+    await store.write('color_done', 'rosa');
+    final a = AppSettings(store, MemoryKeyStore());
+    await a.load(const []);
+    expect(a.dayColors.pending, 'verde');
+    expect(a.nightColors.done, 'rosa');
+
+    await a.setColors(
+      a.dayColors.copyWith(cream: true, today: 'rojo'),
+      night: false,
+    );
+    await a.setDayNight(DayNight.day);
+    final b = AppSettings(store, MemoryKeyStore());
+    await b.load(const []);
+    expect(b.dayColors.cream, isTrue);
+    expect(b.dayColors.today, 'rojo');
+    expect(b.dayColors.pending, 'verde');
+    expect(b.dayNight, DayNight.day);
+    expect(b.exportPrefs(const []).keys, contains('colores_noche'));
   });
 
   testWidgets('Almanaque: deslizar cambia de mes', (tester) async {

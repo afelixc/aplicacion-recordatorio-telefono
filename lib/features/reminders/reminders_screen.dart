@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../data/reminder.dart';
 import '../calendar/occurrences.dart';
+import '../../core/palette.dart';
 import 'list_colors.dart';
 import 'reminder_editor.dart';
 import 'reminder_tile.dart';
@@ -83,6 +84,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   Widget build(BuildContext context) {
     final repo = AppScope.of(context).reminders;
     final settings = AppScope.of(context).settings;
+    final night = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showReminderEditor(context),
@@ -205,10 +207,14 @@ class _RemindersScreenState extends State<RemindersScreen> {
                                   reminder: items[i],
                                   // En "Todos", con los colores elegidos.
                                   tint: _filter == _Filter.all
-                                      ? listColor(
+                                      ? softColor(
                                           items[i].done
-                                              ? settings.colorDone
-                                              : settings.colorPending,
+                                              ? settings
+                                                    .colorsFor(night: night)
+                                                    .done
+                                              : settings
+                                                    .colorsFor(night: night)
+                                                    .pending,
                                         )
                                       : null,
                                 ),

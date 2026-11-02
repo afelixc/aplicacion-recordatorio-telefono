@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../data/reminder.dart';
-import 'list_colors.dart';
+import '../../core/palette.dart';
 import 'reminder_editor.dart';
 
 /// Un recordatorio en una lista: marcar como hecho, editar y borrar.
@@ -13,7 +13,7 @@ class ReminderTile extends StatelessWidget {
   final Reminder reminder;
 
   /// Color de la tarjeta (en Listado → Todos, el que eligió el usuario).
-  final ListColor? tint;
+  final SoftColor? tint;
 
   Future<void> _delete(BuildContext context) async {
     final repo = AppScope.of(context).reminders;
@@ -37,6 +37,7 @@ class ReminderTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final night = theme.brightness == Brightness.dark;
     final repo = AppScope.of(context).reminders;
     final overdue =
         !reminder.done &&
@@ -46,10 +47,10 @@ class ReminderTile extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
-      color: tint?.fillFor(theme.brightness),
+      color: tint?.fill(night),
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: tint?.border ?? theme.colorScheme.outlineVariant,
+          color: tint?.border(night) ?? theme.colorScheme.outlineVariant,
         ),
         borderRadius: BorderRadius.circular(14),
       ),

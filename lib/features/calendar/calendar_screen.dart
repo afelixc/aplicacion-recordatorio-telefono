@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
+import '../../core/palette.dart';
 import '../../data/reminder.dart';
 import '../reminders/reminder_editor.dart';
 import 'occurrences.dart';
@@ -252,18 +253,20 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final night = Theme.of(context).brightness == Brightness.dark;
+    final settings = AppScope.of(context).settings;
+    final colors = settings.colorsFor(night: night);
     final hasReminders = count > 0;
     // Hoy: bien resaltado. Días con recordatorios: fondo suave y puntitos
     // (uno por recordatorio, hasta 5). El día elegido lleva un borde.
+    // Los colores salen de Configuración → Colores.
     final bg = isToday
-        ? scheme.secondary
+        ? todayColor(colors.today).of(night)
         : hasReminders
-        ? scheme.primaryContainer
+        ? softColor(colors.withReminders).fill(night)
         : Colors.transparent;
     final fg = isToday
-        ? scheme.onSecondary
-        : hasReminders
-        ? scheme.onPrimaryContainer
+        ? (night ? const Color(0xFF10131C) : Colors.white)
         : scheme.onSurface;
     return Padding(
       padding: const EdgeInsets.all(2),
@@ -272,7 +275,10 @@ class _DayCell extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
           side: isSelected
-              ? BorderSide(color: scheme.primary, width: 2)
+              ? BorderSide(
+                  color: mainColor(colors.selected).of(night),
+                  width: 2,
+                )
               : BorderSide.none,
         ),
         child: InkWell(

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'palette.dart';
+
 enum UsageMode { free, ai }
 
 /// Idiomas para las respuestas de la IA y el dictado por voz.
@@ -182,20 +184,36 @@ class AppSettings extends ChangeNotifier {
   /// Eventos que ya se vieron (para traer solo los nuevos).
   final Set<String> calendarKnown = {};
 
-  /// Colores de Listado → Todos (nombres de `listColors`).
-  String colorPending = 'azul';
-  String colorDone = 'amarillo';
+  /// Colores (Configuración → Colores): día/noche y lo elegido en cada uno.
+  DayNight dayNight = DayNight.auto;
+  ColorSet dayColors = const ColorSet();
+  ColorSet nightColors = const ColorSet();
 
-  Future<void> setListColor({String? pending, String? done}) async {
-    if (pending != null) {
-      colorPending = pending;
-      await _store.write('color_pending', pending);
-    }
-    if (done != null) {
-      colorDone = done;
-      await _store.write('color_done', done);
+  /// Ícono del teléfono (id de `appIcons`).
+  String appIconId = 'clasico';
+
+  ColorSet colorsFor({required bool night}) => night ? nightColors : dayColors;
+
+  Future<void> setDayNight(DayNight value) async {
+    dayNight = value;
+    notifyListeners();
+    await _store.write('dia_noche', value.name);
+  }
+
+  Future<void> setColors(ColorSet value, {required bool night}) async {
+    if (night) {
+      nightColors = value;
+    } else {
+      dayColors = value;
     }
     notifyListeners();
+    await _store.write(night ? 'colores_noche' : 'colores_dia', value.encode());
+  }
+
+  Future<void> setAppIcon(String id) async {
+    appIconId = id;
+    notifyListeners();
+    await _store.write('icono', id);
   }
 
   Future<void> setCalendar(String id, String name) async {
@@ -264,8 +282,9 @@ class AppSettings extends ChangeNotifier {
     'mode': mode.name,
     'provider': providerId,
     'language': language,
-    'color_pending': colorPending,
-    'color_done': colorDone,
+    'dia_noche': dayNight.name,
+    'colores_dia': dayColors.encode(),
+    'colores_noche': nightColors.encode(),
     for (final id in providerIds)
       if (_models[id] != null) 'model_$id': _models[id]!,
     for (final id in providerIds)
@@ -284,6 +303,9 @@ class AppSettings extends ChangeNotifier {
       if (e.key == 'mode' ||
           e.key == 'provider' ||
           e.key == 'language' ||
+          e.key == 'dia_noche' ||
+          e.key == 'colores_dia' ||
+          e.key == 'colores_noche' ||
           e.key == 'color_pending' ||
           e.key == 'color_done' ||
           e.key.startsWith('model_') ||
@@ -314,8 +336,21 @@ class AppSettings extends ChangeNotifier {
           ),
         );
     } catch (_) {}
-    colorPending = await _store.read('color_pending') ?? colorPending;
-    colorDone = await _store.read('color_done') ?? colorDone;
+    dayNight =
+        DayNight.values.asNameMap()[await _store.read('dia_noche')] ??
+        DayNight.auto;
+    appIconId = await _store.read('icono') ?? appIconId;
+    final savedDay = await _store.read('colores_dia');
+    final savedNight = await _store.read('colores_noche');
+    dayColors = ColorSet.decode(savedDay);
+    nightColors = ColorSet.decode(savedNight);
+    // Versión anterior: solo los colores del Listado (pendientes y hechos).
+    final oldPending = await _store.read('color_pending');
+    final oldDone = await _store.read('color_done');
+    if (savedDay == null && (oldPending != null || oldDone != null)) {
+      dayColors = dayColors.copyWith(pending: oldPending, done: oldDone);
+      nightColors = nightColors.copyWith(pending: oldPending, done: oldDone);
+    }
     backupUri = await _store.read('backup_uri');
     backupName = await _store.read('backup_name');
     backupLast = DateTime.tryParse(await _store.read('backup_last') ?? '');

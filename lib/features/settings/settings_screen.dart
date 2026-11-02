@@ -9,6 +9,7 @@ import '../help/modes_help.dart';
 import 'ai_section.dart';
 import 'backup_section.dart';
 import 'calendar_section.dart';
+import 'colors_page.dart';
 import 'notifications_section.dart';
 import 'usage_section.dart';
 
@@ -74,6 +75,12 @@ class SettingsScreen extends StatelessWidget {
               title: 'Idioma',
               subtitle: language,
               page: (_) => _LanguagePage(settings: settings),
+            ),
+            _MenuItem(
+              icon: Icons.palette_outlined,
+              title: 'Colores',
+              subtitle: 'Día y noche, la app, almanaque, listado e ícono',
+              page: (_) => const ColorsPage(),
             ),
             _MenuItem(
               icon: Icons.notifications_outlined,
