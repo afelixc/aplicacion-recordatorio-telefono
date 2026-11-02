@@ -23,7 +23,7 @@
 - Pedidos relativos ("en 15 minutos"): la IA devuelve `in_minutes` y la cuenta se hace en el teléfono.
 - Ejemplos (`lib/features/chat/examples_sheet.dart`): botón con recuadro que abre la lista; son solo para leer, tocarlos no crea nada. Debajo, "Cargar a mano".
 - Listado → Pendientes tiene filtros Pasados / Hoy / Todos (arranca en Hoy). Borrar muestra "Deshacer" 5 segundos (`persist: false`).
-- En Listado → Todos, los hechos se pintan de amarillo clarito (`highlightDone`).
+- Listado tiene buscador arriba (`matchesSearch`: sin tildes, mayúsculas ni orden de palabras; busca en la solapa elegida y, si no hay nada, ofrece "Buscar en Todos"). En Listado → Todos, pendientes y hechos con colores que elige el usuario (`list_colors.dart`, botón "Colores"; por defecto azul y amarillo; `color_pending` / `color_done`, van en la copia).
 - Sonido de los avisos (Configuración → Notificaciones): 4 sonidos propios en `res/raw` (campanita, timbre, suave, alerta; protegidos en `keep.xml`) o uno del teléfono con el selector de Android (`MainActivity.kt`, canal `recordame/sonido`). Android no deja cambiar el sonido de un canal: cada cambio crea `recordatorios_<n>`, borra el anterior y hace `resync`. Elegido en SharedPreferences (`notif_channel`, `notif_sound_uri`, `notif_sound_name`).
 - Almanaque: deslizar a la izquierda = mes siguiente, a la derecha = anterior.
 - Configuración es un menú de recuadros: cada opción abre su pantalla.

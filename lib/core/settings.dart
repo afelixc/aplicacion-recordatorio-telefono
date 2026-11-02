@@ -182,6 +182,22 @@ class AppSettings extends ChangeNotifier {
   /// Eventos que ya se vieron (para traer solo los nuevos).
   final Set<String> calendarKnown = {};
 
+  /// Colores de Listado → Todos (nombres de `listColors`).
+  String colorPending = 'azul';
+  String colorDone = 'amarillo';
+
+  Future<void> setListColor({String? pending, String? done}) async {
+    if (pending != null) {
+      colorPending = pending;
+      await _store.write('color_pending', pending);
+    }
+    if (done != null) {
+      colorDone = done;
+      await _store.write('color_done', done);
+    }
+    notifyListeners();
+  }
+
   Future<void> setCalendar(String id, String name) async {
     calendarId = id;
     calendarName = name;
@@ -248,6 +264,8 @@ class AppSettings extends ChangeNotifier {
     'mode': mode.name,
     'provider': providerId,
     'language': language,
+    'color_pending': colorPending,
+    'color_done': colorDone,
     for (final id in providerIds)
       if (_models[id] != null) 'model_$id': _models[id]!,
     for (final id in providerIds)
@@ -266,6 +284,8 @@ class AppSettings extends ChangeNotifier {
       if (e.key == 'mode' ||
           e.key == 'provider' ||
           e.key == 'language' ||
+          e.key == 'color_pending' ||
+          e.key == 'color_done' ||
           e.key.startsWith('model_') ||
           e.key.startsWith('balance_')) {
         await _store.write(e.key, e.value);
@@ -294,6 +314,8 @@ class AppSettings extends ChangeNotifier {
           ),
         );
     } catch (_) {}
+    colorPending = await _store.read('color_pending') ?? colorPending;
+    colorDone = await _store.read('color_done') ?? colorDone;
     backupUri = await _store.read('backup_uri');
     backupName = await _store.read('backup_name');
     backupLast = DateTime.tryParse(await _store.read('backup_last') ?? '');

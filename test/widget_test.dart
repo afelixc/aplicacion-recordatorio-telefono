@@ -10,6 +10,8 @@ import 'package:recordame/data/memory_reminder_repository.dart';
 import 'package:recordame/data/recurrence.dart';
 import 'package:recordame/data/usage.dart';
 import 'package:recordame/data/reminder.dart';
+import 'package:recordame/features/reminders/list_colors.dart';
+import 'package:recordame/features/reminders/reminders_screen.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('es_AR'));
@@ -367,6 +369,60 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Hoy a la noche'), findsOneWidget);
     expect(find.text('Para mañana'), findsOneWidget);
+  });
+
+  test('buscar: sin tildes, mayúsculas ni orden', () {
+    const t = 'Mandar un mensaje a Fabricio Gandini, tema puerta';
+    expect(matchesSearch(t, ''), isTrue);
+    expect(matchesSearch(t, 'gandini'), isTrue);
+    expect(matchesSearch(t, 'PUERTA fabricio'), isTrue);
+    expect(matchesSearch('Llamar a Martín', 'martin'), isTrue);
+    expect(matchesSearch(t, 'ventana'), isFalse);
+  });
+
+  testWidgets('Listado: buscador y colores de Todos', (tester) async {
+    final now = DateTime.now();
+    await pumpApp(tester, [
+      Reminder(
+        title: 'Mensaje a Fabricio Gandini, tema puerta',
+        dueAt: now.add(const Duration(days: 2)),
+      ),
+      Reminder(title: 'Pagar la luz', dueAt: now.add(const Duration(days: 3))),
+    ]);
+    await tester.tap(find.text('Listado'));
+    await tester.pumpAndSettle();
+
+    // En Pendientes → Hoy no está: ofrece buscar en Todos.
+    await tester.enterText(find.byKey(const Key('search')), 'gandini');
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Acá no hay nada'), findsOneWidget);
+    expect(find.text('Todos (1)'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('search-all')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Mensaje a Fabricio Gandini, tema puerta'),
+      findsOneWidget,
+    );
+    expect(find.text('Pagar la luz'), findsNothing);
+
+    // Borrar la búsqueda vuelve a mostrar todo.
+    await tester.tap(find.byTooltip('Borrar búsqueda'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pagar la luz'), findsOneWidget);
+
+    // Colores: elegir verde para los pendientes.
+    await tester.tap(find.byKey(const Key('list-colors')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('color-p-verde')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Listo'));
+    await tester.pumpAndSettle();
+    final card = tester.widget<Card>(
+      find
+          .ancestor(of: find.text('Pagar la luz'), matching: find.byType(Card))
+          .first,
+    );
+    expect(card.color, listColor('verde').fill);
   });
 
   testWidgets('Almanaque: deslizar cambia de mes', (tester) async {

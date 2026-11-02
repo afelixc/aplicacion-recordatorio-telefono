@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/app_scope.dart';
 import '../../data/reminder.dart';
 import '../calendar/occurrences.dart';
+import 'list_colors.dart';
 import 'reminder_editor.dart';
 import 'reminder_tile.dart';
 
@@ -10,6 +11,27 @@ enum _Filter { pending, done, all }
 
 /// Dentro de Pendientes: todos, los de hoy o los que ya pasaron.
 enum _Pending { overdue, today, all }
+
+/// Texto para buscar: minúsculas y sin tildes.
+String _plain(String s) {
+  const from = 'áàäâéèëêíìïîóòöôúùüûñ';
+  const to = 'aaaaeeeeiiiioooouuuun';
+  final b = StringBuffer();
+  for (final ch in s.toLowerCase().split('')) {
+    final i = from.indexOf(ch);
+    b.write(i < 0 ? ch : to[i]);
+  }
+  return b.toString();
+}
+
+/// ¿El título tiene todas las palabras buscadas (en cualquier orden)?
+bool matchesSearch(String title, String query) {
+  final t = _plain(title);
+  return _plain(query)
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .every(t.contains);
+}
 
 /// Un pendiente que ya pasó y no se marcó como hecho.
 bool isOverdue(Reminder r, DateTime now) =>
@@ -33,6 +55,19 @@ class RemindersScreen extends StatefulWidget {
 class _RemindersScreenState extends State<RemindersScreen> {
   _Filter _filter = _Filter.pending;
   _Pending _pending = _Pending.today;
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _clearSearch() {
+    _search.clear();
+    setState(() => _query = '');
+  }
 
   bool _matches(Reminder r, DateTime now) => switch (_filter) {
     _Filter.pending => switch (_pending) {
@@ -47,6 +82,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   @override
   Widget build(BuildContext context) {
     final repo = AppScope.of(context).reminders;
+    final settings = AppScope.of(context).settings;
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showReminderEditor(context),
@@ -80,6 +116,30 @@ class _RemindersScreenState extends State<RemindersScreen> {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: TextField(
+              key: const Key('search'),
+              controller: _search,
+              onChanged: (v) => setState(() => _query = v.trim()),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Buscar…',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Borrar búsqueda',
+                        icon: const Icon(Icons.close),
+                        onPressed: _clearSearch,
+                      ),
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: StreamBuilder<List<Reminder>>(
               stream: repo.watchAll(),
@@ -88,7 +148,9 @@ class _RemindersScreenState extends State<RemindersScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final now = DateTime.now();
-                final all = snapshot.data!;
+                final all = snapshot.data!
+                    .where((r) => matchesSearch(r.title, _query))
+                    .toList();
                 var items = all.where((r) => _matches(r, now)).toList();
                 // Los hechos, del más reciente al más viejo.
                 if (_filter == _Filter.done) items = items.reversed.toList();
@@ -115,6 +177,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
                         'Ya pasaron y no los marcaste como hechos. Tocá '
                         '"Reprogramar" para darles una fecha nueva.',
                       ),
+                    if (_filter == _Filter.all) const ListColorsBar(),
                     if (_filter == _Filter.done && items.isNotEmpty)
                       const _Hint(
                         'Para volver a activar uno, destildá el círculo o '
@@ -122,17 +185,33 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       ),
                     Expanded(
                       child: items.isEmpty
-                          ? _Empty(filter: _filter, pending: _pending)
+                          ? (_query.isNotEmpty
+                                ? _NotFound(
+                                    query: _query,
+                                    inAll: _filter == _Filter.all,
+                                    onSearchAll: () =>
+                                        setState(() => _filter = _Filter.all),
+                                  )
+                                : _Empty(filter: _filter, pending: _pending))
                           : ListView.separated(
                               padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                               itemCount: items.length,
                               separatorBuilder: (_, _) =>
                                   const SizedBox(height: 8),
-                              itemBuilder: (_, i) => ReminderTile(
-                                key: ValueKey(items[i].id),
-                                reminder: items[i],
-                                // En "Todos", los hechos con otro color.
-                                highlightDone: _filter == _Filter.all,
+                              itemBuilder: (_, i) => ListenableBuilder(
+                                listenable: settings,
+                                builder: (_, _) => ReminderTile(
+                                  key: ValueKey(items[i].id),
+                                  reminder: items[i],
+                                  // En "Todos", con los colores elegidos.
+                                  tint: _filter == _Filter.all
+                                      ? listColor(
+                                          items[i].done
+                                              ? settings.colorDone
+                                              : settings.colorPending,
+                                        )
+                                      : null,
+                                ),
                               ),
                             ),
                     ),
@@ -234,6 +313,48 @@ class _Hint extends StatelessWidget {
         text,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+class _NotFound extends StatelessWidget {
+  const _NotFound({
+    required this.query,
+    required this.inAll,
+    required this.onSearchAll,
+  });
+
+  final String query;
+  final bool inAll;
+  final VoidCallback onSearchAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              inAll
+                  ? 'No encontré nada con "$query".'
+                  : 'Acá no hay nada con "$query".',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            if (!inAll) ...[
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                key: const Key('search-all'),
+                icon: const Icon(Icons.search),
+                label: const Text('Buscar en Todos'),
+                onPressed: onSearchAll,
+              ),
+            ],
+          ],
         ),
       ),
     );
