@@ -63,6 +63,34 @@ h1{font-family:var(--display);font-size:clamp(26px,4vw,36px);margin:0;color:var(
 .chips span{flex:1;text-align:center;font-size:12px;padding:5px 0;border-radius:14px;border:1px solid var(--p-line)}
 .chips .on{background:var(--p-chip);border-color:transparent;font-weight:700}
 .fab{position:absolute;right:14px;bottom:62px;background:var(--p-main);color:var(--p-onmain);border-radius:16px;padding:10px 14px;font-size:13px;font-weight:700}
+.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:-1px;position:relative;z-index:1}
+.tabs2 button{all:unset;cursor:pointer;text-align:center;padding:10px 4px;font-weight:700;font-size:14px;border:1px solid var(--line);border-bottom:none;border-radius:14px 14px 0 0;opacity:.55}
+.tabs2 button[aria-pressed="true"]{opacity:1}
+.tabs2 .tday{background:#FFF6DC;color:#7A5300;border-color:#E8C77A}
+.tabs2 .tnight{background:#1B2140;color:#E3E8FF;border-color:#3A4470}
+.zone{border-radius:0 0 14px 14px;padding:10px;display:grid;gap:10px;border:2px solid}
+.zone.day{background:#FFF9EA;border-color:#E8C77A}
+.zone.night{background:#161B33;border-color:#3A4470}
+.zone .zt{font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;text-align:center}
+.zone.day .zt{color:#7A5300}.zone.night .zt{color:#C9D2FF}
+.zone .box{background:var(--paper)}
+.zone.night .box{background:#1F2647;color:#E7EAF2;border-color:#3A4470}
+.zone.night .box p,.zone.night .pick span{color:#B8C0DD}
+.zone.night .link{color:#C9D2FF}
+.zone.night .dot[aria-pressed="true"]{outline-color:#fff}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sw button{all:unset;cursor:pointer;width:44px;height:24px;border-radius:12px;background:#9AA1B5;position:relative;flex:none}
+.sw button::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s}
+.sw button[aria-pressed="true"]{background:#2E9A5A}
+.sw button[aria-pressed="true"]::after{left:23px}
+.icons{display:flex;flex-wrap:wrap;gap:10px}
+.icons button{all:unset;cursor:pointer;width:48px;height:48px;border-radius:12px;position:relative}
+.icons button[aria-pressed="true"]{outline:3px solid var(--brand);outline-offset:3px}
+.icons svg{width:48px;height:48px;display:block}
+.home{border-radius:12px;padding:12px;display:flex;gap:18px;align-items:flex-end;background:linear-gradient(135deg,#5B6C9A,#9B7FA8)}
+.home figure{margin:0;display:grid;justify-items:center;gap:4px;color:#fff;font-size:11px;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.home .other{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.35)}
+.home svg{width:44px;height:44px}
 .notes{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:grid;gap:10px;font-size:14px}
 .notes h2{margin:0;font-family:var(--display);color:var(--brand);font-size:21px}
 .notes ul{margin:0;padding-left:20px;display:grid;gap:6px}
@@ -91,12 +119,14 @@ h1{font-family:var(--display);font-size:clamp(26px,4vw,36px);margin:0;color:var(
     <ul>
       <li><b>Día / Noche:</b> "Como el teléfono" cambia sola cuando el teléfono pasa a modo oscuro. También podés dejarla siempre de día o siempre de noche.</li>
       <li><b>Cada modo con sus colores:</b> arriba elegís si estás pintando los de día ☀️ o los de noche 🌙. Los de noche son tonos más oscuros, para que no encandilen.</li>
+      <li><b>Fondo cremita:</b> se prende o se apaga, aparte para día y para noche (de noche es un oscuro cálido).</li>
+      <li><b>Ícono del teléfono:</b> 8 combinaciones listas para elegir. Android solo deja cambiar entre íconos preparados de antemano (no cualquier color suelto). Al cambiarlo, en algunos teléfonos el ícono tarda unos segundos en actualizarse y la app se cierra una vez.</li>
       <li><b>Color de la app:</b> la barra de arriba, los botones y el botón "Nuevo".</li>
       <li><b>Almanaque:</b> el día de hoy, los días que tienen recordatorios y el borde del día que tocaste.</li>
       <li><b>Listado:</b> pendientes y hechos (lo que ya tenés). El botón "Colores" del Listado te trae directo acá.</li>
       <li>"Volver a los de siempre" deja todo como está hoy. Los colores van en la copia de seguridad.</li>
     </ul>
-    <div class="q"><b>Para pulir:</b> ¿te alcanzan estos colores o querés más? ¿Le sumamos color al fondo (por ejemplo, un fondo apenas cremita de día)? ¿Algo más que quieras pintar?</div>
+    <div class="q"><b>Para pulir:</b> ¿te alcanzan estos colores o querés más? ¿Te gustan las 8 combinaciones del ícono o querés alguna otra (decime fondo y campanita)? ¿Algo más que quieras pintar?</div>
   </section>
 </div>
 
@@ -120,8 +150,15 @@ const TODAY={ // hoy en el almanaque: color fuerte
   ambar:{n:"Ámbar",d:"#E8A33D",x:"#F0B357"}, rojo:{n:"Rojo",d:"#D2453B",x:"#F08A80"},
   verde:{n:"Verde",d:"#2E9A5A",x:"#7FD3A0"}, azul:{n:"Azul",d:"#2F6FE0",x:"#8FB2F5"},
   violeta:{n:"Violeta",d:"#7A4FD0",x:"#C0A6F2"}, rosa:{n:"Rosa",d:"#D64F8A",x:"#F29AC0"}};
-const DEF={day:{main:"tinta",today:"ambar",has:"azul",sel:"tinta",pend:"azul",done:"amarillo"},
-           night:{main:"tinta",today:"ambar",has:"azul",sel:"tinta",pend:"azul",done:"amarillo"}};
+const ICONS={
+  clasico:{n:"Clásico",bg:"#2B3A67",fg:"#E8A33D"}, rojo:{n:"Rojo",bg:"#C62828",fg:"#FFFFFF"},
+  naranja:{n:"Naranja",bg:"#E8A33D",fg:"#2B3A67"}, verde:{n:"Verde",bg:"#2E6B4F",fg:"#F5D76E"},
+  violeta:{n:"Violeta",bg:"#5B3F8C",fg:"#F6B7D2"}, negro:{n:"Negro",bg:"#1C1C1E",fg:"#E0B84F"},
+  blanco:{n:"Blanco",bg:"#FFFFFF",fg:"#2B3A67"}, celeste:{n:"Celeste",bg:"#3FA7D6",fg:"#FFFFFF"}};
+let icon="clasico";
+const bell=(k)=>{const c=ICONS[k];return `<svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="11" fill="${c.bg}" stroke="${c.bg==="#FFFFFF"?"#D7DBE5":"none"}"/><path d="M24 9.5a2.5 2.5 0 0 1 2.5 2.5v.7c5 1.1 8.5 5.4 8.5 10.6v6.7l2.8 3.8H10.2l2.8-3.8v-6.7c0-5.2 3.5-9.5 8.5-10.6V12A2.5 2.5 0 0 1 24 9.5z" fill="${c.fg}"/><circle cx="24" cy="37.5" r="3" fill="${c.fg}"/><path d="M19.2 23.8l3.4 3.4 6.2-6.4" stroke="${c.bg}" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`;};
+const DEF={day:{cream:false,main:"tinta",today:"ambar",has:"azul",sel:"tinta",pend:"azul",done:"amarillo"},
+           night:{cream:false,main:"tinta",today:"ambar",has:"azul",sel:"tinta",pend:"azul",done:"amarillo"}};
 let cfg=JSON.parse(JSON.stringify(DEF)), mode="auto", editing="day", view="cal", selDay=12;
 const sysDark=()=>matchMedia("(prefers-color-scheme: dark)").matches;
 const shown=()=>mode==="day"?"day":mode==="night"?"night":editing; // en "Como el teléfono", la vista sigue lo que estás pintando
@@ -145,22 +182,33 @@ function drawSet(){
     <div class="box"><h3>Día y noche</h3>
       <div class="seg" role="group" aria-label="Modo">${[["auto","Como el teléfono"],["day","☀️ Siempre día"],["night","🌙 Siempre noche"]].map(([k,n])=>`<button data-mode="${k}" aria-pressed="${mode===k}">${n}</button>`).join("")}</div>
       <p>${mode==="auto"?"Cambia sola cuando el teléfono pasa a modo oscuro.":mode==="day"?"Siempre con los colores de día.":"Siempre con los colores de noche."}</p></div>
-    <div class="box"><h3>Estoy eligiendo los colores de…</h3>
-      <div class="seg" role="group" aria-label="Qué colores">${[["day","☀️ Día"],["night","🌙 Noche"]].map(([k,n])=>`<button data-edit="${k}" aria-pressed="${editing===k}">${n}</button>`).join("")}</div></div>
-    <div class="box"><h3>La app</h3><p>Barra de arriba, botones y "Nuevo".</p>${row("Color principal","main","main",MAIN)}</div>
-    <div class="box"><h3>Almanaque</h3>
-      ${row("Hoy","today","today",TODAY)}
-      ${row("Días con recordatorios","has","soft",SOFT)}
-      ${row("Día que tocaste (borde)","sel","sel",MAIN)}</div>
-    <div class="box"><h3>Listado → Todos</h3>
-      ${row("Los que faltan hacer","pend","soft",SOFT)}
-      ${row("Los hechos","done","soft",SOFT)}</div>
-    <div class="box"><button class="link" id="reset">Volver a los de siempre (${editing==="day"?"día":"noche"})</button>
-      <button class="link" id="copy">${editing==="day"?"Usar estos mismos de noche":"Usar los de día también de noche"}</button></div>
+    <div class="box"><h3>Ícono del teléfono</h3><p>El dibujito de Recordame en la pantalla de inicio. Es uno solo para día y noche.</p>
+      <div class="icons">${Object.keys(ICONS).map(k=>`<button data-icon="${k}" aria-pressed="${icon===k}" title="${ICONS[k].n}" aria-label="${ICONS[k].n}">${bell(k)}</button>`).join("")}</div>
+      <div class="home"><figure><div class="other"></div>Fotos</figure><figure>${bell(icon)}Recordame</figure><figure><div class="other"></div>WhatsApp</figure></div></div>
+    <div>
+      <div class="tabs2" role="group" aria-label="Qué colores">${[["day","☀️ Colores de DÍA","tday"],["night","🌙 Colores de NOCHE","tnight"]].map(([k,n,c])=>`<button class="${c}" data-edit="${k}" aria-pressed="${editing===k}">${n}</button>`).join("")}</div>
+      <div class="zone ${editing}">
+        <div class="zt">${editing==="day"?"Estás pintando los colores de día":"Estás pintando los colores de noche"}</div>
+        <div class="box"><h3>Fondo</h3>
+          <div class="sw"><span style="font-size:13px">${editing==="day"?"Fondo cremita (en vez de blanco)":"Fondo cálido (en vez de azul oscuro)"}</span><button id="cream" aria-pressed="${cfg[editing].cream}" aria-label="Fondo cremita"></button></div></div>
+        <div class="box"><h3>La app</h3><p>Barra de arriba, botones y "Nuevo".</p>${row("Color principal","main","main",MAIN)}</div>
+        <div class="box"><h3>Almanaque</h3>
+          ${row("Hoy","today","today",TODAY)}
+          ${row("Días con recordatorios","has","soft",SOFT)}
+          ${row("Día que tocaste (borde)","sel","sel",MAIN)}</div>
+        <div class="box"><h3>Listado → Todos</h3>
+          ${row("Los que faltan hacer","pend","soft",SOFT)}
+          ${row("Los hechos","done","soft",SOFT)}</div>
+        <div class="box"><button class="link" id="reset">Volver a los de siempre (${editing==="day"?"día":"noche"})</button>
+          <button class="link" id="copy">${editing==="day"?"Usar estos mismos de noche":"Copiar los de día"}</button></div>
+      </div>
+    </div>
   </div>`;
   s.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;if(mode!=="auto")editing=mode;drawAll();});
   s.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{editing=b.dataset.edit;if(mode!=="auto")mode=editing;drawAll();});
   s.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{cfg[editing][b.dataset.k]=b.dataset.v;drawAll(b.dataset.k);});
+  s.querySelectorAll("[data-icon]").forEach(b=>b.onclick=()=>{icon=b.dataset.icon;drawAll();});
+  document.getElementById("cream").onclick=()=>{cfg[editing].cream=!cfg[editing].cream;drawAll();};
   document.getElementById("reset").onclick=()=>{cfg[editing]={...DEF[editing]};drawAll();};
   document.getElementById("copy").onclick=()=>{if(editing==="day")cfg.night={...cfg.day};else cfg.night={...cfg.day};drawAll();};
 }
@@ -170,8 +218,9 @@ function drawPrev(focus){
   document.getElementById("prevLabel").textContent=n?"Así queda de noche 🌙":"Así queda de día ☀️";
   const main=MAIN[c.main][n?"x":"d"], sel=MAIN[c.sel][n?"x":"d"], today=TODAY[c.today][n?"x":"d"];
   const has=SOFT[c.has][n?"x":"d"], pend=SOFT[c.pend][n?"x":"d"], done=SOFT[c.done][n?"x":"d"];
-  const V=n?{bg:"#141826",ink:"#E7EAF2",muted:"#A3AABC",line:"#323A50",bar:"#1A1F2E",onmain:"#10131C"}
-           :{bg:"#FFFFFF",ink:"#1C2333",muted:"#5D6578",line:"#D7DBE5",bar:"#F6F8FC",onmain:"#FFFFFF"};
+  const cream=c.cream;
+  const V=n?{bg:cream?"#1E1A14":"#141826",ink:"#E7EAF2",muted:"#A3AABC",line:"#323A50",bar:"#1A1F2E",onmain:"#10131C"}
+           :{bg:cream?"#FBF5E8":"#FFFFFF",ink:"#1C2333",muted:"#5D6578",line:"#D7DBE5",bar:"#F6F8FC",onmain:"#FFFFFF"};
   Object.entries({bg:V.bg,ink:V.ink,muted:V.muted,line:V.line,bar:V.bar,main:n?"#1A1F2E":main,onmain:n?main:V.onmain,main2:main,chip:has[0]})
     .forEach(([k,v])=>p.style.setProperty("--p-"+k,v));
   if(focus==="pend"||focus==="done")view="list"; else if(focus&&focus!=="main")view="cal";
@@ -201,6 +250,6 @@ function drawPrev(focus){
   p.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{if(b.dataset.v==="cal"||b.dataset.v==="list"){view=b.dataset.v;drawPrev();}});
   p.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{selDay=+b.dataset.day;drawPrev();});
 }
-function drawAll(focus){drawSet();drawPrev(focus);}
+function drawAll(focus){const sc=document.querySelector("#set .scroll");const y=sc?sc.scrollTop:0;drawSet();const sc2=document.querySelector("#set .scroll");if(sc2)sc2.scrollTop=y;drawPrev(focus);}
 drawAll();
 </script>
