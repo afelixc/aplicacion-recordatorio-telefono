@@ -9,6 +9,7 @@ class FakeSpeech implements SpeechToText {
   void Function(SpeechRecognitionResult)? onResult;
   void Function(String)? onStatus;
   bool listening = false;
+  int listens = 0;
 
   void say(String words, {bool last = true}) => onResult!(
     SpeechRecognitionResult.init([
@@ -46,6 +47,7 @@ class FakeSpeech implements SpeechToText {
     dynamic listenOptions,
   }) async {
     this.onResult = onResult as void Function(SpeechRecognitionResult);
+    listens++;
     listening = true;
   }
 
@@ -94,6 +96,24 @@ void main() {
     expect(
       await d.finish(wait: const Duration(milliseconds: 50)),
       'recordame mañana comprar pan',
+    );
+  });
+
+  test('una pausa larga reinicia una sola vez y no pierde nada', () async {
+    final speech = FakeSpeech();
+    final d = Dictation(speech: speech);
+    await d.start(language: 'es-AR');
+    speech.say('el martes a las 10', last: false);
+    // Me quedé pensando: Android corta y avisa dos veces.
+    speech.listening = false;
+    speech.onStatus!(SpeechToText.doneStatus);
+    speech.onStatus!(SpeechToText.notListeningStatus);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(speech.listens, 2);
+    speech.say('llamar a Juan');
+    expect(
+      await d.finish(wait: const Duration(milliseconds: 50)),
+      'el martes a las 10 llamar a Juan',
     );
   });
 }

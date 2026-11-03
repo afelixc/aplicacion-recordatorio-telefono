@@ -30,6 +30,12 @@ class Dictation extends ChangeNotifier {
   /// Al tocar Enviar: espera las últimas palabras que todavía no llegaron.
   Completer<void>? _finalWaiter;
 
+  /// Ya hay un reinicio en camino (Android avisa el corte dos o tres veces:
+  /// "done", "notListening", error). Si se reiniciara dos veces, el segundo
+  /// arranque borraría lo que se está diciendo en ese momento.
+  bool _restarting = false;
+  bool _starting = false;
+
   bool get active => _active;
 
   /// Todo lo dicho hasta ahora.
@@ -60,7 +66,22 @@ class Dictation extends ChangeNotifier {
   }
 
   Future<void> _listen() async {
-    if (!_active || _speech.isListening) return;
+    _restarting = false;
+    if (!_active || _starting || _speech.isListening) return;
+    // Lo que quedó a medio escuchar del tramo anterior no se pierde.
+    if (_partial.isNotEmpty) {
+      _commit(_partial);
+      _partial = '';
+    }
+    _starting = true;
+    try {
+      await _listenNow();
+    } finally {
+      _starting = false;
+    }
+  }
+
+  Future<void> _listenNow() async {
     await _speech.listen(
       listenOptions: SpeechListenOptions(
         localeId: _language.replaceAll('-', '_'),
@@ -135,7 +156,10 @@ class Dictation extends ChangeNotifier {
       _commit(_partial);
       _partial = '';
     }
-    Future<void>.delayed(const Duration(milliseconds: 250), _listen);
+    if (_restarting) return;
+    _restarting = true;
+    // Lo más rápido posible, para no perder palabras en el corte.
+    Future<void>.delayed(const Duration(milliseconds: 80), _listen);
   }
 
   /// Deja de escuchar y devuelve todo lo dicho. Espera un momento las últimas
