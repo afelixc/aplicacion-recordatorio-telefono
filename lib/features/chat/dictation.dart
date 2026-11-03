@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -20,8 +22,13 @@ class Dictation extends ChangeNotifier {
   /// Lo que se está diciendo en este momento (todavía puede cambiar).
   String _partial = '';
 
-  /// El último tramo que se guardó (para no repetirlo).
+  /// El último tramo que se guardó (para no repetirlo) y lo que había antes
+  /// de él (para cambiarlo por una versión más completa del mismo tramo).
   String _lastChunk = '';
+  String _beforeLast = '';
+
+  /// Al tocar Enviar: espera las últimas palabras que todavía no llegaron.
+  Completer<void>? _finalWaiter;
 
   bool get active => _active;
 
@@ -45,6 +52,7 @@ class Dictation extends ChangeNotifier {
     _committed = initialText.trim();
     _partial = '';
     _lastChunk = '';
+    _beforeLast = '';
     _active = true;
     notifyListeners();
     await _listen();
@@ -63,28 +71,57 @@ class Dictation extends ChangeNotifier {
         cancelOnError: false,
       ),
       onResult: (result) {
-        // A veces el resultado final de un tramo llega después de que ya se
-        // guardó al reiniciar: no se repite.
-        if (_lastChunk.isNotEmpty &&
-            result.recognizedWords.trim() == _lastChunk &&
-            _committed.endsWith(_lastChunk)) {
-          return;
-        }
-        _partial = result.recognizedWords;
         if (result.finalResult) {
-          _lastChunk = _partial.trim();
-          _committed = [
-            _committed,
-            _partial,
-          ].where((s) => s.trim().isNotEmpty).join(' ').trim();
           _partial = '';
+          _commit(result.recognizedWords);
+          _finalWaiter?.complete();
+          _finalWaiter = null;
+        } else {
+          _partial = result.recognizedWords;
         }
         notifyListeners();
       },
     );
   }
 
+  static String _plain(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^\p{L}\p{N} ]', unicode: true), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  static String _join(String a, String b) =>
+      [a, b].where((s) => s.trim().isNotEmpty).join(' ').trim();
+
+  /// Suma un tramo dicho. Android a veces manda el mismo tramo dos veces al
+  /// reiniciar (igual, más corto o más completo): no se repite, y si llega
+  /// más completo reemplaza al anterior.
+  void _commit(String chunk) {
+    chunk = chunk.trim();
+    if (chunk.isEmpty) return;
+    final now = _plain(chunk);
+    final last = _plain(_lastChunk);
+    if (last.isNotEmpty) {
+      // Para los prefijos, tramos de varias palabras: "a" no es "a las 11".
+      if (now == last || (now.length >= 8 && last.startsWith('$now '))) {
+        return;
+      }
+      if (last.length >= 8 && now.startsWith('$last ')) {
+        _committed = _join(_beforeLast, chunk);
+        _lastChunk = chunk;
+        return;
+      }
+    }
+    _beforeLast = _committed;
+    _committed = _join(_committed, chunk);
+    _lastChunk = chunk;
+  }
+
   void _onStatus(String status) {
+    if (status == SpeechToText.doneStatus) {
+      _finalWaiter?.complete();
+      _finalWaiter = null;
+    }
     if (status == SpeechToText.doneStatus ||
         status == SpeechToText.notListeningStatus) {
       _restartSoon();
@@ -95,20 +132,29 @@ class Dictation extends ChangeNotifier {
   void _restartSoon() {
     if (!_active) return;
     if (_partial.isNotEmpty) {
-      _lastChunk = _partial.trim();
-      _committed = [_committed, _partial].join(' ').trim();
+      _commit(_partial);
       _partial = '';
     }
     Future<void>.delayed(const Duration(milliseconds: 250), _listen);
   }
 
-  /// Deja de escuchar y devuelve todo lo dicho.
-  Future<String> finish() async {
+  /// Deja de escuchar y devuelve todo lo dicho. Espera un momento las últimas
+  /// palabras: si se toca Enviar enseguida de hablar, todavía no llegaron.
+  Future<String> finish({
+    Duration wait = const Duration(milliseconds: 1500),
+  }) async {
     _active = false;
+    final waiter = _finalWaiter = Completer<void>();
     await _speech.stop();
+    await waiter.future.timeout(wait, onTimeout: () {});
+    _finalWaiter = null;
+    if (_partial.isNotEmpty) _commit(_partial);
+    _partial = '';
     final result = text;
     _committed = '';
     _partial = '';
+    _lastChunk = '';
+    _beforeLast = '';
     notifyListeners();
     return result;
   }
