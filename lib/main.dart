@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui' show DartPluginRegistrant;
 
 import 'package:flutter/foundation.dart';
@@ -19,7 +18,6 @@ import 'features/ai/ai_providers.dart';
 import 'features/backup/backup_service.dart';
 import 'features/calendar_sync/calendar_sync.dart';
 import 'features/calendar_sync/device_calendar.dart';
-import 'features/gmail/gmail_sync.dart';
 import 'features/notifications/notification_service.dart';
 import 'features/notifications/reminder_actions.dart';
 import 'features/notifications/reminder_scheduler.dart';
@@ -70,12 +68,6 @@ Future<void> main() async {
     files: AndroidBackupFiles(),
   );
 
-  final gmail = GmailSync(
-    reminders: reminders,
-    settings: settings,
-    files: AndroidGmailFiles(),
-  );
-
   runApp(
     RecordameApp(
       reminders: reminders,
@@ -83,7 +75,6 @@ Future<void> main() async {
       usage: usage,
       backup: backup,
       calendar: calendar,
-      gmail: gmail,
       notifications: notifications,
       openedReminders: notifications.openedReminders,
       launchReminderId: notifications.launchReminderId,
@@ -102,49 +93,18 @@ Future<void> main() async {
       await calendar.autoImport(reminders);
     } catch (_) {}
     await backup.autoBackup();
-    await _syncGmail(gmail);
   }
 
   await refresh();
-  _lifecycle = AppLifecycleListener(
-    onResume: () {
-      refresh();
-      _startGmailTimer(gmail);
-    },
-    onPause: () => _gmailTimer?.cancel(),
-  );
-  _startGmailTimer(gmail);
-  // Cada cambio en el teléfono va a Gmail (unos segundos después, por si
-  // vienen varios juntos).
-  Timer? debounce;
-  reminders.watchAll().skip(1).listen((_) {
-    debounce?.cancel();
-    debounce = Timer(const Duration(seconds: 3), () => _syncGmail(gmail));
-  });
+  _lifecycle = AppLifecycleListener(onResume: refresh);
 }
 
 // ignore: unused_element
 AppLifecycleListener? _lifecycle;
-Timer? _gmailTimer;
 
-/// Con la app abierta, mira cada minuto si llegó algo de Gmail.
-void _startGmailTimer(GmailSync gmail) {
-  _gmailTimer?.cancel();
-  _gmailTimer = Timer.periodic(
-    const Duration(minutes: 1),
-    (_) => _syncGmail(gmail),
-  );
-}
-
-Future<void> _syncGmail(GmailSync gmail) async {
-  try {
-    await gmail.sync();
-  } catch (_) {}
-}
-
-/// Revisión con la app cerrada: la arranca Android (CalendarWorker.kt) cuando
-/// cambia el calendario y cada 15 minutos. Trae lo nuevo del calendario y lo
-/// hecho en Gmail, programa sus avisos y termina.
+/// Revisión del calendario con la app cerrada: la arranca Android
+/// (CalendarWorker.kt) cuando cambia el calendario y cada 15 minutos. Trae lo
+/// nuevo, programa sus avisos y termina.
 @pragma('vm:entry-point')
 Future<void> calendarBackground() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -158,7 +118,7 @@ Future<void> calendarBackground() async {
       calendar: AndroidDeviceCalendar(),
       settings: settings,
     );
-    if (settings.calendarAuto || settings.gmailOn) {
+    if (settings.calendarAuto) {
       final notifications = NotificationService.instance;
       await notifications.init();
       db = AppDatabase();
@@ -166,16 +126,7 @@ Future<void> calendarBackground() async {
         CalendarSyncRepository(DriftReminderRepository(db), calendar),
         notifications,
       );
-      try {
-        await calendar.autoImport(reminders);
-      } catch (_) {}
-      // Lo que se hizo en Gmail en la compu, y la lista al día para Gmail
-      // (incluye lo tildado desde la notificación con la app cerrada).
-      await GmailSync(
-        reminders: reminders,
-        settings: settings,
-        files: AndroidGmailFiles(),
-      ).sync();
+      await calendar.autoImport(reminders);
     }
   } catch (_) {
     // Se intenta de nuevo en la próxima revisión.

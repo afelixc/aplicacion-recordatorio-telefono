@@ -10,7 +10,6 @@ import 'ai_section.dart';
 import 'backup_section.dart';
 import 'calendar_section.dart';
 import 'colors_page.dart';
-import 'gmail_section.dart';
 import 'notifications_section.dart';
 import 'usage_section.dart';
 
@@ -131,35 +130,8 @@ class SettingsScreen extends StatelessWidget {
                   child: CalendarSection(sync: scope.calendar!),
                 ),
               ),
-            if (scope.gmail != null && settings.gmailUnlocked)
-              _MenuItem(
-                icon: Icons.mail_outline,
-                title: 'Gmail en la compu',
-                subtitle: !settings.gmailOn
-                    ? 'Ver y manejar tus recordatorios desde Gmail'
-                    : settings.gmailError != null
-                    ? 'No se pudo actualizar'
-                    : settings.gmailLast == null
-                    ? 'Conectado'
-                    : 'Conectado · ${Fmt.when(settings.gmailLast!)}',
-                warn: settings.gmailError != null,
-                page: (_) => _Page(
-                  title: 'Gmail en la compu',
-                  child: GmailSection(
-                    gmail: scope.gmail!,
-                    onConnected: () async {
-                      await scope.calendar?.ensureBackground();
-                      await scope.gmail!.sync(force: true);
-                    },
-                  ),
-                ),
-              ),
             const SizedBox(height: 16),
-            _VersionFooter(
-              onUnlock: scope.gmail == null || settings.gmailUnlocked
-                  ? null
-                  : () => settings.setGmailUnlocked(true),
-            ),
+            const _VersionFooter(),
           ],
         );
       },
@@ -354,56 +326,19 @@ class SettingsCard extends StatelessWidget {
   }
 }
 
-class _VersionFooter extends StatefulWidget {
-  const _VersionFooter({this.onUnlock});
-
-  /// 5 toques seguidos: aparece el recuadro escondido "Gmail en la compu".
-  final VoidCallback? onUnlock;
-
-  @override
-  State<_VersionFooter> createState() => _VersionFooterState();
-}
-
-class _VersionFooterState extends State<_VersionFooter> {
-  final _info = PackageInfo.fromPlatform();
-  int _taps = 0;
-  DateTime? _lastTap;
-
-  void _tap() {
-    final unlock = widget.onUnlock;
-    if (unlock == null) return;
-    final now = DateTime.now();
-    if (_lastTap == null || now.difference(_lastTap!).inSeconds > 2) _taps = 0;
-    _lastTap = now;
-    if (++_taps < 5) return;
-    _taps = 0;
-    unlock();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Listo: apareció "Gmail en la compu" arriba.'),
-        persist: false,
-      ),
-    );
-  }
+class _VersionFooter extends StatelessWidget {
+  const _VersionFooter();
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: const Key('version-footer'),
-      behavior: HitTestBehavior.opaque,
-      onTap: _tap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: FutureBuilder<PackageInfo>(
-          future: _info,
-          builder: (context, snapshot) => Text(
-            snapshot.hasData
-                ? 'Recordame · versión ${snapshot.data!.version}'
-                : 'Recordame',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ),
+    return FutureBuilder<PackageInfo>(
+      future: PackageInfo.fromPlatform(),
+      builder: (context, snapshot) => Text(
+        snapshot.hasData
+            ? 'Recordame · versión ${snapshot.data!.version}'
+            : 'Recordame',
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }

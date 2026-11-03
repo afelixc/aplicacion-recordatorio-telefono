@@ -25,7 +25,6 @@ import kotlin.coroutines.resume
 
 /**
  * Revisa el calendario con la app cerrada y trae lo nuevo a Recordame.
- * También levanta lo que se hizo en Gmail en la compu (archivos en Drive).
  *
  * Se despierta de dos formas:
  *  1. "cambio": Android avisa cuando cambia algo en el calendario del teléfono
@@ -64,10 +63,6 @@ class CalendarWorker(context: Context, params: WorkerParameters) : CoroutineWork
         MethodChannel(messenger, "recordame/calendario").setMethodCallHandler { call, result ->
             calendar.handle(call, result)
         }
-        // Archivos de Gmail en Drive (leer y escribir; elegirlos solo con la app abierta).
-        MethodChannel(messenger, "recordame/copia").setMethodCallHandler { call, result ->
-            if (!DriveFiles.handle(applicationContext, call, result)) result.notImplemented()
-        }
         MethodChannel(messenger, "recordame/fondo").setMethodCallHandler { call, result ->
             result.success(null)
             if (call.method == "listo") finish()
@@ -84,11 +79,7 @@ class CalendarWorker(context: Context, params: WorkerParameters) : CoroutineWork
         private const val NAME_PERIODIC = "recordame_calendario_periodico"
 
         fun schedule(context: Context) {
-            // El aviso de cambios del calendario solo con permiso (si es solo
-            // por Gmail, alcanza con la revisión cada 15 minutos).
-            if (CalendarChannel(context).hasPermission()) {
-                scheduleChange(context, ExistingWorkPolicy.KEEP)
-            }
+            scheduleChange(context, ExistingWorkPolicy.KEEP)
             val periodic = PeriodicWorkRequestBuilder<CalendarWorker>(15, TimeUnit.MINUTES).build()
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(NAME_PERIODIC, ExistingPeriodicWorkPolicy.KEEP, periodic)

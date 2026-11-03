@@ -5,7 +5,6 @@ import '../data/usage.dart';
 import '../features/ai/ai_provider.dart';
 import '../features/backup/backup_service.dart';
 import '../features/calendar_sync/calendar_sync.dart';
-import '../features/gmail/gmail_sync.dart';
 import '../features/notifications/notification_service.dart';
 import 'settings.dart';
 
@@ -20,7 +19,6 @@ class AppScope extends InheritedWidget {
     this.aiProviderOverride,
     this.backup,
     this.calendar,
-    this.gmail,
     required super.child,
   });
 
@@ -39,9 +37,6 @@ class AppScope extends InheritedWidget {
   /// Google Calendar del teléfono (null en la vista web).
   final CalendarSync? calendar;
 
-  /// Gmail en la compu (null en la vista web).
-  final GmailSync? gmail;
-
   /// Solo para las pruebas: reemplaza al proveedor de IA real.
   final AiProvider? aiProviderOverride;
 
@@ -55,6 +50,5 @@ class AppScope extends InheritedWidget {
       usage != oldWidget.usage ||
       notifications != oldWidget.notifications ||
       backup != oldWidget.backup ||
-      calendar != oldWidget.calendar ||
-      gmail != oldWidget.gmail;
+      calendar != oldWidget.calendar;
 }
