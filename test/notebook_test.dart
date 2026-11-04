@@ -251,4 +251,24 @@ void main() {
     expect(find.text('Vino tinto'), findsOneWidget);
     expect(find.text('Compras  (0/1)'), findsOneWidget);
   });
+
+  testWidgets('buscador adentro de la carpeta', (tester) async {
+    final s = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    final f = await s.addFolder('General', folderColors.first);
+    await s.addNotes(f, ['Compras', 'Llamar a Ignacio']);
+    await s.replaceNote(
+      f,
+      f.items.first,
+      f.items.first.copyWith(sub: const [SubItem('Vino'), SubItem('Pan')]),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FolderPage(settings: s, folder: f),
+      ),
+    );
+    await tester.enterText(find.byKey(const Key('folder-search')), 'vino');
+    await tester.pumpAndSettle();
+    expect(find.text('Vino'), findsOneWidget);
+    expect(find.text('Llamar a Ignacio'), findsNothing);
+  });
 }

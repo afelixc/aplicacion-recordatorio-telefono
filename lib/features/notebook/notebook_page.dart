@@ -376,10 +376,25 @@ class _FolderPageState extends State<FolderPage> {
     }
   }
 
+  /// Buscador de adentro de la carpeta.
+  final _search = TextEditingController();
+
+  String get _query => _search.text.trim();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   bool _isHit(String text) {
-    final w = widget.highlightWord;
+    final w = _query.isNotEmpty ? _query : widget.highlightWord;
     return w != null && w.isNotEmpty && matchesSearch(text, w);
   }
+
+  /// Con algo escrito en el buscador: la nota o alguno de adentro coincide.
+  bool _matches(NoteItem n) =>
+      _isHit(n.text) || n.sub.any((x) => _isHit(x.text));
 
   /// Avisa si quedan ítems sin tildar adentro de la nota.
   Future<bool> _confirmUnfinished(NoteItem n, String action) async {
@@ -552,6 +567,9 @@ class _FolderPageState extends State<FolderPage> {
   Widget _row(NoteItem n, int number, List<NoteItem> list) {
     final scheme = Theme.of(context).colorScheme;
     final selected = identical(_selected, n);
+    // Buscando, la nota se muestra abierta si coincide algo de adentro.
+    final open =
+        selected || (_query.isNotEmpty && n.sub.any((x) => _isHit(x.text)));
     final pos = list.indexOf(n);
     final subDone = n.sub.where((x) => x.done).length;
     final night = Theme.of(context).brightness == Brightness.dark;
@@ -559,7 +577,9 @@ class _FolderPageState extends State<FolderPage> {
     final tint = softColor(n.done ? colors.noteDone : colors.notePending);
     return Material(
       key: identical(n, widget.highlight) ? _highlightKey : null,
-      color: identical(n, widget.highlight) && _isHit(n.text)
+      color:
+          (identical(n, widget.highlight) || _query.isNotEmpty) &&
+              _isHit(n.text)
           ? Colors.amber.withValues(alpha: 0.35)
           : selected
           ? scheme.primaryContainer.withValues(alpha: 0.6)
@@ -640,7 +660,7 @@ class _FolderPageState extends State<FolderPage> {
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
                       child: Icon(
-                        selected ? Icons.expand_less : Icons.expand_more,
+                        open ? Icons.expand_less : Icons.expand_more,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -648,7 +668,7 @@ class _FolderPageState extends State<FolderPage> {
               ),
               // La lista de adentro se despliega al tocar la nota; cerrada,
               // la nota ocupa un renglón como las demás (con el 0/4).
-              if (selected)
+              if (open)
                 for (final (i, x) in n.sub.indexed)
                   // Tocar el ítem no cierra la nota: solo el título la cierra.
                   GestureDetector(
@@ -710,7 +730,7 @@ class _FolderPageState extends State<FolderPage> {
                       ),
                     ),
                   ),
-              if (selected && n.sub.isNotEmpty) const SizedBox(height: 8),
+              if (open && n.sub.isNotEmpty) const SizedBox(height: 8),
               if (selected)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10, left: 34),
@@ -806,6 +826,32 @@ class _FolderPageState extends State<FolderPage> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                   children: [
+                    TextField(
+                      key: const Key('folder-search'),
+                      controller: _search,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Buscar en ${_f.name}…',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        suffixIcon: _query.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Borrar búsqueda',
+                                icon: const Icon(Icons.close, size: 18),
+                                onPressed: () =>
+                                    setState(() => _search.clear()),
+                              ),
+                        isDense: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_query.isNotEmpty && !_f.items.any(_matches)) ...[
+                      Text('No encontré "$_query" en ${_f.name}.'),
+                      const SizedBox(height: 10),
+                    ],
                     if (_message != null) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -835,7 +881,8 @@ class _FolderPageState extends State<FolderPage> {
                             ]
                           : [
                               for (final (i, n) in pending.indexed)
-                                _row(n, i + 1, pending),
+                                if (_query.isEmpty || _matches(n))
+                                  _row(n, i + 1, pending),
                             ],
                     ),
                     if (done.isNotEmpty) ...[
@@ -845,7 +892,8 @@ class _FolderPageState extends State<FolderPage> {
                         color: color,
                         children: [
                           for (final (i, n) in done.indexed)
-                            _row(n, i + 1, done),
+                            if (_query.isEmpty || _matches(n))
+                              _row(n, i + 1, done),
                         ],
                       ),
                     ],
