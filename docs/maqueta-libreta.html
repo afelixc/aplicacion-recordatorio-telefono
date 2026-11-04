@@ -1,0 +1,155 @@
+<title>Libreta de Recordame</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
+<style>
+/* Teléfono centrado a la izquierda, explicación a la derecha (una columna en celular) */
+:root{
+  --bg:#eef1f5; --fg:#1d2430; --muted:#5f6b7a; --phone:#ffffff; --bar:#2f6fb3; --barfg:#fff;
+  --line:#d5dbe3; --accent:#2f6fb3; --soft:#e4eef9; --paper:#fffbea; --paperline:#ecdfa6; --ok:#2e8b57; --new:#fff2b8;
+  --body:'Nunito',system-ui,sans-serif; --hand:'Caveat','Comic Sans MS',cursive;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24476e; --barfg:#e8f1ff;
+  --line:#33404f; --accent:#7fb2ea; --soft:#22364c; --paper:#2a2718; --paperline:#4a4325; --ok:#5cc28a; --new:#4a4320; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24476e; --barfg:#e8f1ff;
+  --line:#33404f; --accent:#7fb2ea; --soft:#22364c; --paper:#2a2718; --paperline:#4a4325; --ok:#5cc28a; --new:#4a4320; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px}
+.wrap{max-width:900px;margin:0 auto;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:360px;max-width:100%;background:var(--phone);border:10px solid #10151c;border-radius:34px;overflow:hidden;
+  display:flex;flex-direction:column;height:690px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.top{background:var(--bar);color:var(--barfg);padding:14px 16px;font-weight:800;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
+.top button{background:none;border:0;color:inherit;font-size:22px;cursor:pointer;padding:0 4px}
+.screen{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;border-top:1px solid var(--line)}
+.tabs div{flex:1;text-align:center;font-size:11px;padding:8px 0;color:var(--muted)}
+.tabs div.on{color:var(--accent);font-weight:800}
+.tabs b{display:block;font-size:18px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.boxes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.box{border:2px solid var(--accent);border-radius:12px;background:none;color:var(--accent);font:700 13px var(--body);padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
+.box.fill{background:var(--accent);color:var(--phone)}
+.box.new{outline:3px dashed #e0a800;outline-offset:2px}
+.box span{font-size:20px}
+.micbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+.field{flex:1;border:1px solid var(--line);border-radius:22px;padding:10px 14px;color:var(--muted);font-size:14px;background:transparent;font-family:var(--body);color:var(--fg)}
+.mic{width:46px;height:46px;border-radius:50%;border:0;background:var(--accent);color:var(--phone);font-size:20px;cursor:pointer;flex:none}
+.mic.rec{background:#d64545;animation:p 1s infinite}
+@media (prefers-reduced-motion:reduce){.mic.rec{animation:none}}
+@keyframes p{50%{transform:scale(1.08)}}
+.paper{background:var(--paper);border:1px solid var(--paperline);border-radius:10px;padding:6px 12px;
+  background-image:repeating-linear-gradient(transparent 0 41px,var(--paperline) 41px 42px)}
+.item{display:flex;align-items:center;gap:10px;min-height:42px}
+.item input{width:22px;height:22px;accent-color:var(--ok);flex:none}
+.item label{flex:1;font-family:var(--hand);font-size:24px;line-height:1.1;cursor:pointer}
+.item.done label{text-decoration:line-through;color:var(--muted)}
+.item.fresh{background:var(--new);border-radius:6px}
+.item .x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer}
+.rem{background:none;border:0;cursor:pointer;font-size:18px;color:var(--muted)}
+.sec{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:4px 0 0}
+.empty{font-family:var(--hand);font-size:22px;color:var(--muted);padding:8px 0}
+.toast{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px}
+.side{flex:1;min-width:0;max-width:460px;display:flex;flex-direction:column;gap:14px}
+.side h1{margin:0;font-size:26px;text-wrap:balance}
+.side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;line-height:1.45}
+.try{display:flex;flex-direction:column;gap:8px;background:var(--phone);border:1px solid var(--line);border-radius:12px;padding:14px}
+.try button{font:700 14px var(--body);border:2px solid var(--accent);background:var(--soft);color:var(--fg);border-radius:10px;padding:10px;cursor:pointer;text-align:left}
+.q{background:var(--phone);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.45}
+.q h2{margin:0 0 6px;font-size:16px}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <div class="phone">
+    <div class="top" id="top"></div>
+    <div class="screen" id="screen"></div>
+    <div class="micbar">
+      <input class="field" id="field" placeholder="Escribí acá…" aria-label="Escribir">
+      <button class="mic" id="mic" aria-label="Hablar">🎤</button>
+    </div>
+    <div class="tabs" id="tabs"><div class="on"><b>💬</b>Chat</div><div><b>📅</b>Almanaque</div><div><b>☰</b>Listado</div><div><b>⚙</b>Configuración</div></div>
+  </div>
+
+  <div class="side">
+    <h1>Libreta: anotar cosas sin fecha</h1>
+    <ol>
+      <li>En el <b>Chat</b>, el texto de arriba queda más chico y aparece un botón nuevo, <b>Libreta</b> (marcado con rayitas amarillas).</li>
+      <li>Tocalo. Se abre una hoja de libreta con tus cosas pendientes.</li>
+      <li>Tocá el micrófono y decí, por ejemplo: <i>"cargame: uno, llamar al contador; dos, comprar tornillos; tres, pagar la luz"</i>. Cada cosa queda en un renglón.</li>
+      <li>Cuando lo hacés, tocás el cuadradito y queda tachado. Abajo quedan los hechos.</li>
+      <li>Si alguno lo querés con aviso, tocás la campanita 🔔 y lo pasás a recordatorio.</li>
+    </ol>
+    <div class="try">
+      <b>Probalo en la maqueta (hace de cuenta que hablaste):</b>
+      <button id="say1">🎤 "uno llamar al contador dos comprar tornillos tres pagar la luz"</button>
+      <button id="say2">🎤 "me faltó llevar el auto al taller y también pedir presupuesto de chapa"</button>
+    </div>
+    <div class="q"><h2>Para decidir</h2>
+      Lo de la libreta <b>no avisa</b> ni va al calendario: es solo para anotar y tachar. ¿Te sirve así, o querés que una vez por día te aparezca un aviso tipo "Tenés 3 cosas en la libreta"?</div>
+  </div>
+</div>
+
+<script>
+const S={view:'chat',items:[
+  {t:'Llamar a Marcelo por el presupuesto',d:false},
+  {t:'Comprar cinta de embalar',d:false},
+  {t:'Revisar la factura de la luz',d:true}],fresh:[],toast:''};
+const $=id=>document.getElementById(id);
+const nums=/\b(?:uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|primero|segundo|tercero|despu[eé]s|y tambi[eé]n|tambi[eé]n|\d+)\b[.,:)]?/gi;
+function split(text){
+  text=text.replace(/^\s*(?:che\s+)?(?:cargame|anotame|anot[aá]|me falt[oó]|tengo que)\s*:?\s*/i,'');
+  return text.split(nums).flatMap(s=>s.split(/[;,\n]/)).map(s=>s.trim().replace(/^y\s+/i,'')).filter(s=>s.length>2)
+    .map(s=>s[0].toUpperCase()+s.slice(1));
+}
+function add(text){
+  const parts=split(text); if(!parts.length) return;
+  S.fresh=parts; parts.forEach(p=>S.items.unshift({t:p,d:false}));
+  S.toast=`Anoté ${parts.length} ${parts.length===1?'cosa':'cosas'} en la libreta.`;
+  S.view='libreta'; render();
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function row(it,i){
+  return `<div class="item${it.d?' done':''}${S.fresh.includes(it.t)&&!it.d?' fresh':''}">
+   <input type="checkbox" id="c${i}" ${it.d?'checked':''} data-i="${i}">
+   <label for="c${i}">${esc(it.t)}</label>
+   ${it.d?`<button class="x" data-del="${i}" aria-label="Borrar">✕</button>`:`<button class="rem" data-rem="${i}" aria-label="Pasar a recordatorio" title="Pasar a recordatorio">🔔</button>`}</div>`;
+}
+function render(){
+  const lib=S.view==='libreta';
+  $('top').innerHTML=lib?'<button id="back" aria-label="Volver">←</button> LIBRETA':'TE RECORDARÉ';
+  $('field').placeholder=lib?'Escribí o dictá cosas para anotar…':'Escribí acá…';
+  if(!lib){
+    $('screen').innerHTML=`<p class="hint">Tocá el micrófono y decime qué querés que te recuerde y cuándo.</p>
+     <div class="boxes"><button class="box"><span>💡</span>Ejemplos</button>
+     <button class="box fill"><span>✎</span>Cargar a mano</button>
+     <button class="box new" id="open"><span>📒</span>Libreta</button></div>
+     <p class="hint">📒 Libreta: ${S.items.filter(x=>!x.d).length} cosas sin hacer.</p>`;
+    $('open').onclick=()=>{S.view='libreta';S.toast='';render()};
+  }else{
+    const p=S.items.map((x,i)=>[x,i]).filter(([x])=>!x.d), d=S.items.map((x,i)=>[x,i]).filter(([x])=>x.d);
+    $('screen').innerHTML=`${S.toast?`<div class="toast">✓ ${S.toast}</div>`:''}
+     <p class="hint">Tocá 🎤 y decí varias cosas juntas: "uno… dos… tres…". Cada una va a un renglón.</p>
+     <p class="sec">Para hacer (${p.length})</p>
+     <div class="paper">${p.length?p.map(([x,i])=>row(x,i)).join(''):'<div class="empty">No te falta nada 🎉</div>'}</div>
+     ${d.length?`<p class="sec">Hechos (${d.length})</p><div class="paper">${d.map(([x,i])=>row(x,i)).join('')}</div>`:''}`;
+    $('back').onclick=()=>{S.view='chat';render()};
+  }
+  $('screen').querySelectorAll('[data-i]').forEach(c=>c.onchange=()=>{S.items[c.dataset.i].d=c.checked;S.toast='';render()});
+  $('screen').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{S.items.splice(b.dataset.del,1);render()});
+  $('screen').querySelectorAll('[data-rem]').forEach(b=>b.onclick=()=>{const it=S.items[b.dataset.rem];
+    S.toast=`Se abre el chat con "${it.t}" para que digas cuándo avisarte.`;render()});
+}
+function sayLike(text){
+  const m=$('mic'); m.classList.add('rec'); $('field').value='';
+  if(S.view!=='libreta'){S.view='libreta';S.toast='';render();}
+  let k=0; const w=text.split(' ');
+  const t=setInterval(()=>{ $('field').value=w.slice(0,++k).join(' ');
+    if(k>=w.length){clearInterval(t);setTimeout(()=>{m.classList.remove('rec');add($('field').value);$('field').value='';},400)} },120);
+}
+$('say1').onclick=()=>sayLike('uno llamar al contador dos comprar tornillos tres pagar la luz');
+$('say2').onclick=()=>sayLike('me faltó llevar el auto al taller y también pedir presupuesto de chapa');
+$('mic').onclick=()=>{ if($('field').value.trim()){ if(S.view!=='libreta'){S.view='libreta'} add($('field').value); $('field').value=''; } else sayLike('uno llamar al contador dos comprar tornillos tres pagar la luz'); };
+$('field').onkeydown=e=>{if(e.key==='Enter'&&$('field').value.trim()){S.view='libreta';add($('field').value);$('field').value='';}};
+render();
+</script>
