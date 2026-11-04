@@ -5,6 +5,7 @@ import '../../core/formatting.dart';
 import '../../core/settings.dart';
 import '../help/modes_help.dart';
 import '../home/home_shell.dart';
+import '../notebook/notebook_page.dart';
 import '../reminders/reminder_form.dart';
 import 'ai_chat.dart';
 
@@ -118,6 +119,16 @@ class _ManualEntryState extends State<_ManualEntry> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Align(
+          alignment: Alignment.centerRight,
+          child: OutlinedButton.icon(
+            key: const Key('open-notebook'),
+            icon: const Icon(Icons.menu_book_outlined),
+            label: const Text('Libreta'),
+            onPressed: () =>
+                openNotebook(context, AppScope.of(context).settings),
+          ),
+        ),
         if (_lastSaved != null) ChatBubble(text: _lastSaved!),
         const SizedBox(height: 8),
         Card(

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/notebook/notes.dart';
 import 'palette.dart';
 
 enum UsageMode { free, ai }
@@ -165,6 +166,41 @@ class AppSettings extends ChangeNotifier {
     await _saveChat();
   }
 
+  // --- Libreta: cosas para hacer, sin fecha ni aviso ---
+
+  /// Lo anotado, lo más nuevo primero.
+  final List<NoteItem> notes = [];
+
+  Future<void> addNotes(Iterable<String> texts) async {
+    final now = DateTime.now();
+    notes.insertAll(0, [for (final t in texts) NoteItem(t, at: now)]);
+    await _saveNotes();
+  }
+
+  Future<void> setNoteDone(NoteItem note, bool done) async {
+    final i = notes.indexOf(note);
+    if (i < 0) return;
+    notes[i] = note.copyWith(done: done);
+    await _saveNotes();
+  }
+
+  Future<void> removeNote(NoteItem note) async {
+    notes.remove(note);
+    await _saveNotes();
+  }
+
+  Future<void> insertNote(int index, NoteItem note) async {
+    notes.insert(index.clamp(0, notes.length), note);
+    await _saveNotes();
+  }
+
+  String _encodeNotes() => jsonEncode([for (final n in notes) n.toJson()]);
+
+  Future<void> _saveNotes() async {
+    notifyListeners();
+    await _store.write('libreta', _encodeNotes());
+  }
+
   Future<void> _saveChat() => _store.write(
     'chat_history',
     jsonEncode([for (final e in chatHistory) e.toJson()]),
@@ -285,6 +321,7 @@ class AppSettings extends ChangeNotifier {
     'dia_noche': dayNight.name,
     'colores_dia': dayColors.encode(),
     'colores_noche': nightColors.encode(),
+    'libreta': _encodeNotes(),
     for (final id in providerIds)
       if (_models[id] != null) 'model_$id': _models[id]!,
     for (final id in providerIds)
@@ -308,6 +345,7 @@ class AppSettings extends ChangeNotifier {
           e.key == 'colores_noche' ||
           e.key == 'color_pending' ||
           e.key == 'color_done' ||
+          e.key == 'libreta' ||
           e.key.startsWith('model_') ||
           e.key.startsWith('balance_')) {
         await _store.write(e.key, e.value);
@@ -323,6 +361,15 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> load(Iterable<String> providerIds) async {
+    try {
+      notes
+        ..clear()
+        ..addAll(
+          (jsonDecode(await _store.read('libreta') ?? '[]') as List).map(
+            (e) => NoteItem.fromJson(e as Map<String, dynamic>),
+          ),
+        );
+    } catch (_) {}
     calendarId = await _store.read('cal_id');
     calendarName = await _store.read('cal_name');
     calendarSend = await _store.read('cal_send') == 'true';

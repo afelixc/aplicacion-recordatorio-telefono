@@ -14,6 +14,7 @@ import '../ai/reminder_interpreter.dart';
 import '../reminders/reminder_editor.dart';
 import 'chat_screen.dart';
 import 'dictation.dart';
+import '../notebook/notebook_page.dart';
 import 'examples_sheet.dart';
 
 enum _Status { thinking, saved, question, error }
@@ -315,6 +316,7 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
                 providerName: providerById(widget.settings.providerId).name,
                 onExamples: () => showExamples(context),
                 onManual: () => showReminderEditor(context),
+                onNotebook: () => openNotebook(context, widget.settings),
                 onModify: _modify,
                 onCancel: _cancel,
                 onRestore: _restore,
@@ -370,6 +372,7 @@ class _LastView extends StatelessWidget {
     required this.providerName,
     required this.onExamples,
     required this.onManual,
+    required this.onNotebook,
     required this.onModify,
     required this.onCancel,
     required this.onRestore,
@@ -380,6 +383,7 @@ class _LastView extends StatelessWidget {
   final String providerName;
   final VoidCallback onExamples;
   final VoidCallback onManual;
+  final VoidCallback onNotebook;
   final ValueChanged<int> onModify;
   final ValueChanged<int> onCancel;
   final ValueChanged<int> onRestore;
@@ -418,6 +422,15 @@ class _LastView extends StatelessWidget {
             filled: true,
           ),
         ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _BoxButton(
+            key: const Key('open-notebook'),
+            icon: Icons.menu_book_outlined,
+            label: 'Libreta',
+            onPressed: onNotebook,
+          ),
+        ),
       ],
     );
 
@@ -427,7 +440,9 @@ class _LastView extends StatelessWidget {
         children: [
           Text(
             'Tocá el micrófono y decime qué querés que te recuerde y cuándo.',
-            style: theme.textTheme.bodyLarge,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 16),
           shortcuts,
@@ -552,6 +567,7 @@ class _LastView extends StatelessWidget {
 /// Botón con recuadro (Ejemplos, Cargar a mano).
 class _BoxButton extends StatelessWidget {
   const _BoxButton({
+    super.key,
     required this.icon,
     required this.label,
     required this.onPressed,
@@ -568,9 +584,10 @@ class _BoxButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return OutlinedButton.icon(
+    return OutlinedButton(
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
+        minimumSize: const Size.fromHeight(56),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         backgroundColor: filled
             ? scheme.secondary.withValues(alpha: 0.18)
             : null,
@@ -582,9 +599,16 @@ class _BoxButton extends StatelessWidget {
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      icon: Icon(icon),
-      label: Text(label),
       onPressed: onPressed,
+      // Ícono arriba y texto abajo: entran tres en una fila.
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon),
+          const SizedBox(height: 2),
+          Text(label, textAlign: TextAlign.center, maxLines: 2),
+        ],
+      ),
     );
   }
 }

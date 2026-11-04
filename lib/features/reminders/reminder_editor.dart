@@ -10,14 +10,16 @@ Future<void> showReminderEditor(
   BuildContext context, {
   Reminder? reminder,
   DateTime? initialDay,
+  String initialTitle = '',
 }) {
   final repo = AppScope.of(context).reminders;
   final messenger = ScaffoldMessenger.of(context);
   Reminder? initial = reminder;
-  if (initial == null && initialDay != null) {
+  if (initial == null && (initialDay != null || initialTitle.isNotEmpty)) {
+    final day = initialDay ?? DateTime.now().add(const Duration(days: 1));
     initial = Reminder(
-      title: '',
-      dueAt: DateTime(initialDay.year, initialDay.month, initialDay.day, 9),
+      title: initialTitle,
+      dueAt: DateTime(day.year, day.month, day.day, 9),
     );
   }
   return showModalBottomSheet<void>(
