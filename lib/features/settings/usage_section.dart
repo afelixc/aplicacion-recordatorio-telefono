@@ -128,49 +128,66 @@ class _UsageSectionState extends State<UsageSection>
     final controller = TextEditingController();
     final amount = await showDialog<double>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Anotá el saldo que ves en la página del proveedor, en dólares. '
-              'Desde ahora la app te va restando lo que vas consumiendo. '
-              'Si no lo viste, tocá Cancelar.',
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('balance-input'),
-              controller: controller,
-              autofocus: true,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+      builder: (context) {
+        void save() => Navigator.pop(
+          context,
+          double.tryParse(controller.text.replaceAll(',', '.')),
+        );
+        // Con el teclado abierto el cartel queda chico: todo se desplaza y
+        // los botones van abajo del texto, con recuadro, sin pisarse.
+        return AlertDialog(
+          scrollable: true,
+          title: Text(title),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Anotá el saldo que ves en la página del proveedor, en '
+                'dólares. Desde ahora la app te va restando lo que vas '
+                'consumiendo. Si no lo viste, tocá Cancelar.',
               ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              decoration: const InputDecoration(
-                prefixText: 'US\$ ',
-                hintText: '5.00',
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('balance-input'),
+                controller: controller,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+                decoration: const InputDecoration(
+                  prefixText: 'US\$ ',
+                  hintText: '5.00',
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => save(),
               ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancelar'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      key: const Key('balance-save'),
+                      onPressed: save,
+                      child: const Text('Guardar'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(
-              context,
-              double.tryParse(controller.text.replaceAll(',', '.')),
-            ),
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
+        );
+      },
     );
     if (amount != null) await settings.setBalance(settings.providerId, amount);
   }

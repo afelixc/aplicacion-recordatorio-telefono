@@ -975,12 +975,12 @@ class _SmallTool extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     return Padding(
-      padding: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.only(right: 8),
       child: IconButton(
         tooltip: tooltip,
         onPressed: onPressed,
-        iconSize: 18,
-        constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+        iconSize: 20,
+        constraints: const BoxConstraints.tightFor(width: 44, height: 38),
         padding: EdgeInsets.zero,
         style: IconButton.styleFrom(
           backgroundColor: color.withValues(alpha: enabled ? 0.15 : 0.05),
@@ -1121,62 +1121,80 @@ class _NoteEditPageState extends State<NoteEditPage> {
                       color: Color(widget.folder.color),
                       children: [
                         for (final (i, x) in _note.sub.indexed)
-                          Row(
-                            children: [
-                              Checkbox(
-                                value: x.done,
-                                onChanged: (v) => _save(
-                                  _note.copyWith(
-                                    sub: [..._note.sub]
-                                      ..[i] = SubItem(x.text, done: v ?? false),
+                          // El texto a lo largo arriba y los botones abajo.
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8, right: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Checkbox(
+                                      value: x.done,
+                                      onChanged: (v) => _save(
+                                        _note.copyWith(
+                                          sub: [..._note.sub]
+                                            ..[i] = SubItem(
+                                              x.text,
+                                              done: v ?? false,
+                                            ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        x.text,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          decoration: x.done
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 44),
+                                  child: Row(
+                                    children: [
+                                      _SmallTool(
+                                        tooltip: 'Subir',
+                                        icon: Icons.arrow_upward,
+                                        color: Colors.blue.shade700,
+                                        onPressed: i == 0
+                                            ? null
+                                            : () => _moveSub(i, -1),
+                                      ),
+                                      _SmallTool(
+                                        tooltip: 'Bajar',
+                                        icon: Icons.arrow_downward,
+                                        color: Colors.blue.shade700,
+                                        onPressed: i == _note.sub.length - 1
+                                            ? null
+                                            : () => _moveSub(i, 1),
+                                      ),
+                                      _SmallTool(
+                                        tooltip: 'Editar',
+                                        icon: Icons.edit,
+                                        color: Colors.green.shade700,
+                                        onPressed: () => _editSub(i),
+                                      ),
+                                      _SmallTool(
+                                        tooltip: 'Quitar',
+                                        icon: Icons.close,
+                                        color: Colors.red.shade700,
+                                        onPressed: () => _save(
+                                          _note.copyWith(
+                                            sub: [..._note.sub]..removeAt(i),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                              Expanded(
-                                child: Text(
-                                  x.text,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    decoration: x.done
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              _SmallTool(
-                                tooltip: 'Subir',
-                                icon: Icons.arrow_upward,
-                                color: Colors.blue.shade700,
-                                onPressed: i == 0
-                                    ? null
-                                    : () => _moveSub(i, -1),
-                              ),
-                              _SmallTool(
-                                tooltip: 'Bajar',
-                                icon: Icons.arrow_downward,
-                                color: Colors.blue.shade700,
-                                onPressed: i == _note.sub.length - 1
-                                    ? null
-                                    : () => _moveSub(i, 1),
-                              ),
-                              _SmallTool(
-                                tooltip: 'Editar',
-                                icon: Icons.edit,
-                                color: Colors.green.shade700,
-                                onPressed: () => _editSub(i),
-                              ),
-                              _SmallTool(
-                                tooltip: 'Quitar',
-                                icon: Icons.close,
-                                color: Colors.red.shade700,
-                                onPressed: () => _save(
-                                  _note.copyWith(
-                                    sub: [..._note.sub]..removeAt(i),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                            ],
+                              ],
+                            ),
                           ),
                       ],
                     ),
