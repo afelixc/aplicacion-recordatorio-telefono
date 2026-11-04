@@ -73,6 +73,11 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
 .tools button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--phone);color:var(--fg);font-size:16px;cursor:pointer}
 .tools button:disabled{opacity:.35;cursor:default}
 .empty{color:var(--muted);padding:14px;font-size:14px}
+.when{display:block;font-size:12px;color:var(--accent);font-weight:700;text-decoration:none}
+.picker{background:var(--phone);border:2px solid var(--accent);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.picker .row{display:flex;gap:8px;flex-wrap:wrap}
+.picker input{flex:1;min-width:120px;border:1px solid var(--line);border-radius:10px;padding:10px;font:600 15px var(--body);background:var(--phone);color:var(--fg)}
+.notif{background:var(--soft);border-radius:12px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:2px}
 .toast{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px}
 .confirm{background:var(--libbg);border:1px solid var(--lib);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
 .confirm .row{display:flex;gap:8px;justify-content:flex-end}
@@ -120,6 +125,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
       <li>Dentro de una carpeta, las cosas van <b>numeradas</b>: 1, 2, 3…</li>
       <li>Solo se tilda tocando el <b>cuadradito</b>. Si tocás el renglón, se marca y aparecen <b>▲ ▼</b> para subirlo o bajarlo, 🔔 para pasarlo a recordatorio y 🗑 para borrarlo.</li>
       <li>Abajo: escribís y tocás el <b>✓ verde</b> para anotar, o tocás el <b>🎤</b> para dictar.</li>
+      <li><b>Nuevo:</b> la <b>🔔</b> te pregunta directo <b>día y hora</b>. Ese día suena una notificación: <i>“Libreta · Impresora: Cambiar el tóner”</i>. La cosa sigue en la libreta con la campanita y la fecha debajo.</li>
     </ol>
     <div class="try">
       <b>Probalo (hace de cuenta que hablaste dentro de la carpeta abierta):</b>
@@ -131,7 +137,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 </div>
 
 <script>
-const S={view:'chat',folder:null,sel:null,naming:false,askDel:false,toast:'',fresh:[],
+const S={view:'chat',folder:null,sel:null,pick:null,notif:null,naming:false,askDel:false,toast:'',fresh:[],
   folders:[
     {name:'Impresora',items:[{t:'Comprar cartucho negro',d:false},{t:'Llamar al técnico por el atasco',d:false},{t:'Revisar garantía',d:true}]},
     {name:'Auto',items:[{t:'Llevarlo al taller',d:false},{t:'Pedir presupuesto de chapa',d:false},{t:'Pagar la patente',d:false}]},
@@ -165,7 +171,7 @@ function render(){
     top.innerHTML='<span class="grow">TE RECORDARÉ</span>';
     sc.innerHTML=`<div class="introrow"><p class="hint">Tocá el micrófono y decime qué querés que te recuerde y cuándo.</p>
       <button class="chip">💡 Ejemplos</button></div>
-      <div class="bigs"><button class="big manual" id="bm"><span>✎</span>Cargar a mano</button>
+      <div class="bigs"><button class="big manual" id="bm"><span>✎</span>Cargar a mano<br>recordatorios</button>
       <button class="big lib" id="bl"><span>📒</span>Libreta</button></div>`;
     $('bm').onclick=()=>pop($('bm'),()=>{S.toast='';sc.innerHTML='<div class="toast">Acá se abre el formulario de siempre para cargar un recordatorio a mano.</div><button class="chip" id="bk">← Volver</button>';$('bk').onclick=()=>render();});
     $('bl').onclick=()=>pop($('bl'),()=>{S.view='folders';S.toast='';render();});
@@ -179,7 +185,7 @@ function render(){
       ${S.naming?`<div class="namebox"><input id="fname" placeholder="Nombre: Impresora, Auto…" aria-label="Nombre de la carpeta"><button class="btn" id="fok">Crear</button></div>`
         :`<button class="newf" id="newf">＋ Nueva carpeta</button>`}`;
     $('back').onclick=()=>{S.view='chat';render()};
-    sc.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.folder=+b.dataset.f;S.view='folder';S.sel=null;S.toast='';S.fresh=[];S.askDel=false;render()});
+    sc.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.folder=+b.dataset.f;S.view='folder';S.sel=null;S.pick=null;S.notif=null;S.toast='';S.fresh=[];S.askDel=false;render()});
     if(S.naming){const inp=$('fname');inp.focus();const ok=()=>{const n=inp.value.trim();if(!n)return;S.folders.push({name:n[0].toUpperCase()+n.slice(1),items:[]});S.naming=false;S.folder=S.folders.length-1;S.view='folder';S.toast='';render()};
       $('fok').onclick=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok()};}
     else $('newf').onclick=()=>{S.naming=true;render()};
@@ -191,10 +197,14 @@ function render(){
   const row=([x,i],n,list)=>{const sel=S.sel===i;const pos=list.findIndex(([,j])=>j===i);
     return `<div class="item${x.d?' done':''}${S.fresh.includes(x)&&!x.d?' fresh':''}${sel?' sel':''}" data-row="${i}">
       <span class="n">${n}.</span><input type="checkbox" ${x.d?'checked':''} data-chk="${i}" aria-label="Hecho">
-      <span class="t">${esc(x.t)}</span>
+      <span class="t">${esc(x.t)}${x.at?`<span class="when">🔔 ${x.at}</span>`:''}</span>
       ${sel?`<span class="tools">${x.d?'':`<button data-up="${i}" ${pos===0?'disabled':''} aria-label="Subir">▲</button><button data-down="${i}" ${pos===list.length-1?'disabled':''} aria-label="Bajar">▼</button><button data-bell="${i}" aria-label="Pasar a recordatorio">🔔</button>`}<button data-rm="${i}" aria-label="Borrar">🗑</button></span>`:''}
     </div>`};
   sc.innerHTML=`${S.askDel?`<div class="confirm">¿Borrar la carpeta <b>${esc(f.name)}</b> con todo lo que tiene adentro?<div class="row"><button class="btn ghost" id="dno">Cancelar</button><button class="btn danger" id="dyes">Borrar</button></div></div>`:''}
+    ${S.pick!=null?`<div class="picker"><b>¿Cuándo te aviso?</b><span class="hint">“${esc(f.items[S.pick].t)}”</span>
+      <div class="row"><input type="date" id="pd" aria-label="Día"><input type="time" id="pt" value="09:00" aria-label="Hora"></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn ghost" id="pno">Cancelar</button><button class="btn" id="pok" style="background:var(--accent);color:var(--phone)">Avisarme</button></div></div>`:''}
+    ${S.notif?`<div class="notif"><b>🔔 Recordame · ${S.notif.when}</b><span>Libreta · ${esc(f.name)}: ${esc(S.notif.t)}</span><span class="hint">Así te va a llegar la notificación, con sonido.</span></div>`:''}
     ${S.toast?`<div class="toast">✓ ${S.toast}</div>`:''}
     <p class="sec">Para hacer (${pend.length})</p>
     <div class="paper">${pend.length?pend.map((p,k)=>row(p,k+1,pend)).join(''):'<div class="empty">No falta nada en esta carpeta. Escribí abajo o tocá 🎤.</div>'}</div>
@@ -210,7 +220,12 @@ function render(){
   sc.querySelectorAll('[data-up]').forEach(b=>b.onclick=e=>{e.stopPropagation();swap(+b.dataset.up,-1)});
   sc.querySelectorAll('[data-down]').forEach(b=>b.onclick=e=>{e.stopPropagation();swap(+b.dataset.down,1)});
   sc.querySelectorAll('[data-rm]').forEach(b=>b.onclick=e=>{e.stopPropagation();const it=f.items.splice(+b.dataset.rm,1)[0];S.sel=null;S.toast=`Borré "${it.t}".`;render()});
-  sc.querySelectorAll('[data-bell]').forEach(b=>b.onclick=e=>{e.stopPropagation();S.toast=`Se abre el formulario con "${f.items[+b.dataset.bell].t}" para elegir día y hora.`;render()});
+  sc.querySelectorAll('[data-bell]').forEach(b=>b.onclick=e=>{e.stopPropagation();S.pick=+b.dataset.bell;S.notif=null;S.toast='';render();
+    const t=new Date(Date.now()+864e5);$('pd').value=t.toISOString().slice(0,10);});
+  if(S.pick!=null){$('pno').onclick=()=>{S.pick=null;render()};$('pok').onclick=()=>{const it=f.items[S.pick];const [y,m,d]=$('pd').value.split('-');
+    const days=['dom','lun','mar','mié','jue','vie','sáb'];const dt=new Date(+y,m-1,+d);
+    it.at=`${days[dt.getDay()]} ${+d}/${+m} ${$('pt').value}`;S.notif={t:it.t,when:it.at};S.pick=null;S.sel=null;
+    S.toast='Listo: queda en la libreta y además te avisa ese día.';render()};}
 }
 function pop(el,then){el.classList.add('pop');setTimeout(then,matchMedia('(prefers-reduced-motion: reduce)').matches?0:320);}
 function updSend(){$('send').disabled=!$('field').value.trim();}
