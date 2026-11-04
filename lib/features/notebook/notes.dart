@@ -93,6 +93,19 @@ class NoteFolder {
     for (final n in items)
       if (!n.done) n,
   ];
+
+  /// Cuántas cosas faltan hacer: cada nota sin tildar cuenta 1, y si tiene
+  /// lista adentro cuenta los ítems sin tildar (3 ítems con 1 tildado = 2).
+  int get toDo {
+    var n = 0;
+    for (final i in items) {
+      if (i.done) continue;
+      final left = i.sub.where((s) => !s.done).length;
+      n += i.sub.isEmpty || left == 0 ? 1 : left;
+    }
+    return n;
+  }
+
   List<NoteItem> get done => [
     for (final n in items)
       if (n.done) n,
@@ -231,3 +244,10 @@ List<String> splitNotes(String text) {
   }
   return parts;
 }
+
+/// Lo que falta hacer en toda la libreta.
+int notebookToDo(List<NoteFolder> folders) =>
+    folders.fold(0, (sum, f) => sum + f.toDo);
+
+/// "1 por hacer" / "5 por hacer".
+String toDoLabel(int n) => n == 0 ? 'Todo hecho ✓' : '$n por hacer';

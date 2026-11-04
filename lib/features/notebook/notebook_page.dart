@@ -194,7 +194,7 @@ class _FolderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(folder.color);
-    final pending = folder.pending.length;
+    final toDo = folder.toDo;
     return Material(
       color: color.withValues(alpha: 0.14),
       shape: RoundedRectangleBorder(
@@ -222,10 +222,8 @@ class _FolderCard extends StatelessWidget {
                   height: 1.15,
                 ),
               ),
-              Text(
-                pending == 0 ? 'Todo hecho ✓' : '$pending para hacer',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              const SizedBox(height: 4),
+              ToDoBadge(toDo),
             ],
           ),
         ),
@@ -1263,6 +1261,35 @@ class _Paper extends StatelessWidget {
             c,
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// Cartelito resaltado con lo que falta hacer ("2 por hacer").
+class ToDoBadge extends StatelessWidget {
+  const ToDoBadge(this.count, {super.key});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final none = count == 0;
+    final color = none ? const Color(0xFF2E7D32) : const Color(0xFFD84315);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: none ? color.withValues(alpha: 0.15) : color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        toDoLabel(count),
+        maxLines: 1,
+        style: TextStyle(
+          color: none ? color : Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
       ),
     );
   }

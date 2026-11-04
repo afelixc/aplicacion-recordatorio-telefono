@@ -6,6 +6,35 @@ import 'package:recordame/features/notebook/notebook_page.dart';
 import 'package:recordame/features/notebook/notes.dart';
 
 void main() {
+  test('cuenta lo que falta hacer, con los ítems de adentro', () {
+    final at = DateTime(2026);
+    final f = NoteFolder(
+      'Casa',
+      items: [
+        NoteItem(
+          'Compras',
+          at: at,
+          sub: const [
+            SubItem('pan', done: true),
+            SubItem('leche'),
+            SubItem('vino'),
+          ],
+        ),
+        NoteItem('Llamar al plomero', at: at),
+        NoteItem('Ya está', at: at, done: true),
+        NoteItem(
+          'Lista tildada',
+          at: at,
+          sub: const [SubItem('a', done: true)],
+        ),
+      ],
+    );
+    expect(f.toDo, 4);
+    expect(notebookToDo([f, NoteFolder('Vacía')]), 4);
+    expect(toDoLabel(0), 'Todo hecho ✓');
+    expect(toDoLabel(4), '4 por hacer');
+  });
+
   test('separa lo dictado en renglones', () {
     expect(
       splitNotes(

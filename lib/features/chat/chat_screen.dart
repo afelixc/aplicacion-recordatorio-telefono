@@ -6,6 +6,7 @@ import '../../core/settings.dart';
 import '../help/modes_help.dart';
 import '../home/home_shell.dart';
 import '../notebook/notebook_page.dart';
+import '../notebook/notes.dart';
 import '../reminders/reminder_form.dart';
 import 'ai_chat.dart';
 
@@ -124,7 +125,13 @@ class _ManualEntryState extends State<_ManualEntry> {
           child: FilledButton.tonalIcon(
             key: const Key('open-notebook'),
             icon: const Icon(Icons.menu_book_outlined),
-            label: const Text('Libreta'),
+            label: ListenableBuilder(
+              listenable: AppScope.of(context).settings,
+              builder: (context, _) {
+                final n = notebookToDo(AppScope.of(context).settings.folders);
+                return Text(n == 0 ? 'Libreta' : 'Libreta · $n por hacer');
+              },
+            ),
             onPressed: () =>
                 openNotebook(context, AppScope.of(context).settings),
           ),

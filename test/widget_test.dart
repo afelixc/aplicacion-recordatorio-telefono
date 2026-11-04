@@ -373,7 +373,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Cargar a mano\nrecordatorios'), findsOneWidget);
-    expect(find.text('Libreta\n'), findsOneWidget);
+    expect(find.text('Libreta'), findsOneWidget);
+    expect(find.text('Todo hecho ✓'), findsOneWidget);
     await tester.tap(find.text('Ejemplos'));
     await tester.pumpAndSettle();
     expect(find.text('Ejemplos y formas de pedirlo'), findsOneWidget);

@@ -15,6 +15,7 @@ import '../reminders/reminder_editor.dart';
 import 'chat_screen.dart';
 import 'dictation.dart';
 import '../notebook/notebook_page.dart';
+import '../notebook/notes.dart';
 import 'examples_sheet.dart';
 import 'talking_panel.dart';
 
@@ -312,16 +313,20 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
           child: TabBarView(
             controller: _tabs,
             children: [
-              _LastView(
-                last: _last,
-                providerName: providerById(widget.settings.providerId).name,
-                onExamples: () => showExamples(context),
-                onManual: () => showReminderEditor(context),
-                onNotebook: () => openNotebook(context, widget.settings),
-                onModify: _modify,
-                onCancel: _cancel,
-                onRestore: _restore,
-                onStartOver: _startOver,
+              ListenableBuilder(
+                listenable: widget.settings,
+                builder: (context, _) => _LastView(
+                  last: _last,
+                  notebookToDo: notebookToDo(widget.settings.folders),
+                  providerName: providerById(widget.settings.providerId).name,
+                  onExamples: () => showExamples(context),
+                  onManual: () => showReminderEditor(context),
+                  onNotebook: () => openNotebook(context, widget.settings),
+                  onModify: _modify,
+                  onCancel: _cancel,
+                  onRestore: _restore,
+                  onStartOver: _startOver,
+                ),
               ),
               _HistoryView(
                 messages: _history,
@@ -374,6 +379,7 @@ class _LastView extends StatelessWidget {
     required this.onExamples,
     required this.onManual,
     required this.onNotebook,
+    required this.notebookToDo,
     required this.onModify,
     required this.onCancel,
     required this.onRestore,
@@ -385,6 +391,7 @@ class _LastView extends StatelessWidget {
   final VoidCallback onExamples;
   final VoidCallback onManual;
   final VoidCallback onNotebook;
+  final int notebookToDo;
   final ValueChanged<int> onModify;
   final ValueChanged<int> onCancel;
   final ValueChanged<int> onRestore;
@@ -437,27 +444,31 @@ class _LastView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _BigButton(
-                icon: Icons.edit_note,
-                label: 'Cargar a mano\nrecordatorios',
-                color: scheme.primary,
-                onPressed: onManual,
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _BigButton(
+                  icon: Icons.edit_note,
+                  label: 'Cargar a mano\nrecordatorios',
+                  color: scheme.primary,
+                  onPressed: onManual,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _BigButton(
-                key: const Key('open-notebook'),
-                icon: Icons.menu_book_outlined,
-                label: 'Libreta\n',
-                color: const Color(0xFFC98A00),
-                onPressed: onNotebook,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _BigButton(
+                  key: const Key('open-notebook'),
+                  icon: Icons.menu_book_outlined,
+                  label: 'Libreta',
+                  badge: ToDoBadge(notebookToDo),
+                  color: const Color(0xFFC98A00),
+                  onPressed: onNotebook,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -588,8 +599,11 @@ class _BigButton extends StatefulWidget {
     required this.label,
     required this.color,
     required this.onPressed,
+    this.badge,
   });
 
+  /// Va en el segundo renglón, en lugar de texto (p. ej. "2 por hacer").
+  final Widget? badge;
   final IconData icon;
   final String label;
   final Color color;
@@ -631,6 +645,7 @@ class _BigButtonState extends State<_BigButton> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(widget.icon, size: 32, color: c),
                 const SizedBox(height: 6),
@@ -644,6 +659,10 @@ class _BigButtonState extends State<_BigButton> {
                     fontSize: 15,
                   ),
                 ),
+                if (widget.badge != null) ...[
+                  const SizedBox(height: 2),
+                  widget.badge!,
+                ],
               ],
             ),
           ),
