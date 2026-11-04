@@ -1,155 +1,229 @@
 <title>Libreta de Recordame</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Caveat:wght@600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
 <style>
-/* Teléfono centrado a la izquierda, explicación a la derecha (una columna en celular) */
+/* Teléfono a la izquierda, explicación a la derecha (una columna en celular) */
 :root{
   --bg:#eef1f5; --fg:#1d2430; --muted:#5f6b7a; --phone:#ffffff; --bar:#2f6fb3; --barfg:#fff;
-  --line:#d5dbe3; --accent:#2f6fb3; --soft:#e4eef9; --paper:#fffbea; --paperline:#ecdfa6; --ok:#2e8b57; --new:#fff2b8;
-  --body:'Nunito',system-ui,sans-serif; --hand:'Caveat','Comic Sans MS',cursive;
+  --line:#d5dbe3; --accent:#2f6fb3; --soft:#e4eef9;
+  --manual:#2f6fb3; --manualbg:#e4eef9; --lib:#c98a00; --libbg:#fff3cf;
+  --paper:#fffbea; --paperline:#ecdfa6; --ok:#2e8b57; --new:#fff2b8; --sel:#dbe9fb; --danger:#c43c3c;
+  --body:'Nunito',system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24476e; --barfg:#e8f1ff;
-  --line:#33404f; --accent:#7fb2ea; --soft:#22364c; --paper:#2a2718; --paperline:#4a4325; --ok:#5cc28a; --new:#4a4320; color-scheme:dark}}
+  --line:#33404f; --accent:#7fb2ea; --soft:#22364c;
+  --manual:#7fb2ea; --manualbg:#1f3248; --lib:#f0c04a; --libbg:#3a3214;
+  --paper:#2a2718; --paperline:#4a4325; --ok:#5cc28a; --new:#4a4320; --sel:#22364c; --danger:#ff7b7b; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24476e; --barfg:#e8f1ff;
-  --line:#33404f; --accent:#7fb2ea; --soft:#22364c; --paper:#2a2718; --paperline:#4a4325; --ok:#5cc28a; --new:#4a4320; color-scheme:dark}
+  --line:#33404f; --accent:#7fb2ea; --soft:#22364c;
+  --manual:#7fb2ea; --manualbg:#1f3248; --lib:#f0c04a; --libbg:#3a3214;
+  --paper:#2a2718; --paperline:#4a4325; --ok:#5cc28a; --new:#4a4320; --sel:#22364c; --danger:#ff7b7b; color-scheme:dark}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px}
-.wrap{max-width:900px;margin:0 auto;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.wrap{max-width:920px;margin:0 auto;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
 .phone{width:360px;max-width:100%;background:var(--phone);border:10px solid #10151c;border-radius:34px;overflow:hidden;
-  display:flex;flex-direction:column;height:690px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
-.top{background:var(--bar);color:var(--barfg);padding:14px 16px;font-weight:800;letter-spacing:.08em;display:flex;align-items:center;gap:10px}
-.top button{background:none;border:0;color:inherit;font-size:22px;cursor:pointer;padding:0 4px}
+  display:flex;flex-direction:column;height:700px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.top{background:var(--bar);color:var(--barfg);padding:14px 16px;font-weight:800;letter-spacing:.06em;display:flex;align-items:center;gap:10px;min-height:24px}
+.top button{background:none;border:0;color:inherit;font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.top .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .screen{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
 .tabs{display:flex;border-top:1px solid var(--line)}
 .tabs div{flex:1;text-align:center;font-size:11px;padding:8px 0;color:var(--muted)}
 .tabs div.on{color:var(--accent);font-weight:800}
 .tabs b{display:block;font-size:18px}
-.hint{font-size:13px;color:var(--muted);margin:0}
-.boxes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.box{border:2px solid var(--accent);border-radius:12px;background:none;color:var(--accent);font:700 13px var(--body);padding:10px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px}
-.box.fill{background:var(--accent);color:var(--phone)}
-.box.new{outline:3px dashed #e0a800;outline-offset:2px}
-.box span{font-size:20px}
-.micbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
-.field{flex:1;border:1px solid var(--line);border-radius:22px;padding:10px 14px;color:var(--muted);font-size:14px;background:transparent;font-family:var(--body);color:var(--fg)}
+.hint{font-size:13px;color:var(--muted);margin:0;line-height:1.35}
+/* Chat */
+.introrow{display:flex;align-items:center;gap:10px}
+.introrow .hint{flex:1;min-width:0}
+.chip{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:10px;padding:6px 10px;font:600 12px var(--body);cursor:pointer;white-space:nowrap}
+.bigs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+.big{border:2px solid;border-radius:16px;padding:18px 8px;font:800 16px var(--body);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:transform .28s ease, box-shadow .28s ease;transform-origin:center}
+.big span{font-size:30px}
+.big.manual{border-color:var(--manual);background:var(--manualbg);color:var(--manual)}
+.big.lib{border-color:var(--lib);background:var(--libbg);color:var(--lib)}
+.big.pop{transform:scale(1.14);box-shadow:0 10px 24px rgba(0,0,0,.22);position:relative;z-index:2}
+@media (prefers-reduced-motion:reduce){.big{transition:none}}
+/* Carpetas */
+.folders{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.folder{border:2px solid var(--lib);background:var(--libbg);border-radius:14px;padding:12px;cursor:pointer;text-align:left;color:var(--fg);font-family:var(--body);display:flex;flex-direction:column;gap:4px;min-width:0}
+.folder b{font-size:16px;overflow-wrap:anywhere}
+.folder small{color:var(--muted);font-size:12px}
+.folder .ic{font-size:24px}
+.newf{border:2px dashed var(--line);background:transparent;color:var(--muted);border-radius:14px;padding:12px;font:700 14px var(--body);cursor:pointer}
+.namebox{display:flex;gap:8px;align-items:center}
+.namebox input{flex:1;min-width:0;border:2px solid var(--lib);border-radius:10px;padding:10px;font:600 15px var(--body);background:var(--phone);color:var(--fg)}
+.btn{border:0;border-radius:10px;padding:10px 12px;font:800 14px var(--body);cursor:pointer;background:var(--lib);color:#1d2430}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.btn.danger{background:var(--danger);color:#fff}
+/* Renglones */
+.sec{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:2px 0 0}
+.paper{background:var(--paper);border:1px solid var(--paperline);border-radius:12px;overflow:hidden}
+.item{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 10px;border-top:1px solid var(--paperline);cursor:pointer}
+.item:first-child{border-top:0}
+.item .n{font-weight:800;color:var(--muted);width:22px;text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.item input{width:20px;height:20px;accent-color:var(--ok);flex:none;cursor:pointer}
+.item .t{flex:1;min-width:0;font-size:16px;line-height:1.3;padding:6px 0;overflow-wrap:anywhere}
+.item.done .t{text-decoration:line-through;color:var(--muted)}
+.item.fresh{background:var(--new)}
+.item.sel{background:var(--sel);outline:2px solid var(--accent);outline-offset:-2px}
+.tools{display:flex;gap:4px;flex:none}
+.tools button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--phone);color:var(--fg);font-size:16px;cursor:pointer}
+.tools button:disabled{opacity:.35;cursor:default}
+.empty{color:var(--muted);padding:14px;font-size:14px}
+.toast{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px}
+.confirm{background:var(--libbg);border:1px solid var(--lib);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.confirm .row{display:flex;gap:8px;justify-content:flex-end}
+/* Barra de abajo */
+.micbar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.fieldwrap{flex:1;min-width:0;display:flex;align-items:center;border:1px solid var(--line);border-radius:24px;padding:2px 4px 2px 14px}
+.field{flex:1;min-width:0;border:0;outline:0;padding:9px 0;font:15px var(--body);background:transparent;color:var(--fg)}
+.send{width:36px;height:36px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:18px;font-weight:800;cursor:pointer;flex:none}
+.send:disabled{background:var(--line);color:var(--muted);cursor:default}
 .mic{width:46px;height:46px;border-radius:50%;border:0;background:var(--accent);color:var(--phone);font-size:20px;cursor:pointer;flex:none}
-.mic.rec{background:#d64545;animation:p 1s infinite}
+.mic.rec{background:var(--danger);animation:p 1s infinite}
 @media (prefers-reduced-motion:reduce){.mic.rec{animation:none}}
 @keyframes p{50%{transform:scale(1.08)}}
-.paper{background:var(--paper);border:1px solid var(--paperline);border-radius:10px;padding:6px 12px;
-  background-image:repeating-linear-gradient(transparent 0 41px,var(--paperline) 41px 42px)}
-.item{display:flex;align-items:center;gap:10px;min-height:42px}
-.item input{width:22px;height:22px;accent-color:var(--ok);flex:none}
-.item label{flex:1;font-family:var(--hand);font-size:24px;line-height:1.1;cursor:pointer}
-.item.done label{text-decoration:line-through;color:var(--muted)}
-.item.fresh{background:var(--new);border-radius:6px}
-.item .x{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer}
-.rem{background:none;border:0;cursor:pointer;font-size:18px;color:var(--muted)}
-.sec{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:4px 0 0}
-.empty{font-family:var(--hand);font-size:22px;color:var(--muted);padding:8px 0}
-.toast{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px}
-.side{flex:1;min-width:0;max-width:460px;display:flex;flex-direction:column;gap:14px}
+/* Explicación */
+.side{flex:1;min-width:0;max-width:470px;display:flex;flex-direction:column;gap:14px}
 .side h1{margin:0;font-size:26px;text-wrap:balance}
 .side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;line-height:1.45}
 .try{display:flex;flex-direction:column;gap:8px;background:var(--phone);border:1px solid var(--line);border-radius:12px;padding:14px}
 .try button{font:700 14px var(--body);border:2px solid var(--accent);background:var(--soft);color:var(--fg);border-radius:10px;padding:10px;cursor:pointer;text-align:left}
 .q{background:var(--phone);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.45}
 .q h2{margin:0 0 6px;font-size:16px}
-button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 </style>
 
 <div class="wrap">
   <div class="phone">
     <div class="top" id="top"></div>
     <div class="screen" id="screen"></div>
-    <div class="micbar">
-      <input class="field" id="field" placeholder="Escribí acá…" aria-label="Escribir">
-      <button class="mic" id="mic" aria-label="Hablar">🎤</button>
+    <div class="micbar" id="bar" hidden>
+      <div class="fieldwrap">
+        <input class="field" id="field" placeholder="Escribí o dictá cosas para anotar…" aria-label="Escribir">
+        <button class="send" id="send" aria-label="Anotar" title="Anotar" disabled>✓</button>
+      </div>
+      <button class="mic" id="mic" aria-label="Dictar">🎤</button>
     </div>
-    <div class="tabs" id="tabs"><div class="on"><b>💬</b>Chat</div><div><b>📅</b>Almanaque</div><div><b>☰</b>Listado</div><div><b>⚙</b>Configuración</div></div>
+    <div class="tabs"><div class="on"><b>💬</b>Chat</div><div><b>📅</b>Almanaque</div><div><b>☰</b>Listado</div><div><b>⚙</b>Configuración</div></div>
   </div>
 
   <div class="side">
-    <h1>Libreta: anotar cosas sin fecha</h1>
+    <h1>Libreta con carpetas</h1>
     <ol>
-      <li>En el <b>Chat</b>, el texto de arriba queda más chico y aparece un botón nuevo, <b>Libreta</b> (marcado con rayitas amarillas).</li>
-      <li>Tocalo. Se abre una hoja de libreta con tus cosas pendientes.</li>
-      <li>Tocá el micrófono y decí, por ejemplo: <i>"cargame: uno, llamar al contador; dos, comprar tornillos; tres, pagar la luz"</i>. Cada cosa queda en un renglón.</li>
-      <li>Cuando lo hacés, tocás el cuadradito y queda tachado. Abajo quedan los hechos.</li>
-      <li>Si alguno lo querés con aviso, tocás la campanita 🔔 y lo pasás a recordatorio.</li>
+      <li>En el <b>Chat</b>, el texto de arriba queda chico y <b>Ejemplos</b> va al lado, como un botoncito.</li>
+      <li>Abajo, dos botones grandes <b>del mismo tamaño y distinto color</b>: <b>Cargar a mano</b> (azul) y <b>Libreta</b> (amarillo). El que tocás se agranda y entra.</li>
+      <li>En la libreta están tus <b>carpetas</b>: Impresora, Auto… Con <b>＋ Nueva carpeta</b> creás otra con el nombre que quieras.</li>
+      <li>Dentro de una carpeta, las cosas van <b>numeradas</b>: 1, 2, 3…</li>
+      <li>Solo se tilda tocando el <b>cuadradito</b>. Si tocás el renglón, se marca y aparecen <b>▲ ▼</b> para subirlo o bajarlo, 🔔 para pasarlo a recordatorio y 🗑 para borrarlo.</li>
+      <li>Abajo: escribís y tocás el <b>✓ verde</b> para anotar, o tocás el <b>🎤</b> para dictar.</li>
     </ol>
     <div class="try">
-      <b>Probalo en la maqueta (hace de cuenta que hablaste):</b>
-      <button id="say1">🎤 "uno llamar al contador dos comprar tornillos tres pagar la luz"</button>
-      <button id="say2">🎤 "me faltó llevar el auto al taller y también pedir presupuesto de chapa"</button>
+      <b>Probalo (hace de cuenta que hablaste dentro de la carpeta abierta):</b>
+      <button id="say1">🎤 "uno cambiar el tóner dos limpiar el cabezal tres pedir papel A4"</button>
     </div>
-    <div class="q"><h2>Para decidir</h2>
-      Lo de la libreta <b>no avisa</b> ni va al calendario: es solo para anotar y tachar. ¿Te sirve así, o querés que una vez por día te aparezca un aviso tipo "Tenés 3 cosas en la libreta"?</div>
+    <div class="q"><h2>Lo que ya anotaste</h2>
+      Las cosas que ya cargaste en la libreta de antes van a quedar en una carpeta llamada <b>General</b>, así no se pierde nada.</div>
   </div>
 </div>
 
 <script>
-const S={view:'chat',items:[
-  {t:'Llamar a Marcelo por el presupuesto',d:false},
-  {t:'Comprar cinta de embalar',d:false},
-  {t:'Revisar la factura de la luz',d:true}],fresh:[],toast:''};
+const S={view:'chat',folder:null,sel:null,naming:false,askDel:false,toast:'',fresh:[],
+  folders:[
+    {name:'Impresora',items:[{t:'Comprar cartucho negro',d:false},{t:'Llamar al técnico por el atasco',d:false},{t:'Revisar garantía',d:true}]},
+    {name:'Auto',items:[{t:'Llevarlo al taller',d:false},{t:'Pedir presupuesto de chapa',d:false},{t:'Pagar la patente',d:false}]},
+    {name:'General',items:[{t:'Llamar a Marcelo por el presupuesto',d:false}]}]};
 const $=id=>document.getElementById(id);
-const nums=/\b(?:uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|primero|segundo|tercero|despu[eé]s|y tambi[eé]n|tambi[eé]n|\d+)\b[.,:)]?/gi;
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const counting=[['uno','primero','1'],['dos','segundo','2'],['tres','tercero','3'],['cuatro','cuarto','4'],['cinco','quinto','5']];
 function split(text){
-  text=text.replace(/^\s*(?:che\s+)?(?:cargame|anotame|anot[aá]|me falt[oó]|tengo que)\s*:?\s*/i,'');
-  return text.split(nums).flatMap(s=>s.split(/[;,\n]/)).map(s=>s.trim().replace(/^y\s+/i,'')).filter(s=>s.length>2)
-    .map(s=>s[0].toUpperCase()+s.slice(1));
+  text=text.replace(/^\s*(?:che\s+)?(?:cargame|anotame|me falt[oó]|tengo que)\s*:?\s*/i,'');
+  const w=n=>new RegExp('(?:^|\\s)(?:'+counting[n].join('|')+')(?=[\\s.,:;)]|$)[.,:;)]?','i');
+  let parts=[text];
+  const f=w(0).exec(text);
+  if(f&&w(1).test(text.slice(f.index+f[0].length))){
+    parts=[]; if(f.index>0) parts.push(text.slice(0,f.index)); let from=f.index+f[0].length;
+    for(let n=1;n<counting.length;n++){const m=w(n).exec(text.slice(from)); if(!m) break; parts.push(text.slice(from,from+m.index)); from+=m.index+m[0].length;}
+    parts.push(text.slice(from));
+  }
+  return parts.flatMap(p=>p.split(/\s+y\s+(?:tambi[eé]n|despu[eé]s)\s+|,\s*/i)).map(s=>s.trim()).filter(s=>s.length>1).map(s=>s[0].toUpperCase()+s.slice(1));
 }
+const F=()=>S.folders[S.folder];
 function add(text){
-  const parts=split(text); if(!parts.length) return;
-  S.fresh=parts; parts.forEach(p=>S.items.unshift({t:p,d:false}));
-  S.toast=`Anoté ${parts.length} ${parts.length===1?'cosa':'cosas'} en la libreta.`;
-  S.view='libreta'; render();
-}
-function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-function row(it,i){
-  return `<div class="item${it.d?' done':''}${S.fresh.includes(it.t)&&!it.d?' fresh':''}">
-   <input type="checkbox" id="c${i}" ${it.d?'checked':''} data-i="${i}">
-   <label for="c${i}">${esc(it.t)}</label>
-   ${it.d?`<button class="x" data-del="${i}" aria-label="Borrar">✕</button>`:`<button class="rem" data-rem="${i}" aria-label="Pasar a recordatorio" title="Pasar a recordatorio">🔔</button>`}</div>`;
+  const parts=split(text); if(!parts.length||S.folder==null) return;
+  const f=F(); const firstDone=f.items.findIndex(x=>x.d); const at=firstDone<0?f.items.length:firstDone;
+  const items=parts.map(t=>({t,d:false})); f.items.splice(at,0,...items); S.fresh=items; S.sel=null;
+  S.toast=`Anoté ${parts.length} ${parts.length===1?'cosa':'cosas'} en ${f.name}.`; render();
 }
 function render(){
-  const lib=S.view==='libreta';
-  $('top').innerHTML=lib?'<button id="back" aria-label="Volver">←</button> LIBRETA':'TE RECORDARÉ';
-  $('field').placeholder=lib?'Escribí o dictá cosas para anotar…':'Escribí acá…';
-  if(!lib){
-    $('screen').innerHTML=`<p class="hint">Tocá el micrófono y decime qué querés que te recuerde y cuándo.</p>
-     <div class="boxes"><button class="box"><span>💡</span>Ejemplos</button>
-     <button class="box fill"><span>✎</span>Cargar a mano</button>
-     <button class="box new" id="open"><span>📒</span>Libreta</button></div>
-     <p class="hint">📒 Libreta: ${S.items.filter(x=>!x.d).length} cosas sin hacer.</p>`;
-    $('open').onclick=()=>{S.view='libreta';S.toast='';render()};
-  }else{
-    const p=S.items.map((x,i)=>[x,i]).filter(([x])=>!x.d), d=S.items.map((x,i)=>[x,i]).filter(([x])=>x.d);
-    $('screen').innerHTML=`${S.toast?`<div class="toast">✓ ${S.toast}</div>`:''}
-     <p class="hint">Tocá 🎤 y decí varias cosas juntas: "uno… dos… tres…". Cada una va a un renglón.</p>
-     <p class="sec">Para hacer (${p.length})</p>
-     <div class="paper">${p.length?p.map(([x,i])=>row(x,i)).join(''):'<div class="empty">No te falta nada 🎉</div>'}</div>
-     ${d.length?`<p class="sec">Hechos (${d.length})</p><div class="paper">${d.map(([x,i])=>row(x,i)).join('')}</div>`:''}`;
-    $('back').onclick=()=>{S.view='chat';render()};
+  const top=$('top'), sc=$('screen');
+  $('bar').hidden=S.view!=='folder';
+  if(S.view==='chat'){
+    top.innerHTML='<span class="grow">TE RECORDARÉ</span>';
+    sc.innerHTML=`<div class="introrow"><p class="hint">Tocá el micrófono y decime qué querés que te recuerde y cuándo.</p>
+      <button class="chip">💡 Ejemplos</button></div>
+      <div class="bigs"><button class="big manual" id="bm"><span>✎</span>Cargar a mano</button>
+      <button class="big lib" id="bl"><span>📒</span>Libreta</button></div>`;
+    $('bm').onclick=()=>pop($('bm'),()=>{S.toast='';sc.innerHTML='<div class="toast">Acá se abre el formulario de siempre para cargar un recordatorio a mano.</div><button class="chip" id="bk">← Volver</button>';$('bk').onclick=()=>render();});
+    $('bl').onclick=()=>pop($('bl'),()=>{S.view='folders';S.toast='';render();});
+    return;
   }
-  $('screen').querySelectorAll('[data-i]').forEach(c=>c.onchange=()=>{S.items[c.dataset.i].d=c.checked;S.toast='';render()});
-  $('screen').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{S.items.splice(b.dataset.del,1);render()});
-  $('screen').querySelectorAll('[data-rem]').forEach(b=>b.onclick=()=>{const it=S.items[b.dataset.rem];
-    S.toast=`Se abre el chat con "${it.t}" para que digas cuándo avisarte.`;render()});
+  if(S.view==='folders'){
+    top.innerHTML='<button id="back" aria-label="Volver">←</button><span class="grow">LIBRETA</span>';
+    sc.innerHTML=`<p class="hint">Tus carpetas. Tocá una para ver lo que tenés para hacer.</p>
+      <div class="folders">${S.folders.map((f,i)=>{const p=f.items.filter(x=>!x.d).length;
+        return `<button class="folder" data-f="${i}"><span class="ic">📁</span><b>${esc(f.name)}</b><small>${p?p+' para hacer':'Todo hecho ✓'}</small></button>`}).join('')}</div>
+      ${S.naming?`<div class="namebox"><input id="fname" placeholder="Nombre: Impresora, Auto…" aria-label="Nombre de la carpeta"><button class="btn" id="fok">Crear</button></div>`
+        :`<button class="newf" id="newf">＋ Nueva carpeta</button>`}`;
+    $('back').onclick=()=>{S.view='chat';render()};
+    sc.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{S.folder=+b.dataset.f;S.view='folder';S.sel=null;S.toast='';S.fresh=[];S.askDel=false;render()});
+    if(S.naming){const inp=$('fname');inp.focus();const ok=()=>{const n=inp.value.trim();if(!n)return;S.folders.push({name:n[0].toUpperCase()+n.slice(1),items:[]});S.naming=false;S.folder=S.folders.length-1;S.view='folder';S.toast='';render()};
+      $('fok').onclick=ok;inp.onkeydown=e=>{if(e.key==='Enter')ok()};}
+    else $('newf').onclick=()=>{S.naming=true;render()};
+    return;
+  }
+  const f=F();
+  top.innerHTML=`<button id="back" aria-label="Volver">←</button><span class="grow">📁 ${esc(f.name)}</span><button id="del" aria-label="Borrar carpeta" title="Borrar carpeta">🗑</button>`;
+  const pend=f.items.map((x,i)=>[x,i]).filter(([x])=>!x.d), done=f.items.map((x,i)=>[x,i]).filter(([x])=>x.d);
+  const row=([x,i],n,list)=>{const sel=S.sel===i;const pos=list.findIndex(([,j])=>j===i);
+    return `<div class="item${x.d?' done':''}${S.fresh.includes(x)&&!x.d?' fresh':''}${sel?' sel':''}" data-row="${i}">
+      <span class="n">${n}.</span><input type="checkbox" ${x.d?'checked':''} data-chk="${i}" aria-label="Hecho">
+      <span class="t">${esc(x.t)}</span>
+      ${sel?`<span class="tools">${x.d?'':`<button data-up="${i}" ${pos===0?'disabled':''} aria-label="Subir">▲</button><button data-down="${i}" ${pos===list.length-1?'disabled':''} aria-label="Bajar">▼</button><button data-bell="${i}" aria-label="Pasar a recordatorio">🔔</button>`}<button data-rm="${i}" aria-label="Borrar">🗑</button></span>`:''}
+    </div>`};
+  sc.innerHTML=`${S.askDel?`<div class="confirm">¿Borrar la carpeta <b>${esc(f.name)}</b> con todo lo que tiene adentro?<div class="row"><button class="btn ghost" id="dno">Cancelar</button><button class="btn danger" id="dyes">Borrar</button></div></div>`:''}
+    ${S.toast?`<div class="toast">✓ ${S.toast}</div>`:''}
+    <p class="sec">Para hacer (${pend.length})</p>
+    <div class="paper">${pend.length?pend.map((p,k)=>row(p,k+1,pend)).join(''):'<div class="empty">No falta nada en esta carpeta. Escribí abajo o tocá 🎤.</div>'}</div>
+    ${done.length?`<p class="sec">Hechos (${done.length})</p><div class="paper">${done.map((p,k)=>row(p,k+1,done)).join('')}</div>`:''}
+    <p class="hint">Tocá un renglón para moverlo ▲▼. Solo el cuadradito lo da por hecho.</p>`;
+  $('back').onclick=()=>{S.view='folders';S.sel=null;render()};
+  $('del').onclick=()=>{S.askDel=true;render()};
+  if(S.askDel){$('dno').onclick=()=>{S.askDel=false;render()};$('dyes').onclick=()=>{S.folders.splice(S.folder,1);S.askDel=false;S.view='folders';render()};}
+  sc.querySelectorAll('[data-chk]').forEach(c=>{c.onclick=e=>e.stopPropagation();c.onchange=()=>{const it=f.items[c.dataset.chk];it.d=c.checked;
+    f.items.splice(c.dataset.chk,1); if(it.d) f.items.push(it); else {const fd=f.items.findIndex(x=>x.d); f.items.splice(fd<0?f.items.length:fd,0,it);} S.sel=null;S.toast='';render()}});
+  sc.querySelectorAll('[data-row]').forEach(r=>r.onclick=()=>{const i=+r.dataset.row;S.sel=S.sel===i?null:i;render()});
+  const swap=(i,dir)=>{const list=f.items.map((x,j)=>[x,j]).filter(([x])=>x.d===f.items[i].d).map(([,j])=>j);const k=list.indexOf(i)+dir;if(k<0||k>=list.length)return;const j=list[k];[f.items[i],f.items[j]]=[f.items[j],f.items[i]];S.sel=j;render()};
+  sc.querySelectorAll('[data-up]').forEach(b=>b.onclick=e=>{e.stopPropagation();swap(+b.dataset.up,-1)});
+  sc.querySelectorAll('[data-down]').forEach(b=>b.onclick=e=>{e.stopPropagation();swap(+b.dataset.down,1)});
+  sc.querySelectorAll('[data-rm]').forEach(b=>b.onclick=e=>{e.stopPropagation();const it=f.items.splice(+b.dataset.rm,1)[0];S.sel=null;S.toast=`Borré "${it.t}".`;render()});
+  sc.querySelectorAll('[data-bell]').forEach(b=>b.onclick=e=>{e.stopPropagation();S.toast=`Se abre el formulario con "${f.items[+b.dataset.bell].t}" para elegir día y hora.`;render()});
 }
+function pop(el,then){el.classList.add('pop');setTimeout(then,matchMedia('(prefers-reduced-motion: reduce)').matches?0:320);}
+function updSend(){$('send').disabled=!$('field').value.trim();}
 function sayLike(text){
-  const m=$('mic'); m.classList.add('rec'); $('field').value='';
-  if(S.view!=='libreta'){S.view='libreta';S.toast='';render();}
-  let k=0; const w=text.split(' ');
-  const t=setInterval(()=>{ $('field').value=w.slice(0,++k).join(' ');
-    if(k>=w.length){clearInterval(t);setTimeout(()=>{m.classList.remove('rec');add($('field').value);$('field').value='';},400)} },120);
+  if(S.view!=='folder'){S.view='folder';S.folder=0;S.sel=null;S.toast='';render();}
+  const m=$('mic');m.classList.add('rec');$('field').value='';let k=0;const w=text.split(' ');
+  const t=setInterval(()=>{$('field').value=w.slice(0,++k).join(' ');updSend();
+    if(k>=w.length){clearInterval(t);setTimeout(()=>{m.classList.remove('rec');add($('field').value);$('field').value='';updSend();},400)}},120);
 }
-$('say1').onclick=()=>sayLike('uno llamar al contador dos comprar tornillos tres pagar la luz');
-$('say2').onclick=()=>sayLike('me faltó llevar el auto al taller y también pedir presupuesto de chapa');
-$('mic').onclick=()=>{ if($('field').value.trim()){ if(S.view!=='libreta'){S.view='libreta'} add($('field').value); $('field').value=''; } else sayLike('uno llamar al contador dos comprar tornillos tres pagar la luz'); };
-$('field').onkeydown=e=>{if(e.key==='Enter'&&$('field').value.trim()){S.view='libreta';add($('field').value);$('field').value='';}};
+$('field').oninput=updSend;
+$('send').onclick=()=>{add($('field').value);$('field').value='';updSend()};
+$('field').onkeydown=e=>{if(e.key==='Enter'&&$('field').value.trim()){add($('field').value);$('field').value='';updSend()}};
+$('mic').onclick=()=>sayLike('uno cambiar el tóner dos limpiar el cabezal tres pedir papel A4');
+$('say1').onclick=()=>sayLike('uno cambiar el tóner dos limpiar el cabezal tres pedir papel A4');
 render();
 </script>
