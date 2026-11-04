@@ -233,6 +233,18 @@ class AppSettings extends ChangeNotifier {
     return updated;
   }
 
+  /// Cambia una nota (texto o la lista de adentro) sin moverla de lugar.
+  Future<NoteItem> replaceNote(
+    NoteFolder f,
+    NoteItem n,
+    NoteItem updated,
+  ) async {
+    final i = f.items.indexOf(n);
+    if (i >= 0) f.items[i] = updated;
+    await saveNotes();
+    return updated;
+  }
+
   /// Guarda la libreta (también después de cambiar nombre o color).
   Future<void> saveNotes() async {
     notifyListeners();

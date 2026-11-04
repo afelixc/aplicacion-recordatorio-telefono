@@ -113,4 +113,49 @@ void main() {
     expect(find.text('En Impresora'), findsOneWidget);
     expect(find.text('Auto'), findsNothing);
   });
+
+  test('cuenta hasta 10 cosas dictadas', () {
+    expect(
+      splitNotes(
+        'uno pan dos leche tres huevos cuatro yerba cinco azúcar seis fideos '
+        'siete arroz ocho aceite nueve sal diez café',
+      ),
+      [
+        'Pan',
+        'Leche',
+        'Huevos',
+        'Yerba',
+        'Azúcar',
+        'Fideos',
+        'Arroz',
+        'Aceite',
+        'Sal',
+        'Café',
+      ],
+    );
+  });
+
+  testWidgets('editar una nota y armar una lista adentro', (tester) async {
+    final s = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    final f = await s.addFolder('Casa', folderColors.first);
+    await s.addNotes(f, ['Compras']);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NoteEditPage(settings: s, folder: f, note: f.items.first),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const Key('notebook-input')),
+      'pan, leche, huevos',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notebook-send')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('note-title')), 'Supermercado');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    final n = f.items.single;
+    expect(n.text, 'Supermercado');
+    expect(n.sub.map((x) => x.text), ['Pan', 'Leche', 'Huevos']);
+  });
 }

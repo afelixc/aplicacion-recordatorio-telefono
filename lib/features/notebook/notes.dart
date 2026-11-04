@@ -1,8 +1,29 @@
 import 'dart:convert';
 
-/// Una cosa anotada en la libreta. Puede tener un aviso ([alarm]).
+/// Un ítem de la lista que hay adentro de una nota (por ejemplo, las
+/// compras: pan, leche…).
+class SubItem {
+  const SubItem(this.text, {this.done = false});
+
+  final String text;
+  final bool done;
+
+  Map<String, dynamic> toJson() => {'t': text, if (done) 'd': true};
+
+  static SubItem fromJson(Map<String, dynamic> j) =>
+      SubItem('${j['t']}', done: j['d'] == true);
+}
+
+/// Una nota de la libreta. Puede tener una lista adentro ([sub]) y un aviso
+/// ([alarm]).
 class NoteItem {
-  const NoteItem(this.text, {this.done = false, required this.at, this.alarm});
+  const NoteItem(
+    this.text, {
+    this.done = false,
+    required this.at,
+    this.alarm,
+    this.sub = const [],
+  });
 
   final String text;
   final bool done;
@@ -11,11 +32,19 @@ class NoteItem {
   /// Si se le puso aviso con la campanita: cuándo suena.
   final DateTime? alarm;
 
-  NoteItem copyWith({bool? done, DateTime? alarm}) => NoteItem(
-    text,
+  final List<SubItem> sub;
+
+  NoteItem copyWith({
+    String? text,
+    bool? done,
+    DateTime? alarm,
+    List<SubItem>? sub,
+  }) => NoteItem(
+    text ?? this.text,
     done: done ?? this.done,
     at: at,
     alarm: alarm ?? this.alarm,
+    sub: sub ?? this.sub,
   );
 
   Map<String, dynamic> toJson() => {
@@ -23,6 +52,7 @@ class NoteItem {
     if (done) 'd': true,
     'at': at.toIso8601String(),
     if (alarm != null) 'al': alarm!.toIso8601String(),
+    if (sub.isNotEmpty) 's': [for (final x in sub) x.toJson()],
   };
 
   static NoteItem fromJson(Map<String, dynamic> j) => NoteItem(
@@ -30,6 +60,10 @@ class NoteItem {
     done: j['d'] == true,
     at: DateTime.tryParse('${j['at']}') ?? DateTime.now(),
     alarm: j['al'] == null ? null : DateTime.tryParse('${j['al']}'),
+    sub: [
+      for (final e in (j['s'] as List? ?? const []))
+        SubItem.fromJson(e as Map<String, dynamic>),
+    ],
   );
 }
 
@@ -122,6 +156,16 @@ const _counting = [
   ['ocho', 'octavo', '8'],
   ['nueve', 'noveno', '9'],
   ['diez', 'décimo', '10'],
+  ['once', 'undécimo', '11'],
+  ['doce', 'duodécimo', '12'],
+  ['trece', '13'],
+  ['catorce', '14'],
+  ['quince', '15'],
+  ['dieciséis', 'dieciseis', '16'],
+  ['diecisiete', '17'],
+  ['dieciocho', '18'],
+  ['diecinueve', '19'],
+  ['veinte', '20'],
 ];
 
 // "… y también …", "… y después …", "… y además …".

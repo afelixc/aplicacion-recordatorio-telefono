@@ -6,6 +6,8 @@ import '../../core/settings.dart';
 import '../../data/reminder.dart';
 import '../chat/dictation.dart';
 import '../reminders/reminders_screen.dart' show matchesSearch;
+import 'marquee_text.dart';
+import 'note_input_bar.dart';
 import 'notes.dart';
 
 Future<void> openNotebook(BuildContext context, AppSettings settings) =>
@@ -101,7 +103,7 @@ class _NotebookPageState extends State<NotebookPage> {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
-                  childAspectRatio: 1.6,
+                  childAspectRatio: 1.35,
                   children: [
                     for (final f in _s.folders)
                       _FolderCard(folder: f, onTap: () => _open(f)),
@@ -136,7 +138,9 @@ class _NotebookPageState extends State<NotebookPage> {
     final items = [
       for (final f in _s.folders)
         for (final n in f.items)
-          if (matchesSearch(n.text, q)) (f, n),
+          if (matchesSearch(n.text, q) ||
+              n.sub.any((x) => matchesSearch(x.text, q)))
+            (f, n),
     ];
     if (folders.isEmpty && items.isEmpty) {
       return [Text('No encontré "$q" en la libreta.')];
@@ -199,11 +203,12 @@ class _FolderCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 folder.name,
-                maxLines: 1,
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 14,
+                  height: 1.15,
                 ),
               ),
               Text(
@@ -311,8 +316,9 @@ Future<(String, int)?> editFolder(BuildContext context, {NoteFolder? folder}) {
   );
 }
 
-/// Adentro de una carpeta: las cosas numeradas. Solo el cuadradito las da por
-/// hechas; tocar el renglón lo marca y muestra subir, bajar, aviso y borrar.
+/// Adentro de una carpeta: las notas numeradas. Solo el cuadradito las da por
+/// hechas; tocar el renglón lo marca y muestra subir, bajar, editar, aviso y
+/// borrar. Una nota puede tener una lista adentro (las compras).
 class FolderPage extends StatefulWidget {
   const FolderPage({
     super.key,
@@ -330,8 +336,6 @@ class FolderPage extends StatefulWidget {
 }
 
 class _FolderPageState extends State<FolderPage> {
-  final _input = TextEditingController();
-  late final Dictation _dictation = widget.speech ?? Dictation();
   final _fresh = <NoteItem>{};
   NoteItem? _selected;
   String? _message;
@@ -339,32 +343,8 @@ class _FolderPageState extends State<FolderPage> {
   AppSettings get _s => widget.settings;
   NoteFolder get _f => widget.folder;
 
-  @override
-  void initState() {
-    super.initState();
-    _dictation.addListener(_onDictation);
-    _input.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _dictation.removeListener(_onDictation);
-    if (widget.speech == null) _dictation.dispose();
-    _input.dispose();
-    super.dispose();
-  }
-
-  void _onDictation() {
-    if (_dictation.active) {
-      _input.text = _dictation.text;
-      _input.selection = TextSelection.collapsed(offset: _input.text.length);
-    }
-    setState(() {});
-  }
-
   Future<void> _add(String text) async {
     final parts = splitNotes(text);
-    _input.clear();
     if (parts.isEmpty) return;
     final added = await _s.addNotes(_f, parts);
     setState(() {
@@ -376,32 +356,6 @@ class _FolderPageState extends State<FolderPage> {
           ? 'Anoté 1 cosa en ${_f.name}.'
           : 'Anoté ${parts.length} cosas en ${_f.name}.';
     });
-  }
-
-  Future<void> _mic() async {
-    if (_dictation.active) {
-      await _add(await _dictation.finish());
-      return;
-    }
-    final ok = await _dictation.start(
-      language: _s.language,
-      initialText: _input.text,
-    );
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No pude usar el micrófono. Permitilo en los ajustes del teléfono, '
-            'o escribilo.',
-          ),
-        ),
-      );
-    }
-  }
-
-  Future<void> _cancelDictation() async {
-    await _dictation.cancel();
-    _input.clear();
   }
 
   Future<void> _delete(NoteItem n) async {
@@ -421,6 +375,20 @@ class _FolderPageState extends State<FolderPage> {
           ),
         ),
       );
+  }
+
+  Future<void> _edit(NoteItem n) async {
+    setState(() => _selected = null);
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => NoteEditPage(
+          settings: _s,
+          folder: _f,
+          note: n,
+          speech: widget.speech,
+        ),
+      ),
+    );
   }
 
   /// La campanita: pide día y hora y arma un recordatorio que suena.
@@ -499,9 +467,10 @@ class _FolderPageState extends State<FolderPage> {
     final scheme = Theme.of(context).colorScheme;
     final selected = identical(_selected, n);
     final pos = list.indexOf(n);
+    final subDone = n.sub.where((x) => x.done).length;
     return Material(
       color: selected
-          ? scheme.primaryContainer
+          ? scheme.primaryContainer.withValues(alpha: 0.6)
           : _fresh.contains(n) && !n.done
           ? scheme.secondary.withValues(alpha: 0.18)
           : Colors.transparent,
@@ -509,86 +478,155 @@ class _FolderPageState extends State<FolderPage> {
         // Tocar el renglón solo lo marca: hecho, únicamente con el cuadradito.
         onTap: () => setState(() => _selected = selected ? null : n),
         child: Padding(
-          padding: const EdgeInsets.only(left: 10, right: 4),
-          child: Row(
+          padding: const EdgeInsets.only(left: 10, right: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                width: 24,
-                child: Text(
-                  '$number.',
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              Checkbox(
-                value: n.done,
-                onChanged: (v) async {
-                  await _s.setNoteDone(_f, n, v ?? false);
-                  setState(() => _selected = null);
-                },
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        n.text,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: SizedBox(
+                      width: 24,
+                      child: Text(
+                        '$number.',
+                        textAlign: TextAlign.right,
                         style: TextStyle(
-                          fontSize: 16,
-                          decoration: n.done
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: n.done ? scheme.onSurfaceVariant : null,
+                          fontWeight: FontWeight.bold,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
-                      if (n.alarm != null)
-                        Text(
-                          '🔔 ${Fmt.when(n.alarm!)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.primary,
-                            fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Checkbox(
+                    value: n.done,
+                    onChanged: (v) async {
+                      await _s.setNoteDone(_f, n, v ?? false);
+                      setState(() => _selected = null);
+                    },
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            n.sub.isEmpty
+                                ? n.text
+                                : '${n.text}  ($subDone/${n.sub.length})',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: n.sub.isEmpty
+                                  ? null
+                                  : FontWeight.w600,
+                              decoration: n.done
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: n.done ? scheme.onSurfaceVariant : null,
+                            ),
+                          ),
+                          if (n.alarm != null)
+                            Text(
+                              '🔔 ${Fmt.when(n.alarm!)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // La lista de adentro: cada ítem se tilda con su cuadradito.
+              for (final (i, x) in n.sub.indexed)
+                Padding(
+                  padding: const EdgeInsets.only(left: 64),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Checkbox(
+                          visualDensity: VisualDensity.compact,
+                          value: x.done,
+                          onChanged: (v) => _s.replaceNote(
+                            _f,
+                            n,
+                            n.copyWith(
+                              sub: [...n.sub]
+                                ..[i] = SubItem(x.text, done: v ?? false),
+                            ),
                           ),
                         ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          x.text,
+                          style: TextStyle(
+                            decoration: x.done
+                                ? TextDecoration.lineThrough
+                                : null,
+                            color: x.done ? scheme.onSurfaceVariant : null,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              if (selected) ...[
-                if (!n.done) ...[
-                  IconButton(
-                    tooltip: 'Subir',
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.arrow_upward),
-                    onPressed: pos == 0 ? null : () => _s.moveNote(_f, n, -1),
+              if (n.sub.isNotEmpty) const SizedBox(height: 8),
+              if (selected)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10, left: 34),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (!n.done) ...[
+                        _Tool(
+                          tooltip: 'Subir',
+                          icon: Icons.arrow_upward,
+                          color: Colors.blue.shade700,
+                          onPressed: pos == 0
+                              ? null
+                              : () => _s.moveNote(_f, n, -1),
+                        ),
+                        _Tool(
+                          tooltip: 'Bajar',
+                          icon: Icons.arrow_downward,
+                          color: Colors.blue.shade700,
+                          onPressed: pos == list.length - 1
+                              ? null
+                              : () => _s.moveNote(_f, n, 1),
+                        ),
+                      ],
+                      _Tool(
+                        tooltip: 'Editar',
+                        icon: Icons.edit,
+                        color: Colors.green.shade700,
+                        onPressed: () => _edit(n),
+                      ),
+                      if (!n.done)
+                        _Tool(
+                          tooltip: 'Avisarme',
+                          icon: Icons.notifications_active,
+                          color: Colors.amber.shade800,
+                          onPressed: () => _alarm(n),
+                        ),
+                      _Tool(
+                        tooltip: 'Borrar',
+                        icon: Icons.delete,
+                        color: Colors.red.shade700,
+                        onPressed: () => _delete(n),
+                      ),
+                    ],
                   ),
-                  IconButton(
-                    tooltip: 'Bajar',
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.arrow_downward),
-                    onPressed: pos == list.length - 1
-                        ? null
-                        : () => _s.moveNote(_f, n, 1),
-                  ),
-                  IconButton(
-                    tooltip: 'Avisarme',
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.notifications_active_outlined),
-                    onPressed: () => _alarm(n),
-                  ),
-                ],
-                IconButton(
-                  tooltip: 'Borrar',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () => _delete(n),
                 ),
-              ],
             ],
           ),
         ),
@@ -600,7 +638,6 @@ class _FolderPageState extends State<FolderPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final recording = _dictation.active;
     return ListenableBuilder(
       listenable: _s,
       builder: (context, _) {
@@ -609,11 +646,12 @@ class _FolderPageState extends State<FolderPage> {
         final done = _f.done;
         return Scaffold(
           appBar: AppBar(
+            titleSpacing: 0,
             title: Row(
               children: [
                 Icon(Icons.folder, color: color),
                 const SizedBox(width: 8),
-                Expanded(child: Text(_f.name, overflow: TextOverflow.ellipsis)),
+                Expanded(child: MarqueeText(_f.name)),
               ],
             ),
             actions: [
@@ -682,7 +720,8 @@ class _FolderPageState extends State<FolderPage> {
                     ],
                     const SizedBox(height: 10),
                     Text(
-                      'Tocá un renglón para moverlo, ponerle aviso o '
+                      'Tocá un renglón para moverlo, editarlo (y armar una '
+                      'lista adentro, como las compras), ponerle aviso o '
                       'borrarlo. Solo el cuadradito lo da por hecho.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: scheme.onSurfaceVariant,
@@ -691,101 +730,209 @@ class _FolderPageState extends State<FolderPage> {
                   ],
                 ),
               ),
-              Material(
-                elevation: 3,
-                color: scheme.surface,
-                child: SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (recording)
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.fiber_manual_record,
-                                color: scheme.error,
-                              ),
-                              const SizedBox(width: 6),
-                              const Expanded(
-                                child: Text(
-                                  'Escuchando… cuando termines tocá Listo.',
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: _cancelDictation,
-                                child: const Text('Cancelar'),
-                              ),
-                            ],
-                          ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                key: const Key('notebook-input'),
-                                controller: _input,
-                                minLines: 1,
-                                maxLines: 4,
-                                readOnly: recording,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                decoration: InputDecoration(
-                                  hintText:
-                                      'Escribí o dictá cosas para anotar…',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  isDense: true,
-                                  suffixIcon: recording
-                                      ? null
-                                      : Padding(
-                                          padding: const EdgeInsets.all(4),
-                                          child: IconButton.filled(
-                                            key: const Key('notebook-send'),
-                                            tooltip: 'Anotar',
-                                            style: IconButton.styleFrom(
-                                              backgroundColor: Colors.green,
-                                              foregroundColor: Colors.white,
-                                            ),
-                                            icon: const Icon(Icons.check),
-                                            onPressed:
-                                                _input.text.trim().isEmpty
-                                                ? null
-                                                : () => _add(_input.text),
-                                          ),
-                                        ),
-                                ),
-                                onSubmitted: _add,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            recording
-                                ? FilledButton.icon(
-                                    key: const Key('notebook-done'),
-                                    icon: const Icon(Icons.check),
-                                    label: const Text('Listo'),
-                                    onPressed: _mic,
-                                  )
-                                : IconButton.filled(
-                                    key: const Key('notebook-mic'),
-                                    tooltip: 'Dictar',
-                                    iconSize: 28,
-                                    icon: const Icon(Icons.mic),
-                                    onPressed: _mic,
-                                  ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              NoteInputBar(
+                language: _s.language,
+                speech: widget.speech,
+                onSubmit: _add,
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// Botoncito de color con recuadro (subir, bajar, editar, aviso, borrar).
+class _Tool extends StatelessWidget {
+  const _Tool({
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: color.withValues(alpha: enabled ? 0.15 : 0.05),
+        foregroundColor: color,
+        disabledForegroundColor: color.withValues(alpha: 0.3),
+        side: BorderSide(
+          color: color.withValues(alpha: enabled ? 0.8 : 0.2),
+          width: 1.5,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      icon: Icon(icon),
+    );
+  }
+}
+
+/// Editar una nota: cambiar el texto y armar una lista adentro (pan, leche…),
+/// escribiendo o dictando varias cosas juntas.
+class NoteEditPage extends StatefulWidget {
+  const NoteEditPage({
+    super.key,
+    required this.settings,
+    required this.folder,
+    required this.note,
+    this.speech,
+  });
+
+  final AppSettings settings;
+  final NoteFolder folder;
+  final NoteItem note;
+  final Dictation? speech;
+
+  @override
+  State<NoteEditPage> createState() => _NoteEditPageState();
+}
+
+class _NoteEditPageState extends State<NoteEditPage> {
+  late NoteItem _note = widget.note;
+  late final _title = TextEditingController(text: widget.note.text);
+
+  AppSettings get _s => widget.settings;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save(NoteItem updated) async {
+    final saved = await _s.replaceNote(widget.folder, _note, updated);
+    setState(() => _note = saved);
+  }
+
+  Future<void> _saveTitle() async {
+    final t = _title.text.trim();
+    if (t.isEmpty || t == _note.text) return;
+    await _save(_note.copyWith(text: t));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return PopScope(
+      onPopInvokedWithResult: (_, _) => _saveTitle(),
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Editar nota')),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                children: [
+                  TextField(
+                    key: const Key('note-title'),
+                    controller: _title,
+                    textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      labelText: 'Nota',
+                      border: OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _saveTitle(),
+                    onTapOutside: (_) => _saveTitle(),
+                  ),
+                  const SizedBox(height: 18),
+                  _Section('Lista adentro de la nota (${_note.sub.length})'),
+                  if (_note.sub.isEmpty)
+                    Text(
+                      'Por ejemplo, para ir de compras: escribí o dictá abajo '
+                      '"pan, leche, huevos" o "uno pan dos leche tres '
+                      'huevos". Cada cosa queda en su renglón.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    )
+                  else
+                    _Paper(
+                      color: Color(widget.folder.color),
+                      children: [
+                        for (final (i, x) in _note.sub.indexed)
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: x.done,
+                                onChanged: (v) => _save(
+                                  _note.copyWith(
+                                    sub: [..._note.sub]
+                                      ..[i] = SubItem(x.text, done: v ?? false),
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  x.text,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    decoration: x.done
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Subir',
+                                visualDensity: VisualDensity.compact,
+                                color: Colors.blue.shade700,
+                                icon: const Icon(Icons.arrow_upward),
+                                onPressed: i == 0
+                                    ? null
+                                    : () => _save(
+                                        _note.copyWith(
+                                          sub: [..._note.sub]
+                                            ..[i] = _note.sub[i - 1]
+                                            ..[i - 1] = x,
+                                        ),
+                                      ),
+                              ),
+                              IconButton(
+                                tooltip: 'Quitar',
+                                visualDensity: VisualDensity.compact,
+                                color: Colors.red.shade700,
+                                icon: const Icon(Icons.close),
+                                onPressed: () => _save(
+                                  _note.copyWith(
+                                    sub: [..._note.sub]..removeAt(i),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            NoteInputBar(
+              language: _s.language,
+              speech: widget.speech,
+              hint: 'Agregá ítems a la lista…',
+              onSubmit: (text) => _save(
+                _note.copyWith(
+                  sub: [
+                    ..._note.sub,
+                    for (final t in splitNotes(text)) SubItem(t),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
