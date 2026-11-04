@@ -158,4 +158,43 @@ void main() {
     expect(n.text, 'Supermercado');
     expect(n.sub.map((x) => x.text), ['Pan', 'Leche', 'Huevos']);
   });
+
+  testWidgets('ítems de adentro: bajar, editar y se ven solo al abrir', (
+    tester,
+  ) async {
+    final s = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    final f = await s.addFolder('Alejandro', folderColors.first);
+    await s.addNotes(f, ['Compras']);
+    await s.replaceNote(
+      f,
+      f.items.single,
+      f.items.single.copyWith(sub: const [SubItem('Pan'), SubItem('Lehce')]),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NoteEditPage(settings: s, folder: f, note: f.items.single),
+      ),
+    );
+    await tester.tap(find.byTooltip('Bajar').first);
+    await tester.pumpAndSettle();
+    expect(f.items.single.sub.map((x) => x.text), ['Lehce', 'Pan']);
+    await tester.tap(find.byTooltip('Editar').first);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('sub-edit')), 'Leche');
+    await tester.tap(find.byKey(const Key('sub-edit-save')));
+    await tester.pumpAndSettle();
+    expect(f.items.single.sub.map((x) => x.text), ['Leche', 'Pan']);
+
+    // En la carpeta, cerrada muestra "(0/2)" y al tocarla se despliega.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FolderPage(settings: s, folder: f),
+      ),
+    );
+    expect(find.text('Compras  (0/2)'), findsOneWidget);
+    expect(find.text('Leche'), findsNothing);
+    await tester.tap(find.text('Compras  (0/2)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Leche'), findsOneWidget);
+  });
 }

@@ -434,12 +434,27 @@ class _FolderPageState extends State<FolderPage> {
   }
 
   Future<void> _deleteFolder() async {
+    // Cosas sin terminar: notas sin tildar e ítems de adentro sin tildar.
+    final unfinished =
+        _f.pending.length +
+        _f.items.fold<int>(
+          0,
+          (sum, n) => sum + n.sub.where((x) => !x.done).length,
+        );
     final yes = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Borrar carpeta'),
+        title: Text(
+          unfinished > 0
+              ? 'Fijate: tiene cosas sin terminar'
+              : 'Borrar carpeta',
+        ),
         content: Text(
-          '¿Borrar la carpeta "${_f.name}" con todo lo que tiene adentro?',
+          unfinished > 0
+              ? 'La carpeta "${_f.name}" todavía tiene $unfinished '
+                    '${unfinished == 1 ? 'cosa sin terminar' : 'cosas sin terminar'}. '
+                    'Si tocás Aceptar se borra todo; con Cancelar queda como está.'
+              : '¿Borrar la carpeta "${_f.name}" con todo lo que tiene adentro?',
         ),
         actions: [
           TextButton(
@@ -452,7 +467,7 @@ class _FolderPageState extends State<FolderPage> {
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Borrar'),
+            child: Text(unfinished > 0 ? 'Aceptar' : 'Borrar'),
           ),
         ],
       ),
@@ -540,46 +555,56 @@ class _FolderPageState extends State<FolderPage> {
                       ),
                     ),
                   ),
+                  if (n.sub.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Icon(
+                        selected ? Icons.expand_less : Icons.expand_more,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                 ],
               ),
-              // La lista de adentro: cada ítem se tilda con su cuadradito.
-              for (final (i, x) in n.sub.indexed)
-                Padding(
-                  padding: const EdgeInsets.only(left: 64),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 32,
-                        height: 32,
-                        child: Checkbox(
-                          visualDensity: VisualDensity.compact,
-                          value: x.done,
-                          onChanged: (v) => _s.replaceNote(
-                            _f,
-                            n,
-                            n.copyWith(
-                              sub: [...n.sub]
-                                ..[i] = SubItem(x.text, done: v ?? false),
+              // La lista de adentro se despliega al tocar la nota; cerrada,
+              // la nota ocupa un renglón como las demás (con el 0/4).
+              if (selected)
+                for (final (i, x) in n.sub.indexed)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 64),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Checkbox(
+                            visualDensity: VisualDensity.compact,
+                            value: x.done,
+                            onChanged: (v) => _s.replaceNote(
+                              _f,
+                              n,
+                              n.copyWith(
+                                sub: [...n.sub]
+                                  ..[i] = SubItem(x.text, done: v ?? false),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          x.text,
-                          style: TextStyle(
-                            decoration: x.done
-                                ? TextDecoration.lineThrough
-                                : null,
-                            color: x.done ? scheme.onSurfaceVariant : null,
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            x.text,
+                            style: TextStyle(
+                              decoration: x.done
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: x.done ? scheme.onSurfaceVariant : null,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              if (n.sub.isNotEmpty) const SizedBox(height: 8),
+              if (selected && n.sub.isNotEmpty) const SizedBox(height: 8),
               if (selected)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10, left: 34),
@@ -778,6 +803,44 @@ class _Tool extends StatelessWidget {
   }
 }
 
+/// Botoncito de color más chico, para los ítems de adentro de una nota.
+class _SmallTool extends StatelessWidget {
+  const _SmallTool({
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        iconSize: 18,
+        constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+        padding: EdgeInsets.zero,
+        style: IconButton.styleFrom(
+          backgroundColor: color.withValues(alpha: enabled ? 0.15 : 0.05),
+          foregroundColor: color,
+          disabledForegroundColor: color.withValues(alpha: 0.3),
+          side: BorderSide(color: color.withValues(alpha: enabled ? 0.8 : 0.2)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        icon: Icon(icon),
+      ),
+    );
+  }
+}
+
 /// Editar una nota: cambiar el texto y armar una lista adentro (pan, leche…),
 /// escribiendo o dictando varias cosas juntas.
 class NoteEditPage extends StatefulWidget {
@@ -813,6 +876,48 @@ class _NoteEditPageState extends State<NoteEditPage> {
   Future<void> _save(NoteItem updated) async {
     final saved = await _s.replaceNote(widget.folder, _note, updated);
     setState(() => _note = saved);
+  }
+
+  Future<void> _moveSub(int i, int dir) {
+    final sub = [..._note.sub];
+    final x = sub[i];
+    sub[i] = sub[i + dir];
+    sub[i + dir] = x;
+    return _save(_note.copyWith(sub: sub));
+  }
+
+  Future<void> _editSub(int i) async {
+    final x = _note.sub[i];
+    final c = TextEditingController(text: x.text);
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar'),
+        content: TextField(
+          key: const Key('sub-edit'),
+          controller: c,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('sub-edit-save'),
+            onPressed: () => Navigator.pop(context, c.text),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    final t = text?.trim() ?? '';
+    if (t.isEmpty || t == x.text) return;
+    await _save(
+      _note.copyWith(sub: [..._note.sub]..[i] = SubItem(t, done: x.done)),
+    );
   }
 
   Future<void> _saveTitle() async {
@@ -884,32 +989,39 @@ class _NoteEditPageState extends State<NoteEditPage> {
                                   ),
                                 ),
                               ),
-                              IconButton(
+                              _SmallTool(
                                 tooltip: 'Subir',
-                                visualDensity: VisualDensity.compact,
+                                icon: Icons.arrow_upward,
                                 color: Colors.blue.shade700,
-                                icon: const Icon(Icons.arrow_upward),
                                 onPressed: i == 0
                                     ? null
-                                    : () => _save(
-                                        _note.copyWith(
-                                          sub: [..._note.sub]
-                                            ..[i] = _note.sub[i - 1]
-                                            ..[i - 1] = x,
-                                        ),
-                                      ),
+                                    : () => _moveSub(i, -1),
                               ),
-                              IconButton(
+                              _SmallTool(
+                                tooltip: 'Bajar',
+                                icon: Icons.arrow_downward,
+                                color: Colors.blue.shade700,
+                                onPressed: i == _note.sub.length - 1
+                                    ? null
+                                    : () => _moveSub(i, 1),
+                              ),
+                              _SmallTool(
+                                tooltip: 'Editar',
+                                icon: Icons.edit,
+                                color: Colors.green.shade700,
+                                onPressed: () => _editSub(i),
+                              ),
+                              _SmallTool(
                                 tooltip: 'Quitar',
-                                visualDensity: VisualDensity.compact,
+                                icon: Icons.close,
                                 color: Colors.red.shade700,
-                                icon: const Icon(Icons.close),
                                 onPressed: () => _save(
                                   _note.copyWith(
                                     sub: [..._note.sub]..removeAt(i),
                                   ),
                                 ),
                               ),
+                              const SizedBox(width: 4),
                             ],
                           ),
                       ],
