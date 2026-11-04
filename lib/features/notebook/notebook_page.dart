@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
+import '../../core/palette.dart';
 import '../../core/settings.dart';
 import '../../data/reminder.dart';
 import '../chat/dictation.dart';
@@ -40,12 +41,18 @@ class _NotebookPageState extends State<NotebookPage> {
     super.dispose();
   }
 
-  Future<void> _open(NoteFolder f) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) =>
-          FolderPage(settings: _s, folder: f, speech: widget.speech),
-    ),
-  );
+  Future<void> _open(NoteFolder f, {NoteItem? note, String? word}) =>
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => FolderPage(
+            settings: _s,
+            folder: f,
+            speech: widget.speech,
+            highlight: note,
+            highlightWord: word,
+          ),
+        ),
+      );
 
   Future<void> _newFolder() async {
     final r = await editFolder(context);
@@ -135,12 +142,15 @@ class _NotebookPageState extends State<NotebookPage> {
       for (final f in _s.folders)
         if (matchesSearch(f.name, q)) f,
     ];
-    final items = [
+    // Cada coincidencia por separado: la nota o el ítem de adentro.
+    final items = <(NoteFolder, NoteItem, String, bool, String)>[
       for (final f in _s.folders)
-        for (final n in f.items)
-          if (matchesSearch(n.text, q) ||
-              n.sub.any((x) => matchesSearch(x.text, q)))
-            (f, n),
+        for (final n in f.items) ...[
+          if (matchesSearch(n.text, q)) (f, n, n.text, n.done, 'En ${f.name}'),
+          for (final x in n.sub)
+            if (matchesSearch(x.text, q))
+              (f, n, x.text, x.done, 'En ${f.name} › ${n.text}'),
+        ],
     ];
     if (folders.isEmpty && items.isEmpty) {
       return [Text('No encontré "$q" en la libreta.')];
@@ -154,21 +164,22 @@ class _NotebookPageState extends State<NotebookPage> {
           subtitle: const Text('Carpeta'),
           onTap: () => _open(f),
         ),
-      for (final (f, n) in items)
+      for (final (f, n, text, done, where) in items)
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(
-            n.done ? Icons.check_box : Icons.check_box_outline_blank,
+            done ? Icons.check_box : Icons.check_box_outline_blank,
             color: Color(f.color),
           ),
           title: Text(
-            n.text,
-            style: n.done
+            text,
+            style: done
                 ? const TextStyle(decoration: TextDecoration.lineThrough)
                 : null,
           ),
-          subtitle: Text('En ${f.name}'),
-          onTap: () => _open(f),
+          subtitle: Text(where),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _open(f, note: n, word: q),
         ),
     ];
   }
@@ -325,11 +336,17 @@ class FolderPage extends StatefulWidget {
     required this.settings,
     required this.folder,
     this.speech,
+    this.highlight,
+    this.highlightWord,
   });
 
   final AppSettings settings;
   final NoteFolder folder;
   final Dictation? speech;
+
+  /// Desde el buscador: la nota a mostrar (abierta y resaltada) y la palabra.
+  final NoteItem? highlight;
+  final String? highlightWord;
 
   @override
   State<FolderPage> createState() => _FolderPageState();
@@ -337,8 +354,61 @@ class FolderPage extends StatefulWidget {
 
 class _FolderPageState extends State<FolderPage> {
   final _fresh = <NoteItem>{};
-  NoteItem? _selected;
+  late NoteItem? _selected = widget.highlight;
   String? _message;
+  final _highlightKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.highlight != null) {
+      // Lleva la pantalla hasta la nota buscada.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final c = _highlightKey.currentContext;
+        if (c != null) {
+          Scrollable.ensureVisible(
+            c,
+            alignment: 0.3,
+            duration: const Duration(milliseconds: 300),
+          );
+        }
+      });
+    }
+  }
+
+  bool _isHit(String text) {
+    final w = widget.highlightWord;
+    return w != null && w.isNotEmpty && matchesSearch(text, w);
+  }
+
+  /// Avisa si quedan ítems sin tildar adentro de la nota.
+  Future<bool> _confirmUnfinished(NoteItem n, String action) async {
+    final left = n.sub.where((x) => !x.done).length;
+    if (left == 0) return true;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Fijate: quedaron cosas por hacer'),
+        content: Text(
+          '"${n.text}" todavía tiene $left '
+          '${left == 1 ? 'ítem sin tildar' : 'ítems sin tildar'}. '
+          'Si tocás Aceptar la $action igual; con Cancelar queda como está.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('unfinished-yes'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Aceptar'),
+          ),
+        ],
+      ),
+    );
+    return yes == true;
+  }
 
   AppSettings get _s => widget.settings;
   NoteFolder get _f => widget.folder;
@@ -359,6 +429,7 @@ class _FolderPageState extends State<FolderPage> {
   }
 
   Future<void> _delete(NoteItem n) async {
+    if (!await _confirmUnfinished(n, 'borro')) return;
     final index = await _s.removeNote(_f, n);
     setState(() => _selected = null);
     if (!mounted) return;
@@ -483,12 +554,18 @@ class _FolderPageState extends State<FolderPage> {
     final selected = identical(_selected, n);
     final pos = list.indexOf(n);
     final subDone = n.sub.where((x) => x.done).length;
+    final night = Theme.of(context).brightness == Brightness.dark;
+    final colors = _s.colorsFor(night: night);
+    final tint = softColor(n.done ? colors.noteDone : colors.notePending);
     return Material(
-      color: selected
+      key: identical(n, widget.highlight) ? _highlightKey : null,
+      color: identical(n, widget.highlight) && _isHit(n.text)
+          ? Colors.amber.withValues(alpha: 0.35)
+          : selected
           ? scheme.primaryContainer.withValues(alpha: 0.6)
           : _fresh.contains(n) && !n.done
           ? scheme.secondary.withValues(alpha: 0.18)
-          : Colors.transparent,
+          : tint.fill(night),
       child: InkWell(
         // Tocar el renglón solo lo marca: hecho, únicamente con el cuadradito.
         onTap: () => setState(() => _selected = selected ? null : n),
@@ -517,6 +594,10 @@ class _FolderPageState extends State<FolderPage> {
                   Checkbox(
                     value: n.done,
                     onChanged: (v) async {
+                      if (v == true &&
+                          !await _confirmUnfinished(n, 'doy por hecha')) {
+                        return;
+                      }
                       await _s.setNoteDone(_f, n, v ?? false);
                       setState(() => _selected = null);
                     },
@@ -569,39 +650,64 @@ class _FolderPageState extends State<FolderPage> {
               // la nota ocupa un renglón como las demás (con el 0/4).
               if (selected)
                 for (final (i, x) in n.sub.indexed)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 64),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 32,
-                          height: 32,
-                          child: Checkbox(
-                            visualDensity: VisualDensity.compact,
-                            value: x.done,
-                            onChanged: (v) => _s.replaceNote(
-                              _f,
-                              n,
-                              n.copyWith(
-                                sub: [...n.sub]
-                                  ..[i] = SubItem(x.text, done: v ?? false),
+                  // Tocar el ítem no cierra la nota: solo el título la cierra.
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {},
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 64),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 32,
+                            height: 32,
+                            child: Checkbox(
+                              visualDensity: VisualDensity.compact,
+                              value: x.done,
+                              // Tildar un ítem deja la nota abierta.
+                              onChanged: (v) async {
+                                final u = await _s.replaceNote(
+                                  _f,
+                                  n,
+                                  n.copyWith(
+                                    sub: [...n.sub]
+                                      ..[i] = SubItem(x.text, done: v ?? false),
+                                  ),
+                                );
+                                setState(() => _selected = u);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 2,
+                              ),
+                              decoration: _isHit(x.text)
+                                  ? BoxDecoration(
+                                      color: Colors.amber.withValues(
+                                        alpha: 0.45,
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
+                                    )
+                                  : null,
+                              child: Text(
+                                x.text,
+                                style: TextStyle(
+                                  decoration: x.done
+                                      ? TextDecoration.lineThrough
+                                      : null,
+                                  color: x.done
+                                      ? scheme.onSurfaceVariant
+                                      : null,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            x.text,
-                            style: TextStyle(
-                              decoration: x.done
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                              color: x.done ? scheme.onSurfaceVariant : null,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
               if (selected && n.sub.isNotEmpty) const SizedBox(height: 8),

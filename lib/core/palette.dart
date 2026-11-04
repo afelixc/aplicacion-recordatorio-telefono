@@ -193,6 +193,8 @@ class ColorSet {
     this.selected = 'tinta',
     this.pending = 'azul',
     this.done = 'amarillo',
+    this.notePending = 'blanco',
+    this.noteDone = 'verde',
   });
 
   /// Fondo (id de `backgroundColors`).
@@ -204,6 +206,10 @@ class ColorSet {
   final String pending;
   final String done;
 
+  /// Libreta: las notas que faltan y las hechas.
+  final String notePending;
+  final String noteDone;
+
   ColorSet copyWith({
     String? background,
     String? main,
@@ -212,6 +218,8 @@ class ColorSet {
     String? selected,
     String? pending,
     String? done,
+    String? notePending,
+    String? noteDone,
   }) => ColorSet(
     background: background ?? this.background,
     main: main ?? this.main,
@@ -220,6 +228,8 @@ class ColorSet {
     selected: selected ?? this.selected,
     pending: pending ?? this.pending,
     done: done ?? this.done,
+    notePending: notePending ?? this.notePending,
+    noteDone: noteDone ?? this.noteDone,
   );
 
   String encode() => jsonEncode({
@@ -230,6 +240,8 @@ class ColorSet {
     'elegido': selected,
     'pendientes': pending,
     'hechos': done,
+    'libreta_pend': notePending,
+    'libreta_hechos': noteDone,
   });
 
   static ColorSet decode(String? text) {
@@ -247,6 +259,8 @@ class ColorSet {
         selected: s('elegido', d.selected),
         pending: s('pendientes', d.pending),
         done: s('hechos', d.done),
+        notePending: s('libreta_pend', d.notePending),
+        noteDone: s('libreta_hechos', d.noteDone),
       );
     } catch (_) {
       return d;

@@ -246,6 +246,36 @@ class _ColorsPageState extends State<ColorsPage> {
                         _ListSample(colors: c, night: _night),
                       ],
                     ),
+                    _Box(
+                      title: 'Libreta',
+                      icon: Icons.menu_book_outlined,
+                      note: 'adentro de las carpetas',
+                      children: [
+                        _SoftRow(
+                          label: 'Las que faltan hacer',
+                          prefix: 'lpend',
+                          selected: c.notePending,
+                          night: _night,
+                          onPick: (id) => set(c.copyWith(notePending: id)),
+                        ),
+                        _SoftRow(
+                          label: 'Las hechas',
+                          prefix: 'ldone',
+                          selected: c.noteDone,
+                          night: _night,
+                          onPick: (id) => set(c.copyWith(noteDone: id)),
+                        ),
+                        _ListSample(
+                          colors: c.copyWith(
+                            pending: c.notePending,
+                            done: c.noteDone,
+                          ),
+                          night: _night,
+                          pendingText: 'Comprar vino',
+                          doneText: 'Cambiar el tóner',
+                        ),
+                      ],
+                    ),
                     Wrap(
                       spacing: 8,
                       children: [
@@ -775,10 +805,17 @@ class _CalendarSample extends StatelessWidget {
 
 /// Muestra: un pendiente y un hecho.
 class _ListSample extends StatelessWidget {
-  const _ListSample({required this.colors, required this.night});
+  const _ListSample({
+    required this.colors,
+    required this.night,
+    this.pendingText = 'Llamar al dentista',
+    this.doneText = 'Pagar la luz',
+  });
 
   final ColorSet colors;
   final bool night;
+  final String pendingText;
+  final String doneText;
 
   @override
   Widget build(BuildContext context) {
@@ -816,8 +853,8 @@ class _ListSample extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        tile('Llamar al dentista', softColor(colors.pending), false),
-        tile('Pagar la luz', softColor(colors.done), true),
+        tile(pendingText, softColor(colors.pending), false),
+        tile(doneText, softColor(colors.done), true),
       ],
     );
   }

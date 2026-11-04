@@ -197,4 +197,58 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Leche'), findsOneWidget);
   });
+
+  testWidgets('tildar un ítem no cierra la nota y avisa si quedan cosas', (
+    tester,
+  ) async {
+    final s = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    final f = await s.addFolder('General', folderColors.first);
+    await s.addNotes(f, ['Compras']);
+    await s.replaceNote(
+      f,
+      f.items.single,
+      f.items.single.copyWith(sub: const [SubItem('Vino'), SubItem('Pan')]),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FolderPage(settings: s, folder: f),
+      ),
+    );
+    await tester.tap(find.text('Compras  (0/2)'));
+    await tester.pumpAndSettle();
+    // Checkbox 0 es la nota; 1 y 2, los ítems.
+    await tester.tap(find.byType(Checkbox).at(1));
+    await tester.pumpAndSettle();
+    expect(find.text('Pan'), findsOneWidget);
+    await tester.tap(find.text('Pan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pan'), findsOneWidget);
+    // Dar por hecha la nota con un ítem sin tildar: pregunta.
+    await tester.tap(find.byType(Checkbox).first);
+    await tester.pumpAndSettle();
+    expect(find.text('Fijate: quedaron cosas por hacer'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(f.items.single.done, isFalse);
+  });
+
+  testWidgets('buscador: lleva al ítem de adentro de una nota', (tester) async {
+    final s = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    final f = await s.addFolder('General', folderColors.first);
+    await s.addNotes(f, ['Compras']);
+    await s.replaceNote(
+      f,
+      f.items.single,
+      f.items.single.copyWith(sub: const [SubItem('Vino tinto')]),
+    );
+    await tester.pumpWidget(MaterialApp(home: NotebookPage(settings: s)));
+    await tester.enterText(find.byKey(const Key('notebook-search')), 'vino');
+    await tester.pumpAndSettle();
+    expect(find.text('En General › Compras'), findsOneWidget);
+    await tester.tap(find.text('Vino tinto'));
+    await tester.pumpAndSettle();
+    // Se abre la carpeta con la nota desplegada.
+    expect(find.text('Vino tinto'), findsOneWidget);
+    expect(find.text('Compras  (0/1)'), findsOneWidget);
+  });
 }
