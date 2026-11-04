@@ -26,7 +26,6 @@ final List<SnoozeOption> snoozeOptions = [
     id: 'snooze_15m',
     label: '15 min',
     apply: (now) => now.add(const Duration(minutes: 15)),
-    showInNotification: true,
   ),
   SnoozeOption(
     id: 'snooze_1h',
@@ -38,6 +37,8 @@ final List<SnoozeOption> snoozeOptions = [
     id: 'snooze_tomorrow',
     label: 'Mañana',
     apply: (now) => now.add(const Duration(days: 1)),
+    // Pedido del usuario: en la notificación, Hecho / 1 hora / Mañana.
+    showInNotification: true,
   ),
 ];
 
