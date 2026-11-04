@@ -166,39 +166,77 @@ class AppSettings extends ChangeNotifier {
     await _saveChat();
   }
 
-  // --- Libreta: cosas para hacer, sin fecha ni aviso ---
+  // --- Libreta: carpetas con cosas para hacer ---
 
-  /// Lo anotado, lo más nuevo primero.
-  final List<NoteItem> notes = [];
+  final List<NoteFolder> folders = [];
 
-  Future<void> addNotes(Iterable<String> texts) async {
+  Future<NoteFolder> addFolder(String name, int color) async {
+    final f = NoteFolder(name, color: color);
+    folders.add(f);
+    await saveNotes();
+    return f;
+  }
+
+  Future<void> deleteFolder(NoteFolder f) async {
+    folders.remove(f);
+    await saveNotes();
+  }
+
+  /// Suma cosas al final de los pendientes (antes de los hechos).
+  Future<List<NoteItem>> addNotes(NoteFolder f, Iterable<String> texts) async {
     final now = DateTime.now();
-    notes.insertAll(0, [for (final t in texts) NoteItem(t, at: now)]);
-    await _saveNotes();
+    final added = [for (final t in texts) NoteItem(t, at: now)];
+    final firstDone = f.items.indexWhere((n) => n.done);
+    f.items.insertAll(firstDone < 0 ? f.items.length : firstDone, added);
+    await saveNotes();
+    return added;
   }
 
-  Future<void> setNoteDone(NoteItem note, bool done) async {
-    final i = notes.indexOf(note);
-    if (i < 0) return;
-    notes[i] = note.copyWith(done: done);
-    await _saveNotes();
+  /// Hecho va al principio de los hechos; deshecho, al final de pendientes.
+  Future<NoteItem> setNoteDone(NoteFolder f, NoteItem n, bool done) async {
+    f.items.remove(n);
+    final updated = n.copyWith(done: done);
+    final firstDone = f.items.indexWhere((x) => x.done);
+    f.items.insert(firstDone < 0 ? f.items.length : firstDone, updated);
+    await saveNotes();
+    return updated;
   }
 
-  Future<void> removeNote(NoteItem note) async {
-    notes.remove(note);
-    await _saveNotes();
+  /// Sube (-1) o baja (+1) entre los de su misma lista.
+  Future<void> moveNote(NoteFolder f, NoteItem n, int dir) async {
+    final i = f.items.indexOf(n);
+    final j = i + dir;
+    if (i < 0 || j < 0 || j >= f.items.length) return;
+    if (f.items[j].done != n.done) return;
+    f.items[i] = f.items[j];
+    f.items[j] = n;
+    await saveNotes();
   }
 
-  Future<void> insertNote(int index, NoteItem note) async {
-    notes.insert(index.clamp(0, notes.length), note);
-    await _saveNotes();
+  Future<int> removeNote(NoteFolder f, NoteItem n) async {
+    final i = f.items.indexOf(n);
+    f.items.remove(n);
+    await saveNotes();
+    return i;
   }
 
-  String _encodeNotes() => jsonEncode([for (final n in notes) n.toJson()]);
+  Future<void> insertNote(NoteFolder f, int index, NoteItem n) async {
+    f.items.insert(index.clamp(0, f.items.length), n);
+    await saveNotes();
+  }
 
-  Future<void> _saveNotes() async {
+  Future<NoteItem> setNoteAlarm(NoteFolder f, NoteItem n, DateTime at) async {
+    final updated = n.copyWith(alarm: at);
+    final i = f.items.indexOf(n);
+    if (i >= 0) f.items[i] = updated;
+    await saveNotes();
+    return updated;
+  }
+
+  /// Guarda la libreta (también después de cambiar nombre o color).
+  Future<void> saveNotes() async {
     notifyListeners();
-    await _store.write('libreta', _encodeNotes());
+    await _store.write('libreta', NoteFolder.encodeAll(folders));
   }
 
   Future<void> _saveChat() => _store.write(
@@ -321,7 +359,7 @@ class AppSettings extends ChangeNotifier {
     'dia_noche': dayNight.name,
     'colores_dia': dayColors.encode(),
     'colores_noche': nightColors.encode(),
-    'libreta': _encodeNotes(),
+    'libreta': NoteFolder.encodeAll(folders),
     for (final id in providerIds)
       if (_models[id] != null) 'model_$id': _models[id]!,
     for (final id in providerIds)
@@ -362,13 +400,10 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> load(Iterable<String> providerIds) async {
     try {
-      notes
+      final loaded = NoteFolder.decodeAll(await _store.read('libreta'));
+      folders
         ..clear()
-        ..addAll(
-          (jsonDecode(await _store.read('libreta') ?? '[]') as List).map(
-            (e) => NoteItem.fromJson(e as Map<String, dynamic>),
-          ),
-        );
+        ..addAll(loaded);
     } catch (_) {}
     calendarId = await _store.read('cal_id');
     calendarName = await _store.read('cal_name');

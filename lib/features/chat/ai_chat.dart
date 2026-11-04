@@ -404,50 +404,65 @@ class _LastView extends StatelessWidget {
       ),
     );
 
-    final shortcuts = Row(
+    // Arriba la frase chica con "Ejemplos" al lado; abajo dos botones
+    // grandes iguales, de distinto color, que se agrandan al tocarlos.
+    final shortcuts = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: _BoxButton(
-            icon: Icons.lightbulb_outline,
-            label: 'Ejemplos',
-            onPressed: onExamples,
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Tocá el micrófono y decime qué querés que te recuerde y '
+                'cuándo.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              icon: const Icon(Icons.lightbulb_outline, size: 16),
+              label: const Text('Ejemplos'),
+              onPressed: onExamples,
+            ),
+          ],
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _BoxButton(
-            icon: Icons.edit_note,
-            label: 'Cargar a mano',
-            onPressed: onManual,
-            filled: true,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _BoxButton(
-            key: const Key('open-notebook'),
-            icon: Icons.menu_book_outlined,
-            label: 'Libreta',
-            onPressed: onNotebook,
-          ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _BigButton(
+                icon: Icons.edit_note,
+                label: 'Cargar a mano\nrecordatorios',
+                color: scheme.primary,
+                onPressed: onManual,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _BigButton(
+                key: const Key('open-notebook'),
+                icon: Icons.menu_book_outlined,
+                label: 'Libreta\n',
+                color: const Color(0xFFC98A00),
+                onPressed: onNotebook,
+              ),
+            ),
+          ],
         ),
       ],
     );
 
     if (last == null) {
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            'Tocá el micrófono y decime qué querés que te recuerde y cuándo.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 16),
-          shortcuts,
-        ],
-      );
+      return ListView(padding: const EdgeInsets.all(16), children: [shortcuts]);
     }
 
     final said = last.said;
@@ -564,50 +579,74 @@ class _LastView extends StatelessWidget {
   }
 }
 
-/// Botón con recuadro (Ejemplos, Cargar a mano).
-class _BoxButton extends StatelessWidget {
-  const _BoxButton({
+/// Botón grande (Cargar a mano / Libreta): al tocarlo se agranda y entra.
+class _BigButton extends StatefulWidget {
+  const _BigButton({
     super.key,
     required this.icon,
     required this.label,
+    required this.color,
     required this.onPressed,
-    this.filled = false,
   });
 
   final IconData icon;
   final String label;
+  final Color color;
   final VoidCallback onPressed;
 
-  /// Fondo amarillo claro (el amarillo fuerte queda para el micrófono).
-  final bool filled;
+  @override
+  State<_BigButton> createState() => _BigButtonState();
+}
+
+class _BigButtonState extends State<_BigButton> {
+  bool _big = false;
+
+  Future<void> _tap() async {
+    setState(() => _big = true);
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    if (!mounted) return;
+    widget.onPressed();
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (mounted) setState(() => _big = false);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-        backgroundColor: filled
-            ? scheme.secondary.withValues(alpha: 0.18)
-            : null,
-        foregroundColor: filled ? scheme.onSurface : null,
-        side: BorderSide(
-          color: filled
-              ? scheme.secondary.withValues(alpha: 0.7)
-              : scheme.primary.withValues(alpha: 0.5),
+    final c = widget.color;
+    return AnimatedScale(
+      scale: _big ? 1.12 : 1,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      child: Material(
+        color: c.withValues(alpha: 0.12),
+        elevation: _big ? 6 : 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: c, width: 2),
+          borderRadius: BorderRadius.circular(16),
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      onPressed: onPressed,
-      // Ícono arriba y texto abajo: entran tres en una fila.
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon),
-          const SizedBox(height: 2),
-          Text(label, textAlign: TextAlign.center, maxLines: 2),
-        ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _tap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+            child: Column(
+              children: [
+                Icon(widget.icon, size: 32, color: c),
+                const SizedBox(height: 6),
+                Text(
+                  widget.label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: TextStyle(
+                    color: c,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

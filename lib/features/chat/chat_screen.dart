@@ -121,7 +121,7 @@ class _ManualEntryState extends State<_ManualEntry> {
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: OutlinedButton.icon(
+          child: FilledButton.tonalIcon(
             key: const Key('open-notebook'),
             icon: const Icon(Icons.menu_book_outlined),
             label: const Text('Libreta'),

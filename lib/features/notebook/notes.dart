@@ -1,25 +1,113 @@
-/// Una cosa anotada en la libreta (sin fecha ni aviso).
+import 'dart:convert';
+
+/// Una cosa anotada en la libreta. Puede tener un aviso ([alarm]).
 class NoteItem {
-  const NoteItem(this.text, {this.done = false, required this.at});
+  const NoteItem(this.text, {this.done = false, required this.at, this.alarm});
 
   final String text;
   final bool done;
   final DateTime at;
 
-  NoteItem copyWith({bool? done}) =>
-      NoteItem(text, done: done ?? this.done, at: at);
+  /// Si se le puso aviso con la campanita: cuándo suena.
+  final DateTime? alarm;
+
+  NoteItem copyWith({bool? done, DateTime? alarm}) => NoteItem(
+    text,
+    done: done ?? this.done,
+    at: at,
+    alarm: alarm ?? this.alarm,
+  );
 
   Map<String, dynamic> toJson() => {
     't': text,
     if (done) 'd': true,
     'at': at.toIso8601String(),
+    if (alarm != null) 'al': alarm!.toIso8601String(),
   };
 
   static NoteItem fromJson(Map<String, dynamic> j) => NoteItem(
     '${j['t']}',
     done: j['d'] == true,
     at: DateTime.tryParse('${j['at']}') ?? DateTime.now(),
+    alarm: j['al'] == null ? null : DateTime.tryParse('${j['al']}'),
   );
+}
+
+/// Colores para las carpetas (ARGB).
+const folderColors = <int>[
+  0xFFE0A800, // amarillo
+  0xFF2F6FB3, // azul
+  0xFF2E8B57, // verde
+  0xFFD9534F, // rojo
+  0xFF8E5CC2, // violeta
+  0xFFE67E22, // naranja
+  0xFF16A2B8, // celeste
+  0xFF7F8C8D, // gris
+];
+
+/// Una carpeta de la libreta (Impresora, Auto…). Primero los pendientes, en
+/// el orden que eligió el usuario, y después los hechos.
+class NoteFolder {
+  NoteFolder(this.name, {this.color = 0xFFE0A800, List<NoteItem>? items})
+    : items = items ?? [];
+
+  String name;
+  int color;
+  final List<NoteItem> items;
+
+  List<NoteItem> get pending => [
+    for (final n in items)
+      if (!n.done) n,
+  ];
+  List<NoteItem> get done => [
+    for (final n in items)
+      if (n.done) n,
+  ];
+
+  Map<String, dynamic> toJson() => {
+    'n': name,
+    'c': color,
+    'i': [for (final n in items) n.toJson()],
+  };
+
+  static NoteFolder fromJson(Map<String, dynamic> j) => NoteFolder(
+    '${j['n']}',
+    color: (j['c'] as num?)?.toInt() ?? folderColors.first,
+    items: [
+      for (final e in (j['i'] as List? ?? const []))
+        NoteItem.fromJson(e as Map<String, dynamic>),
+    ],
+  );
+
+  /// Lo guardado: `{"carpetas": [...]}`. La primera versión guardaba una
+  /// lista suelta de cosas: va a una carpeta "General".
+  static List<NoteFolder> decodeAll(String? raw) {
+    if (raw == null || raw.isEmpty) return [];
+    final data = jsonDecode(raw);
+    if (data is List) {
+      if (data.isEmpty) return [];
+      final items = [
+        for (final e in data) NoteItem.fromJson(e as Map<String, dynamic>),
+      ];
+      return [
+        NoteFolder(
+          'General',
+          items: [
+            ...items.where((n) => !n.done),
+            ...items.where((n) => n.done),
+          ],
+        ),
+      ];
+    }
+    return [
+      for (final e in (data['carpetas'] as List? ?? const []))
+        NoteFolder.fromJson(e as Map<String, dynamic>),
+    ];
+  }
+
+  static String encodeAll(List<NoteFolder> folders) => jsonEncode({
+    'carpetas': [for (final f in folders) f.toJson()],
+  });
 }
 
 // Contando: "uno … dos … tres", "primero … segundo", "1. … 2)".
