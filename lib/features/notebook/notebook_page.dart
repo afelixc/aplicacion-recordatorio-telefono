@@ -104,17 +104,32 @@ class _NotebookPageState extends State<NotebookPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 10,
-                  crossAxisSpacing: 10,
-                  childAspectRatio: 1.35,
-                  children: [
-                    for (final f in _s.folders)
-                      _FolderCard(folder: f, onTap: () => _open(f)),
-                  ],
+                LayoutBuilder(
+                  builder: (context, box) {
+                    // Ancho del nombre: tarjeta menos borde y márgenes.
+                    final nameWidth = (box.maxWidth - 10) / 2 - 4 - 24;
+                    final size = folderNameSize(
+                      MediaQuery.textScalerOf(context),
+                      [for (final f in _s.folders) f.name],
+                      nameWidth,
+                    );
+                    return GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: 1.4,
+                      children: [
+                        for (final f in _s.folders)
+                          _FolderCard(
+                            folder: f,
+                            nameSize: size,
+                            onTap: () => _open(f),
+                          ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
@@ -186,7 +201,13 @@ class _NotebookPageState extends State<NotebookPage> {
 }
 
 class _FolderCard extends StatelessWidget {
-  const _FolderCard({required this.folder, required this.onTap});
+  const _FolderCard({
+    required this.folder,
+    required this.nameSize,
+    required this.onTap,
+  });
+
+  final double nameSize;
 
   final NoteFolder folder;
   final VoidCallback onTap;
@@ -207,23 +228,39 @@ class _FolderCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(Icons.folder, color: color),
-              const SizedBox(height: 4),
-              Text(
-                folder.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  height: 1.15,
+              // El nombre arranca al lado de la carpeta y sigue abajo, a lo
+              // ancho de la tarjeta.
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Icon(Icons.folder, color: color, size: 26),
+                        ),
+                      ),
+                      TextSpan(text: folder.name),
+                    ],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: nameSize,
+                    height: 1.2,
+                  ),
                 ),
               ),
-              const SizedBox(height: 4),
-              ToDoBadge(toDo),
+              const SizedBox(height: 6),
+              // Siempre en el mismo lugar, abajo, y entra entero.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FittedBox(fit: BoxFit.scaleDown, child: ToDoBadge(toDo)),
+              ),
             ],
           ),
         ),
@@ -268,6 +305,7 @@ Future<(String, int)?> editFolder(BuildContext context, {NoteFolder? folder}) {
               TextField(
                 key: const Key('folder-name'),
                 controller: name,
+                maxLength: folderNameMax,
                 autofocus: folder == null,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: const InputDecoration(
@@ -1265,6 +1303,56 @@ class _Paper extends StatelessWidget {
     );
   }
 }
+
+/// Tamaño de letra de los nombres de las carpetas: el más grande en el que
+/// ninguna palabra se corta por la mitad y todo entra en dos renglones. Es
+/// el mismo para todas, así quedan parejas.
+double folderNameSize(TextScaler scaler, List<String> names, double width) {
+  bool fits(String text, double size, int lines, {bool icon = false}) {
+    final p = TextPainter(
+      text: TextSpan(
+        children: [
+          if (icon) const WidgetSpan(child: SizedBox()),
+          TextSpan(text: text),
+        ],
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: size,
+          height: 1.2,
+        ),
+      ),
+      textScaler: scaler,
+      textDirection: TextDirection.ltr,
+      maxLines: lines,
+    );
+    if (icon) {
+      p.setPlaceholderDimensions(const [
+        PlaceholderDimensions(
+          size: Size(32, 26),
+          alignment: PlaceholderAlignment.middle,
+        ),
+      ]);
+    }
+    p.layout(maxWidth: width);
+    final ok = !p.didExceedMaxLines;
+    p.dispose();
+    return ok;
+  }
+
+  for (var size = 17.0; size > 11; size -= 1) {
+    final all = names.every(
+      (n) =>
+          n.split(RegExp(r'\s+')).every((w) => fits(w, size, 1)) &&
+          fits(n, size, 2, icon: true),
+    );
+    if (all) return size;
+  }
+  return 11;
+}
+
+/// Largo máximo del nombre de una carpeta, para que las tarjetas queden
+/// parejas (dos renglones).
+const folderNameMax = 20;
 
 /// Cartelito resaltado con lo que falta hacer ("2 por hacer").
 class ToDoBadge extends StatelessWidget {
