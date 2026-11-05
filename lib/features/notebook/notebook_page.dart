@@ -228,31 +228,20 @@ class _FolderCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // El nombre arranca al lado de la carpeta y sigue abajo, a lo
-              // ancho de la tarjeta.
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      WidgetSpan(
-                        alignment: PlaceholderAlignment.middle,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: Icon(Icons.folder, color: color, size: 26),
-                        ),
-                      ),
-                      TextSpan(text: folder.name),
-                    ],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: nameSize,
-                    height: 1.2,
-                  ),
+              // Arriba la carpeta y abajo el nombre, en un solo renglón,
+              // a la misma altura en todas las tarjetas.
+              Icon(Icons.folder, color: color, size: 30),
+              const Spacer(),
+              Text(
+                folder.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: nameSize,
+                  height: 1.2,
                 ),
               ),
               const SizedBox(height: 6),
@@ -1305,16 +1294,13 @@ class _Paper extends StatelessWidget {
 }
 
 /// Tamaño de letra de los nombres de las carpetas: el más grande en el que
-/// ninguna palabra se corta por la mitad y todo entra en dos renglones. Es
-/// el mismo para todas, así quedan parejas.
+/// cada nombre entra entero en un renglón. Es el mismo para todas, así
+/// quedan parejas.
 double folderNameSize(TextScaler scaler, List<String> names, double width) {
-  bool fits(String text, double size, int lines, {bool icon = false}) {
+  bool fits(String text, double size) {
     final p = TextPainter(
       text: TextSpan(
-        children: [
-          if (icon) const WidgetSpan(child: SizedBox()),
-          TextSpan(text: text),
-        ],
+        text: text,
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: size,
@@ -1323,36 +1309,22 @@ double folderNameSize(TextScaler scaler, List<String> names, double width) {
       ),
       textScaler: scaler,
       textDirection: TextDirection.ltr,
-      maxLines: lines,
-    );
-    if (icon) {
-      p.setPlaceholderDimensions(const [
-        PlaceholderDimensions(
-          size: Size(32, 26),
-          alignment: PlaceholderAlignment.middle,
-        ),
-      ]);
-    }
-    p.layout(maxWidth: width);
+      maxLines: 1,
+    )..layout(maxWidth: width);
     final ok = !p.didExceedMaxLines;
     p.dispose();
     return ok;
   }
 
   for (var size = 17.0; size > 11; size -= 1) {
-    final all = names.every(
-      (n) =>
-          n.split(RegExp(r'\s+')).every((w) => fits(w, size, 1)) &&
-          fits(n, size, 2, icon: true),
-    );
-    if (all) return size;
+    if (names.every((n) => fits(n, size))) return size;
   }
   return 11;
 }
 
 /// Largo máximo del nombre de una carpeta, para que las tarjetas queden
-/// parejas (dos renglones).
-const folderNameMax = 20;
+/// parejas (un renglón).
+const folderNameMax = 15;
 
 /// Cartelito resaltado con lo que falta hacer ("2 por hacer").
 class ToDoBadge extends StatelessWidget {
