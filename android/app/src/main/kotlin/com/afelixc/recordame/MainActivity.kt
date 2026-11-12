@@ -7,6 +7,7 @@ import android.content.Intent
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaMetadataRetriever
+import android.media.MediaPlayer
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
@@ -36,6 +37,7 @@ class MainActivity : FlutterActivity() {
     private val calendarPermissionRequest = 4714
     private var pendingPermission: MethodChannel.Result? = null
     private var playing: Ringtone? = null
+    private var player: MediaPlayer? = null
     private val handler = Handler(Looper.getMainLooper())
     private val stopSound = Runnable { stop() }
 
@@ -46,15 +48,23 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "elegir" -> pick(call.argument<String>("actual"), result)
                     "probar" -> {
-                        play(
-                            call.argument<String>("uri"),
-                            call.argument<Boolean>("alarma") ?: false,
-                            call.argument<Int>("ms") ?: 4000,
-                            call.argument<Boolean>("repetir") ?: false,
-                        )
-                        result.success(null)
+                        val uri = call.argument<String>("uri")
+                        if (call.argument<Boolean>("aviso") == true) {
+                            result.success(
+                                playAsNotification(
+                                    uri,
+                                    call.argument<Boolean>("alarma") ?: false,
+                                    call.argument<Int>("ms") ?: 4000,
+                                    call.argument<Boolean>("repetir") ?: false,
+                                ),
+                            )
+                        } else {
+                            play(uri)
+                            result.success(null)
+                        }
                     }
                     "volumen" -> result.success(volumes())
+                    "subirVolumen" -> result.success(raiseVolume(call.argument<Boolean>("alarma") ?: false))
                     "duracion" -> {
                         val uri = call.argument<String>("uri")
                         Thread {
@@ -297,39 +307,89 @@ class MainActivity : FlutterActivity() {
         null
     }
 
-    /**
-     * Hace sonar un sonido desde la app. [alarm] usa el volumen de la alarma
-     * (los avisos "aunque esté en silencio"); si no, el de las notificaciones.
-     * [loop] lo repite hasta que pasen [millis] (la prioridad alta).
-     */
-    private fun play(uri: String?, alarm: Boolean = false, millis: Int = 4000, loop: Boolean = false) {
+    private fun target(uri: String?): Uri = if (uri == null) {
+        RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+    } else {
+        Uri.parse(uri)
+    }
+
+    /** Escuchar un sonido mientras se elige (como antes de la versión 1.0.61). */
+    private fun play(uri: String?) {
         stop()
-        val target = if (uri == null) {
-            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        } else {
-            Uri.parse(uri)
-        }
-        val ringtone = RingtoneManager.getRingtone(this, target) ?: return
-        ringtone.audioAttributes = AudioAttributes.Builder()
+        playing = RingtoneManager.getRingtone(this, target(uri))
+        playing?.play()
+        // Que no suene para siempre si se eligió un tono de llamada.
+        handler.postDelayed(stopSound, 4000)
+    }
+
+    /**
+     * "Probar": suena como va a sonar el aviso, con el volumen de las
+     * notificaciones ([alarm]: con el de la alarma). [loop] lo repite hasta
+     * que pasen [millis] (la prioridad alta). Devuelve el error, si hubo.
+     */
+    private fun playAsNotification(uri: String?, alarm: Boolean, millis: Int, loop: Boolean): String? {
+        stop()
+        val attrs = AudioAttributes.Builder()
             .setUsage(if (alarm) AudioAttributes.USAGE_ALARM else AudioAttributes.USAGE_NOTIFICATION)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        if (loop && Build.VERSION.SDK_INT >= 28) ringtone.isLooping = true
-        playing = ringtone
-        ringtone.play()
-        // Que no suene para siempre si se eligió un tono de llamada.
-        handler.postDelayed(stopSound, millis.toLong().coerceIn(500L, 60000L))
+        return try {
+            val mp = MediaPlayer()
+            player = mp
+            mp.setAudioAttributes(attrs)
+            mp.setDataSource(this, target(uri))
+            mp.isLooping = loop
+            mp.setOnErrorListener { _, _, _ ->
+                stop()
+                true
+            }
+            mp.prepare()
+            mp.start()
+            handler.postDelayed(stopSound, millis.toLong().coerceIn(500L, 60000L))
+            null
+        } catch (e: Exception) {
+            stop()
+            // Si ese sonido no se puede abrir, al menos el de siempre.
+            play(uri)
+            e.message ?: e.javaClass.simpleName
+        }
     }
 
     /** Volumen de las notificaciones y de la alarma (0 = no se escucha). */
     private fun volumes(): Map<String, Int> {
         val audio = getSystemService(AUDIO_SERVICE) as AudioManager
+        fun muted(stream: Int) =
+            if (Build.VERSION.SDK_INT >= 23 && audio.isStreamMute(stream)) 1 else 0
         return mapOf(
             "notificaciones" to audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION),
+            "notificacionesMax" to audio.getStreamMaxVolume(AudioManager.STREAM_NOTIFICATION),
+            "notificacionesMudo" to muted(AudioManager.STREAM_NOTIFICATION),
             "alarma" to audio.getStreamVolume(AudioManager.STREAM_ALARM),
+            "alarmaMax" to audio.getStreamMaxVolume(AudioManager.STREAM_ALARM),
             // 0 = silencio, 1 = vibrar, 2 = normal.
             "modo" to audio.ringerMode,
         )
+    }
+
+    /** Sube el volumen de las notificaciones (o de la alarma) a 3/4. */
+    private fun raiseVolume(alarm: Boolean): Boolean = try {
+        val audio = getSystemService(AUDIO_SERVICE) as AudioManager
+        if (!alarm && audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
+            audio.ringerMode = AudioManager.RINGER_MODE_NORMAL
+        }
+        val stream = if (alarm) AudioManager.STREAM_ALARM else AudioManager.STREAM_NOTIFICATION
+        if (Build.VERSION.SDK_INT >= 23) {
+            audio.adjustStreamVolume(stream, AudioManager.ADJUST_UNMUTE, 0)
+        }
+        val max = audio.getStreamMaxVolume(stream)
+        val want = (max * 3 + 3) / 4
+        if (audio.getStreamVolume(stream) < want) {
+            audio.setStreamVolume(stream, want, AudioManager.FLAG_SHOW_UI)
+        }
+        audio.getStreamVolume(stream) > 0
+    } catch (e: Exception) {
+        // Con "No molestar" prendido Android no deja: se abre el ajuste.
+        false
     }
 
     /** Cuánto dura un sonido del teléfono, en milisegundos (null si no se sabe). */
@@ -354,6 +414,15 @@ class MainActivity : FlutterActivity() {
         handler.removeCallbacks(stopSound)
         playing?.stop()
         playing = null
+        player?.let {
+            try {
+                it.stop()
+            } catch (e: Exception) {
+                // Ya estaba parado.
+            }
+            it.release()
+        }
+        player = null
     }
 
     /** Prende el ícono elegido (activity-alias) y apaga los demás. */

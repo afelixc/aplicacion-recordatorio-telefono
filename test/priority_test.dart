@@ -253,4 +253,30 @@ void main() {
     expect(find.byKey(const Key('alta-phone')), findsOneWidget);
     expect(find.text('Elegir un sonido del teléfono…'), findsOneWidget);
   });
+
+  testWidgets('el ejemplo: HECHO, 1 HORA y MAÑANA alineados en un renglón', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(600, 1200);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Padding(
+            padding: EdgeInsets.all(16),
+            child: NotificationExample(),
+          ),
+        ),
+      ),
+    );
+    final hecho = tester.getRect(find.text('HECHO'));
+    final manana = tester.getRect(find.text('MAÑANA'));
+    final hora = tester.getRect(find.text('1 HORA'));
+    // Misma altura (un solo renglón) y a la misma altura en la pantalla.
+    // (si no entra, la letra se achica un poco pero no baja de renglón).
+    expect(manana.height, lessThan(hecho.height * 1.2));
+    expect(manana.center.dy, closeTo(hecho.center.dy, 0.5));
+    expect(hora.center.dy, closeTo(hecho.center.dy, 0.5));
+  });
 }

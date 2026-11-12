@@ -7,6 +7,7 @@ import '../notifications/notification_service.dart';
 import '../notifications/notification_sound.dart';
 import '../notifications/priority_config.dart';
 import '../notifications/priority_sounds.dart';
+import 'notifications_section.dart';
 
 /// Color de cada prioridad (las ventanitas y los botones del Chat).
 Color priorityColor(ReminderPriority p) => switch (p) {
@@ -162,11 +163,21 @@ class NotificationExample extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    // Cada botón en un renglón, centrado (si no entra, la letra se achica).
     Widget button(String t) => Expanded(
-      child: Text(
-        t,
-        textAlign: TextAlign.center,
-        style: TextStyle(color: scheme.primary, fontWeight: FontWeight.w800),
+      child: Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            t,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: scheme.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
       ),
     );
     return Container(
@@ -231,8 +242,12 @@ class _PriorityPageState extends State<PriorityPage> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       final warning = await widget.service.showPriorityTest(widget.priority);
-      if (warning != null) {
-        messenger.showSnackBar(SnackBar(content: Text(warning)));
+      if (warning != null && mounted) {
+        showSoundWarning(
+          context,
+          warning,
+          () => widget.service.showPriorityTest(widget.priority),
+        );
       }
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('No se pudo: $e')));

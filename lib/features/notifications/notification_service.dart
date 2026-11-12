@@ -30,6 +30,7 @@ class NotificationStatus {
     required this.pending,
     required this.timeZone,
     this.lastError,
+    this.volume,
   });
 
   final bool enabled;
@@ -37,6 +38,9 @@ class NotificationStatus {
   final int pending;
   final String timeZone;
   final String? lastError;
+
+  /// Volumen de las notificaciones (null si no se sabe).
+  final SoundVolume? volume;
 }
 
 /// Notificaciones locales de Android. Funcionan sin internet, con la app
@@ -157,6 +161,7 @@ class NotificationService implements ReminderScheduler {
     pending: (await _plugin.pendingNotificationRequests()).length,
     timeZone: tz.local.name,
     lastError: lastError,
+    volume: await SoundPicker.volume(),
   );
 
   /// Muestra un aviso de prueba ahora mismo. Devuelve un aviso si el volumen
@@ -627,8 +632,8 @@ class NotificationService implements ReminderScheduler {
   ///
   /// Con la app abierta, algunos teléfonos muestran el aviso y vibran pero no
   /// lo hacen sonar: por eso el aviso de prueba va sin sonido y el sonido lo
-  /// hace la app (el mismo que va a tener el recordatorio). Devuelve un
-  /// mensaje si el volumen está en cero.
+  /// hace la app (el mismo y con el mismo volumen que el recordatorio).
+  /// Devuelve un mensaje si no se va a escuchar.
   Future<String?> showPriorityTest(
     ReminderPriority priority, {
     bool loud = false,
@@ -648,18 +653,20 @@ class NotificationService implements ReminderScheduler {
         timeoutMs: alta ? _ringMillis : null,
       ),
     );
-    await SoundPicker.play(
+    final error = await SoundPicker.test(
       soundUriFor(priority),
       alarm: loud,
       millis: alta ? _ringMillis : 4000,
       loop: alta,
     );
-    if (await SoundPicker.isMuted(alarm: loud)) {
-      return loud
-          ? 'El volumen de la alarma está en cero: subilo para escucharlo.'
-          : 'El teléfono está en silencio o vibrar (o el volumen de las '
-                'notificaciones en cero): subilo para escucharlo.';
+    final v = await SoundPicker.volume();
+    if (v != null) {
+      if (loud && !v.alarmAudible) {
+        return 'El volumen de la alarma está en cero.';
+      }
+      if (!loud && !v.notificationsAudible) return '${v.notificationsText}.';
     }
+    if (error != null) return 'No se pudo hacer sonar ese sonido ($error).';
     return null;
   }
 

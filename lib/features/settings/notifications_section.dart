@@ -118,6 +118,18 @@ class _NotificationsSectionState extends State<NotificationsSection>
                       _refresh();
                     },
                   ),
+                  if (s.volume != null)
+                    _StatusRow(
+                      ok: s.volume!.notificationsAudible,
+                      okText: s.volume!.notificationsText,
+                      badText: s.volume!.notificationsText,
+                      actionLabel: 'Subir',
+                      onAction: () async {
+                        final ok = await SoundPicker.raiseVolume();
+                        if (!ok) await SoundPicker.openSoundSettings();
+                        _refresh();
+                      },
+                    ),
                   Text(
                     'Avisos programados: ${s.pending} · Zona horaria: ${s.timeZone}',
                     style: theme.textTheme.bodySmall,
@@ -143,31 +155,33 @@ class _NotificationsSectionState extends State<NotificationsSection>
                   children: [
                     Expanded(
                       child: FilledButton.tonal(
+                        style: _testStyle,
                         onPressed: () async {
-                          final messenger = ScaffoldMessenger.of(context);
                           String? warning;
                           await _run(
                             () async => warning = await service.showTest(),
                             'Aviso de prueba enviado',
                           );
-                          if (warning != null) {
-                            messenger.showSnackBar(
-                              SnackBar(content: Text(warning!)),
-                            );
+                          if (warning != null && context.mounted) {
+                            showSoundWarning(context, warning!, () async {
+                              await service.showTest();
+                              _refresh();
+                            });
                           }
                         },
-                        child: const Text('Aviso ahora'),
+                        child: const _OneLine('Aviso ahora'),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: FilledButton.tonal(
+                        style: _testStyle,
                         onPressed: () => _run(
                           () =>
                               service.scheduleTest(const Duration(minutes: 1)),
                           'Te llega un aviso en 1 minuto. Podés cerrar la app.',
                         ),
-                        child: const Text('Aviso en 1 minuto'),
+                        child: const _OneLine('Aviso en 1 minuto'),
                       ),
                     ),
                   ],
@@ -179,6 +193,49 @@ class _NotificationsSectionState extends State<NotificationsSection>
       ),
     );
   }
+}
+
+/// Los botones "Probar": el texto en un renglón y bien centrado.
+final _testStyle = FilledButton.styleFrom(
+  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+  alignment: Alignment.center,
+);
+
+class _OneLine extends StatelessWidget {
+  const _OneLine(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => FittedBox(
+    fit: BoxFit.scaleDown,
+    child: Text(text, maxLines: 1, textAlign: TextAlign.center),
+  );
+}
+
+/// Cartel cuando el aviso de prueba no se va a escuchar, con "Subir volumen".
+void showSoundWarning(
+  BuildContext context,
+  String warning,
+  Future<void> Function() retry, {
+  bool alarm = false,
+}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      duration: const Duration(seconds: 8),
+      content: Text(warning),
+      action: SnackBarAction(
+        label: 'Subir volumen',
+        onPressed: () async {
+          if (await SoundPicker.raiseVolume(alarm: alarm)) {
+            await retry();
+          } else {
+            await SoundPicker.openSoundSettings();
+          }
+        },
+      ),
+    ),
+  );
 }
 
 class _StatusRow extends StatelessWidget {
