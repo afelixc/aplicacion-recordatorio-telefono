@@ -1,0 +1,261 @@
+<title>Prioridades de Recordame</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+/* Teléfono a la izquierda (maqueta que se toca), explicación a la derecha; una columna en celular */
+:root{
+  --bg:#eef1f5; --fg:#1d2430; --muted:#5f6b7a; --phone:#ffffff; --bar:#2f6fb3; --barfg:#fff;
+  --line:#d5dbe3; --accent:#2f6fb3; --soft:#e4eef9;
+  --manual:#2f6fb3; --manualbg:#e4eef9; --lib:#c98a00; --libbg:#fff3cf;
+  --ok:#2e8b57; --okbg:#e3f3ea; --mid:#c27a00; --midbg:#fff1d6; --high:#c43c3c; --highbg:#fde6e6;
+  --kb:#d3d8de; --key:#ffffff; --badge:#d84315;
+  --body:'Nunito',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24476e; --barfg:#e8f1ff;
+  --line:#33404f; --accent:#7fb2ea; --soft:#22364c;
+  --manual:#7fb2ea; --manualbg:#1f3248; --lib:#f0c04a; --libbg:#3a3214;
+  --ok:#5cc28a; --okbg:#1d3427; --mid:#f0b54a; --midbg:#3a2e14; --high:#ff7b7b; --highbg:#3d1f1f;
+  --kb:#2a313b; --key:#3a434f; --badge:#e0603a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24476e; --barfg:#e8f1ff;
+  --line:#33404f; --accent:#7fb2ea; --soft:#22364c;
+  --manual:#7fb2ea; --manualbg:#1f3248; --lib:#f0c04a; --libbg:#3a3214;
+  --ok:#5cc28a; --okbg:#1d3427; --mid:#f0b54a; --midbg:#3a2e14; --high:#ff7b7b; --highbg:#3d1f1f;
+  --kb:#2a313b; --key:#3a434f; --badge:#e0603a; color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px}
+.wrap{max-width:940px;margin:0 auto;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.phone{width:360px;max-width:100%;background:var(--phone);border:10px solid #10151c;border-radius:34px;overflow:hidden;
+  display:flex;flex-direction:column;height:720px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.top{background:var(--bar);color:var(--barfg);padding:14px 16px;font-weight:800;letter-spacing:.06em;display:flex;align-items:center;gap:10px}
+.top button{background:none;border:0;color:inherit;font-size:22px;cursor:pointer;padding:0 4px;line-height:1}
+.subtabs{display:flex;border-bottom:1px solid var(--line);font-size:13px}
+.subtabs div{flex:1;text-align:center;padding:9px 0;color:var(--muted)}
+.subtabs div.on{color:var(--accent);font-weight:800;border-bottom:2px solid var(--accent)}
+.screen{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;border-top:1px solid var(--line)}
+.tabs button{flex:1;text-align:center;font:11px var(--body);padding:8px 0;color:var(--muted);background:none;border:0;cursor:pointer}
+.tabs button.on{color:var(--accent);font-weight:800}
+.tabs b{display:block;font-size:18px}
+/* Inicio del chat */
+.introrow{display:flex;align-items:center;gap:8px}
+.hint{flex:1;min-width:0;font-size:11.5px;color:var(--muted);margin:0;line-height:1.3}
+.chip{border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:9px;padding:4px 8px;font:700 11px var(--body);cursor:pointer;white-space:nowrap}
+.bigs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.big{border:2px solid;border-radius:16px;padding:10px 6px;font:800 15px/1.25 var(--body);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+.big .ic{font-size:26px;line-height:1}
+.big.manual{border-color:var(--manual);background:var(--manualbg);color:var(--manual)}
+.big.lib{border-color:var(--lib);background:var(--libbg);color:var(--lib);font-size:17px}
+.big.lib .ic{font-size:30px}
+.pill{background:var(--badge);color:#fff;border-radius:20px;padding:1px 9px;font-size:12px;font-weight:800}
+/* Tarjeta del recordatorio */
+.said{font-size:12px;color:var(--muted);font-style:italic;margin:0}
+.card{border:1.5px solid var(--ok);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.card.off{border-color:var(--line)}
+.st{color:var(--ok);font-weight:800;font-size:14px}
+.card.off .st{color:var(--muted)}
+.ttl{font-weight:800;font-size:17px}
+.card.off .ttl{text-decoration:line-through}
+.acts{display:flex;gap:8px;margin-top:4px}
+.acts button{flex:1;min-width:0;white-space:nowrap;border-radius:20px;padding:6px 6px;font:700 13px var(--body);cursor:pointer}
+.acts .cancel{background:transparent;border:1px solid var(--line);color:var(--fg)}
+.acts .mod{background:var(--soft);border:1px solid var(--soft);color:var(--fg)}
+.prio{display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-top:8px;border-top:1px dashed var(--line)}
+.prio .lbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{border:2px solid var(--line);background:transparent;color:var(--fg);border-radius:12px;padding:8px 2px;font:800 14px var(--body);cursor:pointer}
+.seg button[data-p="normal"].on{border-color:var(--ok);background:var(--okbg);color:var(--ok)}
+.seg button[data-p="media"].on{border-color:var(--mid);background:var(--midbg);color:var(--mid)}
+.seg button[data-p="alta"].on{border-color:var(--high);background:var(--highbg);color:var(--high)}
+.what{font-size:12.5px;color:var(--muted);line-height:1.35;margin:0}
+/* Barra de abajo y teclado */
+.micbar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.field{flex:1;min-width:0;border:1px solid var(--line);border-radius:24px;padding:10px 14px;font:15px var(--body);background:var(--phone);color:var(--fg)}
+.mic{width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:var(--phone);font-size:18px;cursor:pointer;flex:none}
+.sendb{border:0;border-radius:22px;background:var(--accent);color:var(--phone);font:800 13px var(--body);padding:12px 12px;cursor:pointer;flex:none}
+.kb{background:var(--kb);padding:8px 4px 10px;display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.kb span{background:var(--key);border-radius:5px;text-align:center;padding:9px 0;font-size:13px;color:var(--fg)}
+.kb .wide{grid-column:span 6}
+.kb .w2{grid-column:span 2}
+/* Configuración */
+.box{border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.box h3{margin:0;padding:8px 12px;font-size:15px;display:flex;align-items:center;gap:8px}
+.box.n{border-color:var(--ok)} .box.n h3{background:var(--okbg);color:var(--ok)}
+.box.m{border-color:var(--mid)} .box.m h3{background:var(--midbg);color:var(--mid)}
+.box.a{border-color:var(--high)} .box.a h3{background:var(--highbg);color:var(--high)}
+.box .in{padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row label{min-width:0;flex:1 1 110px}
+select{font:700 13px var(--body);border:1px solid var(--line);border-radius:8px;padding:6px;background:var(--phone);color:var(--fg)}
+.chk{display:flex;align-items:center;gap:8px}
+.chk input{width:18px;height:18px;accent-color:var(--accent)}
+.test{align-self:flex-start;border:1px solid var(--line);background:var(--soft);color:var(--fg);border-radius:9px;padding:6px 10px;font:700 12.5px var(--body);cursor:pointer}
+.times{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.4}
+.notif{background:var(--soft);border-radius:12px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.notif .nb{display:flex;gap:6px}
+.notif .nb span{flex:1;text-align:center;font-weight:800;color:var(--accent);font-size:12px}
+/* Explicación */
+.side{flex:1;min-width:0;max-width:480px;display:flex;flex-direction:column;gap:14px}
+.side h1{margin:0;font-size:26px;text-wrap:balance}
+.side ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;line-height:1.45}
+.try{display:flex;flex-direction:column;gap:8px;background:var(--phone);border:1px solid var(--line);border-radius:12px;padding:14px}
+.try button{font:700 14px var(--body);border:2px solid var(--accent);background:var(--soft);color:var(--fg);border-radius:10px;padding:10px;cursor:pointer;text-align:left}
+.q{background:var(--phone);border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.45}
+.q h2{margin:0 0 6px;font-size:16px}
+.q ul{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <div class="phone">
+    <div class="top" id="top"></div>
+    <div id="sub"></div>
+    <div class="screen" id="screen"></div>
+    <div id="bottom"></div>
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div class="side">
+    <h1>Prioridad de los recordatorios</h1>
+    <ol>
+      <li>Arriba, la frase <b>“Tocá el micrófono…”</b> queda más chica, con <b>Ejemplos</b> al lado.</li>
+      <li>Los dos cuadros, <b>Cargar a mano</b> y <b>Libreta</b>, quedan un poco más bajos (unos 2 mm). La Libreta (amarilla) tiene la letra y el dibujo un poco más grandes.</li>
+      <li>Cuando mandás un recordatorio, escrito o dictado, <b>el teclado se esconde solo</b> y aparece la tarjeta: <i>Dijiste…</i>, <b>Activo</b>, el nombre y el día.</li>
+      <li><b>Cancelar</b> y <b>Modificar</b> quedan más chicos, cada uno en un solo renglón.</li>
+      <li>Debajo, nuevo: <b>Prioridad: Normal · Media · Alta</b>. Arranca en Normal y la cambiás con un toque.</li>
+      <li>En <b>Configuración → Notificaciones</b> elegís qué hace cada prioridad. Con <b>Probar sonido</b> lo escuchás acá en la compu (en la compu es un “bip”; en el teléfono va a ser tu sonido).</li>
+    </ol>
+    <div class="try">
+      <b>Probalo:</b>
+      <button id="t1">1. Tocá el campo de escribir (sale el teclado) y después “Enviar”</button>
+      <button id="t2">2. Ir a Configuración → Notificaciones</button>
+      <button id="t3">Volver al principio</button>
+    </div>
+    <div class="q"><h2>Lo que te propongo para cada una</h2>
+      <ul>
+        <li><b style="color:var(--ok)">Normal:</b> avisa una vez, como ahora.</li>
+        <li><b style="color:var(--mid)">Media:</b> repite el aviso cada 5 minutos durante 8 horas, <b>hasta que toques “Hecho”</b>. Vos elegís cada cuánto (3, 5, 10, 15 min) y hasta cuándo (1 h, 3 h, 8 h, todo el día).</li>
+        <li><b style="color:var(--high)">Alta:</b> el sonido <b>suena seguido</b> (como 5 o 6 bocinitas) y vibra fuerte. Además repite cada 3 minutos hasta “Hecho”. Si querés, sale en <b>pantalla completa</b> como una alarma.</li>
+      </ul>
+    </div>
+    <div class="q"><h2>Para decidir</h2>
+      ¿Querés que <b>Alta</b> suene también con el teléfono en silencio (como el despertador)? Se puede, pero Android te va a pedir un permiso una sola vez.</div>
+  </div>
+</div>
+
+<script>
+const S={view:'chat',kb:false,text:'',sent:false,active:true,prio:'normal',
+  cfg:{mEvery:5,mFor:'8 h',aBeeps:6,aEvery:3,aFull:true,aSilent:false}};
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sample='mañana a las 10 llamar al contador por los papeles del auto';
+
+function whatText(p){
+  const c=S.cfg;
+  if(p==='normal')return 'Te avisa una vez, a la hora del recordatorio.';
+  if(p==='media')return `Te avisa y repite cada ${c.mEvery} minutos durante ${c.mFor}, hasta que toques “Hecho”.`;
+  return `Suena ${c.aBeeps} veces seguidas y vibra fuerte; repite cada ${c.aEvery} minutos hasta “Hecho”${c.aFull?', en pantalla completa':''}.`;
+}
+
+function render(){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===(S.view==='chat'?'chat':'conf')));
+  if(S.view==='chat')chat(); else conf();
+}
+
+function chat(){
+  $('top').innerHTML='TE RECORDARÉ';
+  $('sub').innerHTML='<div class="subtabs"><div class="on">Último recordatorio</div><div>Chat completo</div></div>';
+  let h='';
+  if(!S.sent){
+    h+=`<div class="introrow"><p class="hint">Tocá el micrófono y decime qué querés que te recuerde y cuándo.</p><button class="chip">💡 Ejemplos</button></div>
+    <div class="bigs">
+      <button class="big manual"><span class="ic">📝</span>Cargar a mano<br>recordatorios</button>
+      <button class="big lib"><span class="ic">📒</span>Libreta<span class="pill">2 por hacer</span></button>
+    </div>`;
+  }else{
+    h+=`<div class="card${S.active?'':' off'}">
+      <p class="said">Dijiste: “${esc(S.text)}”</p>
+      <div class="st">${S.active?'✔ Activo':'✖ Cancelado'}</div>
+      <div class="ttl">Llamar al contador por los papeles del auto</div>
+      <div>Mañana 10:00</div>
+      <div class="acts">${S.active
+        ?'<button class="cancel" id="bc">✕ Cancelar</button><button class="mod">✎ Modificar</button>'
+        :'<button class="cancel" id="br">↶ Volver a activarlo</button>'}</div>
+      ${S.active?`<div class="prio"><span class="lbl">Prioridad</span>
+        <div class="seg">${['normal','media','alta'].map(p=>`<button data-p="${p}" class="${S.prio===p?'on':''}">${p[0].toUpperCase()+p.slice(1)}</button>`).join('')}</div>
+        <p class="what">${whatText(S.prio)}</p></div>`:''}
+    </div>`;
+    if(S.active)h+=`<div class="notif"><b>Así te va a llegar la notificación:</b>
+      <span>🔔 Llamar al contador por los papeles del auto</span>
+      <div class="nb"><span>HECHO</span><span>1 HORA</span><span>MAÑANA</span></div></div>`;
+  }
+  $('screen').innerHTML=h;
+  $('bottom').innerHTML=`<div class="micbar"><input class="field" id="field" placeholder="Escribí acá…" value="${esc(S.kb?S.text:'')}" aria-label="Escribir"><button class="sendb" id="send">Enviar</button><button class="mic" id="mic" aria-label="Dictar">🎤</button></div>`
+    +(S.kb?'<div class="kb">'+'qwertyuiopasdfghjklñ'.split('').map(k=>`<span>${k}</span>`).join('')+'<span class="w2">⇧</span><span class="wide">espacio</span><span class="w2">↵</span></div>':'');
+  $('field').onfocus=()=>{if(!S.kb){S.kb=true;S.text=sample;render();$('field').focus();}};
+  $('field').oninput=e=>S.text=e.target.value;
+  $('send').onclick=send;
+  $('mic').onclick=()=>{S.text=sample;send();};
+  document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{S.prio=b.dataset.p;render();});
+  if($('bc'))$('bc').onclick=()=>{S.active=false;render();};
+  if($('br'))$('br').onclick=()=>{S.active=true;render();};
+}
+function send(){S.text=(S.text||sample).trim()||sample;S.kb=false;S.sent=true;S.active=true;S.prio='normal';render();}
+
+function opts(list,cur,suf){return list.map(v=>`<option${String(v)===String(cur)?' selected':''} value="${v}">${v}${suf}</option>`).join('');}
+function timeline(every,forTxt){
+  const hours={'1 h':1,'3 h':3,'8 h':8,'todo el día':14}[forTxt];const out=[];
+  for(let m=0;m<=hours*60&&out.length<6;m+=every){const t=10*60+m;out.push(`${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`);}
+  return out.join(' · ')+' …';
+}
+function conf(){
+  const c=S.cfg;
+  $('top').innerHTML='<button id="back" aria-label="Volver">←</button> Notificaciones';
+  $('sub').innerHTML='';
+  $('bottom').innerHTML='';
+  $('screen').innerHTML=`
+  <p class="what">Elegí qué hace cada prioridad. Se aplica a todos los recordatorios que tengan esa prioridad.</p>
+  <div class="box n"><h3>● Normal</h3><div class="in">Avisa una vez, como ahora.<button class="test" data-t="normal">▶ Probar sonido</button></div></div>
+  <div class="box m"><h3>● Media</h3><div class="in">
+    <div class="row"><label for="me">Repetir cada</label><select id="me">${opts([3,5,10,15],c.mEvery,' min')}</select></div>
+    <div class="row"><label for="mf">Durante</label><select id="mf">${opts(['1 h','3 h','8 h','todo el día'],c.mFor,'')}</select></div>
+    <div class="times">Si es a las 10:00: ${timeline(c.mEvery,c.mFor)}<br>Se corta cuando tocás “Hecho”.</div>
+    <button class="test" data-t="media">▶ Probar sonido</button></div></div>
+  <div class="box a"><h3>● Alta</h3><div class="in">
+    <div class="row"><label for="ab">Bocinitas seguidas</label><select id="ab">${opts([3,5,6,10],c.aBeeps,'')}</select></div>
+    <div class="row"><label for="ae">Repetir cada</label><select id="ae">${opts([1,2,3,5],c.aEvery,' min')}</select></div>
+    <label class="chk"><input type="checkbox" id="af"${c.aFull?' checked':''}> Pantalla completa, como alarma</label>
+    <label class="chk"><input type="checkbox" id="as"${c.aSilent?' checked':''}> Sonar aunque el teléfono esté en silencio</label>
+    <div class="times">Hasta que toques “Hecho”, con vibración fuerte.</div>
+    <button class="test" data-t="alta">▶ Probar sonido</button></div></div>`;
+  $('back').onclick=()=>{S.view='chat';render();};
+  $('me').onchange=e=>{c.mEvery=+e.target.value;conf();};
+  $('mf').onchange=e=>{c.mFor=e.target.value;conf();};
+  $('ab').onchange=e=>{c.aBeeps=+e.target.value;};
+  $('ae').onchange=e=>{c.aEvery=+e.target.value;};
+  $('af').onchange=e=>{c.aFull=e.target.checked;};
+  $('as').onchange=e=>{c.aSilent=e.target.checked;};
+  document.querySelectorAll('.test').forEach(b=>b.onclick=()=>beep(b.dataset.t));
+}
+
+let ac;
+function beep(kind){
+  try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();}catch(e){return;}
+  const n=kind==='alta'?S.cfg.aBeeps:1, gap=kind==='alta'?0.32:0;
+  const f=kind==='alta'?880:kind==='media'?700:620;
+  for(let i=0;i<n;i++){
+    const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+i*gap;
+    o.frequency.value=f;o.type=kind==='alta'?'square':'sine';
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.25,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.25);
+    o.connect(g).connect(ac.destination);o.start(t);o.stop(t+0.27);
+  }
+}
+
+$('tabs').innerHTML='<button data-v="chat"><b>💬</b>Chat</button><button data-v="x"><b>📅</b>Almanaque</button><button data-v="y"><b>☰</b>Listado</button><button data-v="conf"><b>⚙</b>Configuración</button>';
+document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{if(b.dataset.v==='chat'||b.dataset.v==='conf'){S.view=b.dataset.v;render();}});
+$('t1').onclick=()=>{S.view='chat';S.sent=false;S.kb=true;S.text=sample;render();};
+$('t2').onclick=()=>{S.view='conf';render();};
+$('t3').onclick=()=>{S.view='chat';S.sent=false;S.kb=false;S.text='';render();};
+render();
+</script>
