@@ -338,29 +338,71 @@ class _OccurrenceTile extends StatelessWidget {
         side: BorderSide(color: theme.colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: ListTile(
-        leading: Text(
-          Fmt.time(occurrence.at),
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
+      clipBehavior: Clip.antiAlias,
+      // Todos del mismo alto, de dos renglones (pedido del usuario): si el
+      // texto no entra, se corta con "…" y se lee entero al tocarlo.
+      child: InkWell(
+        onTap: () => showReminderEditor(context, reminder: r),
+        child: SizedBox(
+          height: occurrenceTileHeight,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                Text(
+                  Fmt.time(occurrence.at),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        r.title,
+                        maxLines: r.repeats ? 1 : 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.25,
+                          decoration: done ? TextDecoration.lineThrough : null,
+                          color: done
+                              ? theme.colorScheme.onSurfaceVariant
+                              : null,
+                        ),
+                      ),
+                      if (r.repeats)
+                        Text(
+                          r.recurrence.describe(r.dueAt),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (done || r.repeats) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    done ? Icons.check_circle : Icons.repeat,
+                    color: done
+                        ? Colors.green
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
-        title: Text(
-          r.title,
-          style: done
-              ? TextStyle(
-                  decoration: TextDecoration.lineThrough,
-                  color: theme.colorScheme.onSurfaceVariant,
-                )
-              : null,
-        ),
-        subtitle: r.repeats ? Text(r.recurrence.describe(r.dueAt)) : null,
-        trailing: Icon(
-          done ? Icons.check_circle : (r.repeats ? Icons.repeat : null),
-          color: done ? Colors.green : theme.colorScheme.onSurfaceVariant,
-        ),
-        onTap: () => showReminderEditor(context, reminder: r),
       ),
     );
   }
 }
+
+/// Alto de cada recordatorio en la lista del día del almanaque.
+const occurrenceTileHeight = 62.0;

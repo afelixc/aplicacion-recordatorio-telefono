@@ -993,7 +993,9 @@ class _HistoryView extends StatelessWidget {
           ),
         );
       }
-      items.add(ChatBubble(text: m.text, mine: m.mine, error: m.error));
+      items.add(
+        ChatBubble(text: m.text, mine: m.mine, error: m.error, at: m.at),
+      );
     }
     items.add(
       Center(

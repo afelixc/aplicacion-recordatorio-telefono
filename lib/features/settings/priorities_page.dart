@@ -163,9 +163,19 @@ class NotificationExample extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    // Cada botón en un renglón, centrado (si no entra, la letra se achica).
+    // Tres casilleros separados, del mismo ancho, con el texto centrado y en
+    // un renglón (si no entra, la letra se achica). Así 1 HORA queda justo
+    // en el medio entre HECHO y MAÑANA.
     Widget button(String t) => Expanded(
-      child: Center(
+      child: Container(
+        height: 34,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          border: Border.all(color: scheme.primary.withValues(alpha: 0.6)),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
@@ -203,7 +213,10 @@ class NotificationExample extends StatelessWidget {
           ),
           Text('Recordatorio · 10:00 h', style: theme.textTheme.bodySmall),
           const SizedBox(height: 8),
-          Row(children: [button('HECHO'), button('1 HORA'), button('MAÑANA')]),
+          Row(
+            spacing: 8,
+            children: [button('HECHO'), button('1 HORA'), button('MAÑANA')],
+          ),
         ],
       ),
     );

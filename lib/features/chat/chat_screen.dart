@@ -172,11 +172,15 @@ class ChatBubble extends StatelessWidget {
     required this.text,
     this.mine = false,
     this.error = false,
+    this.at,
   });
 
   final String text;
   final bool mine;
   final bool error;
+
+  /// Hora en que se mandó (en el chat completo).
+  final DateTime? at;
 
   @override
   Widget build(BuildContext context) {
@@ -210,7 +214,27 @@ class ChatBubble extends StatelessWidget {
             bottomRight: mine ? const Radius.circular(4) : r,
           ),
         ),
-        child: Text(text, style: TextStyle(color: fg)),
+        child: at == null
+            ? Text(text, style: TextStyle(color: fg))
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 1,
+                    child: Text(text, style: TextStyle(color: fg)),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    Fmt.time(at!),
+                    style: TextStyle(
+                      color: fg.withValues(alpha: 0.7),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
       ),
     );
   }

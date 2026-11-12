@@ -156,28 +156,105 @@ class _MenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return _BoxedTile(
       warn: warn,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: warn
-              ? scheme.errorContainer
-              : scheme.primaryContainer,
-          foregroundColor: warn ? scheme.error : scheme.onPrimaryContainer,
-          child: Icon(icon),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          subtitle,
-          style: warn ? TextStyle(color: scheme.error) : null,
-        ),
-        trailing: const Icon(Icons.chevron_right),
+      child: InkWell(
         onTap: () =>
             Navigator.of(context).push(MaterialPageRoute(builder: page)),
+        // Todos los recuadros del mismo tamaño (pedido del usuario): el
+        // título y la explicación en un renglón cada uno; si no entran, la
+        // letra se achica un poco.
+        child: SizedBox(
+          height: menuItemHeight,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 16, right: 8),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: warn
+                      ? scheme.errorContainer
+                      : scheme.primaryContainer,
+                  foregroundColor: warn
+                      ? scheme.error
+                      : scheme.onPrimaryContainer,
+                  child: Icon(icon),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FitLine(
+                        title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      _FitLine(
+                        subtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: warn ? scheme.error : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
+}
+
+/// Alto de cada recuadro del menú de Configuración.
+const menuItemHeight = 72.0;
+
+/// Un renglón: si no entra, la letra se achica (hasta cierto punto; después
+/// se corta con "…").
+class _FitLine extends StatelessWidget {
+  const _FitLine(this.text, {this.style});
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, c) {
+      final base = style ?? DefaultTextStyle.of(context).style;
+      final size = base.fontSize ?? 14;
+      final scaler = MediaQuery.textScalerOf(context);
+      // Se prueba de a medio punto hasta que entre (como mucho un 25 % menos).
+      var fit = size;
+      while (fit > size * 0.75) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: text,
+            style: base.copyWith(fontSize: fit),
+          ),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+        )..layout();
+        final fits = tp.width <= c.maxWidth;
+        tp.dispose();
+        if (fits) break;
+        fit -= 0.5;
+      }
+      return Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: base.copyWith(fontSize: fit),
+      );
+    },
+  );
 }
 
 /// Recuadro de cada opción del menú.
