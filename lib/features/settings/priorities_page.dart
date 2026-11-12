@@ -230,11 +230,68 @@ class _PriorityPageState extends State<PriorityPage> {
   Future<void> _test() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await widget.service.showPriorityTest(widget.priority);
+      final warning = await widget.service.showPriorityTest(widget.priority);
+      if (warning != null) {
+        messenger.showSnackBar(SnackBar(content: Text(warning)));
+      }
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text('No se pudo: $e')));
     }
   }
+
+  /// Elige un sonido del teléfono para la media o la alta.
+  Future<void> _pickFromPhone({required bool alta}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final current = alta ? _c.altaPhoneUri : _c.mediaPhoneUri;
+    try {
+      final picked = await SoundPicker.pickFromPhone(current);
+      if (picked == null || picked.uri == null) return;
+      final uri = picked.uri!;
+      if (alta) {
+        final ms = await SoundPicker.duration(uri);
+        await _set(
+          _c.copyWith(
+            altaSound: PriorityConfig.phoneSound,
+            altaPhoneUri: uri,
+            altaPhoneName: picked.name,
+            altaPhoneMillis: ms ?? 3000,
+          ),
+        );
+      } else {
+        await _set(
+          _c.copyWith(
+            mediaSound: PriorityConfig.phoneSound,
+            mediaPhoneUri: uri,
+            mediaPhoneName: picked.name,
+          ),
+        );
+      }
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Este teléfono no deja elegir sonidos desde otra app.'),
+        ),
+      );
+    }
+  }
+
+  /// "Elegir otro sonido del teléfono…", debajo de la lista de sonidos.
+  Widget _phoneButton({required bool alta}) => Card(
+    elevation: 0,
+    margin: const EdgeInsets.only(top: 4),
+    shape: RoundedRectangleBorder(
+      side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: ListTile(
+      key: Key(alta ? 'alta-phone' : 'media-phone'),
+      dense: true,
+      leading: const Icon(Icons.library_music_outlined),
+      title: const Text('Elegir un sonido del teléfono…'),
+      subtitle: const Text('Tonos, alarmas y notificaciones'),
+      onTap: () => _pickFromPhone(alta: alta),
+    ),
+  );
 
   @override
   void dispose() {
@@ -327,6 +384,10 @@ class _PriorityPageState extends State<PriorityPage> {
     );
   }
 
+  static const _stops =
+      'Se corta cuando tocás "Hecho". Si tocás "1 hora" o "Mañana", se calla '
+      'y a esa hora vuelve a empezar a repetir.';
+
   String _hour(int h) => '${h.toString().padLeft(2, '0')}:00';
 
   @override
@@ -399,7 +460,7 @@ class _PriorityPageState extends State<PriorityPage> {
             const SizedBox(height: 4),
             Text(
               'Si es a las 10:00: ${times(c.mediaRepeats(example))}.\n'
-              'Se corta cuando tocás "Hecho".',
+              '$_stops',
               style: theme.textTheme.bodySmall,
             ),
           ]),
@@ -417,10 +478,17 @@ class _PriorityPageState extends State<PriorityPage> {
                 widget.service.soundUri,
               ),
               for (final s in mediaSounds) (s.id, s.name, _raw(s.id)),
+              if (c.mediaPhoneUri != null)
+                (
+                  PriorityConfig.phoneSound,
+                  'Del teléfono: ${c.mediaPhoneName ?? 'sonido elegido'}',
+                  c.mediaPhoneUri,
+                ),
             ],
             c.mediaSound,
             (id) => _set(c.copyWith(mediaSound: id)),
           ),
+          _phoneButton(alta: false),
         ]);
       case ReminderPriority.alta:
         children.addAll([
@@ -464,7 +532,7 @@ class _PriorityPageState extends State<PriorityPage> {
             ),
             Text(
               'Si es a las 10:00: ${times(c.altaRepeats(example))}.\n'
-              'Se corta cuando tocás "Hecho".',
+              '$_stops',
               style: theme.textTheme.bodySmall,
             ),
           ]),
@@ -475,10 +543,19 @@ class _PriorityPageState extends State<PriorityPage> {
           ),
           const SizedBox(height: 6),
           _sounds(
-            [for (final s in altaSounds) (s.id, s.name, _raw(s.id))],
+            [
+              for (final s in altaSounds) (s.id, s.name, _raw(s.id)),
+              if (c.altaPhoneUri != null)
+                (
+                  PriorityConfig.phoneSound,
+                  'Del teléfono: ${c.altaPhoneName ?? 'sonido elegido'}',
+                  c.altaPhoneUri,
+                ),
+            ],
             c.altaSound,
             (id) => _set(c.copyWith(altaSound: id)),
           ),
+          _phoneButton(alta: true),
         ]);
     }
     children.addAll([

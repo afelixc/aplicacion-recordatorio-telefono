@@ -143,8 +143,19 @@ class _NotificationsSectionState extends State<NotificationsSection>
                   children: [
                     Expanded(
                       child: FilledButton.tonal(
-                        onPressed: () =>
-                            _run(service.showTest, 'Aviso de prueba enviado'),
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          String? warning;
+                          await _run(
+                            () async => warning = await service.showTest(),
+                            'Aviso de prueba enviado',
+                          );
+                          if (warning != null) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text(warning!)),
+                            );
+                          }
+                        },
                         child: const Text('Aviso ahora'),
                       ),
                     ),

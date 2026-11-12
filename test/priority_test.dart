@@ -63,6 +63,39 @@ void main() {
     expect(PriorityConfig.decode(null).altaSound, 'a_sirena');
   });
 
+  test('media y alta pueden usar un sonido del teléfono', () {
+    const uri = 'content://media/internal/audio/media/42';
+    const c = PriorityConfig(
+      mediaSound: PriorityConfig.phoneSound,
+      mediaPhoneUri: uri,
+      mediaPhoneName: 'Tono lindo',
+      altaSound: PriorityConfig.phoneSound,
+      altaPhoneUri: uri,
+      altaPhoneName: 'Alarma larga',
+      altaPhoneMillis: 45000,
+    );
+    final back = PriorityConfig.decode(c.encode());
+    expect(back.mediaFromPhone, isTrue);
+    expect(back.mediaSoundName, 'Tono lindo');
+    expect(back.altaFromPhone, isTrue);
+    expect(back.altaSoundName, 'Alarma larga');
+    // Los del teléfono pueden ser largos: se toman hasta 20 segundos.
+    expect(back.altaMillis, 20000);
+    // Sin sonido elegido, vuelve a los de la app.
+    const sinTel = PriorityConfig(altaSound: PriorityConfig.phoneSound);
+    expect(sinTel.altaFromPhone, isFalse);
+    expect(sinTel.altaSoundName, 'Sirena');
+    // Cada sonido del teléfono tiene su canal, siempre con el mismo nombre.
+    expect(
+      NotificationService.soundKey(uri),
+      NotificationService.soundKey(uri),
+    );
+    expect(
+      NotificationService.soundKey(uri),
+      isNot(NotificationService.soundKey('$uri/1')),
+    );
+  });
+
   test('hay 6 sonidos nuevos para media y 16 para alta', () {
     expect(mediaSounds.length, 6);
     expect(altaSounds.length, 16);
@@ -110,6 +143,50 @@ void main() {
       final now = ten.add(const Duration(minutes: 7));
       final t = NotificationService.repeatTimes(r, c, now);
       expect(t.first, DateTime(2026, 11, 21, 10, 5));
+    });
+
+    test('uno que no se repite y se pospone 1 hora: vuelve a repetir', () {
+      final r = Reminder(
+        title: 'x',
+        // "1 hora" mueve la fecha del recordatorio.
+        dueAt: ten.add(const Duration(hours: 1)),
+        priority: ReminderPriority.media,
+      );
+      final now = ten.add(const Duration(minutes: 7));
+      final t = NotificationService.repeatTimes(r, c, now);
+      expect(t.first, DateTime(2026, 11, 20, 11, 5));
+      expect(t.last, DateTime(2026, 11, 20, 12));
+    });
+
+    test('uno diario pospuesto a mañana: hoy se calla y mañana repite', () {
+      final r = Reminder(
+        title: 'x',
+        dueAt: DateTime(2026, 11, 1, 10),
+        recurrence: const Recurrence.daily(),
+        priority: ReminderPriority.media,
+        snoozedUntil: DateTime(2026, 11, 21, 10, 7),
+      );
+      final now = ten.add(const Duration(minutes: 7));
+      final t = NotificationService.repeatTimes(r, c, now);
+      // Nada más hoy.
+      expect(t.every((d) => d.day == 21), isTrue);
+      // Mañana repite desde la hora a la que se pospuso.
+      expect(t, contains(DateTime(2026, 11, 21, 10, 12)));
+      expect(t.length, lessThanOrEqualTo(PriorityConfig.maxRepeats));
+    });
+
+    test('uno diario pospuesto 1 hora: repite desde esa hora', () {
+      final r = Reminder(
+        title: 'x',
+        dueAt: DateTime(2026, 11, 1, 10),
+        recurrence: const Recurrence.daily(),
+        priority: ReminderPriority.media,
+        snoozedUntil: DateTime(2026, 11, 20, 11, 7),
+      );
+      final now = ten.add(const Duration(minutes: 7));
+      final t = NotificationService.repeatTimes(r, c, now);
+      expect(t.first, DateTime(2026, 11, 20, 11, 12));
+      expect(t.where((d) => d.day == 20).last, DateTime(2026, 11, 20, 12, 7));
     });
 
     test('uno diario sin hacer: sigue repitiendo el de hoy', () {
@@ -168,5 +245,12 @@ void main() {
     expect(find.text('Cuántas veces suena seguido'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Pitido urgente'), 200);
     expect(find.text('Sirena de policía'), findsOneWidget);
+    // Abajo de todo: elegir un sonido del teléfono.
+    for (var i = 0; i < 6; i++) {
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('alta-phone')), findsOneWidget);
+    expect(find.text('Elegir un sonido del teléfono…'), findsOneWidget);
   });
 }

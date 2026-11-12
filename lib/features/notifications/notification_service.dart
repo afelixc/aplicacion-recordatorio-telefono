@@ -159,12 +159,12 @@ class NotificationService implements ReminderScheduler {
     lastError: lastError,
   );
 
-  /// Muestra un aviso de prueba ahora mismo.
-  Future<void> showTest() => _plugin.show(
-    id: 0,
+  /// Muestra un aviso de prueba ahora mismo. Devuelve un aviso si el volumen
+  /// de las notificaciones está en cero.
+  Future<String?> showTest() => showPriorityTest(
+    ReminderPriority.normal,
     title: 'Aviso de prueba',
     body: 'Si ves esto, las notificaciones funcionan.',
-    notificationDetails: _details(),
   );
 
   /// Programa un aviso de prueba para dentro de [delay].
@@ -200,6 +200,8 @@ class NotificationService implements ReminderScheduler {
       await _android?.requestNotificationsPermission() ?? true;
 
   Future<void> _onResponse(NotificationResponse response) async {
+    // El aviso de prueba: tocarlo corta el sonido.
+    if (response.id == 0) unawaited(SoundPicker.stop());
     final id = reminderIdOf(response);
     if (id == null) return;
     final handled =
@@ -279,27 +281,52 @@ class NotificationService implements ReminderScheduler {
         audioAttributesUsage: AudioAttributesUsage.alarm,
       );
 
+  /// Clave corta y fija para el nombre del canal de un sonido del teléfono
+  /// (Android no deja cambiar el sonido de un canal: uno por sonido).
+  static String soundKey(String uri) {
+    var h = 0x811c9dc5;
+    for (final c in uri.codeUnits) {
+      h = ((h ^ c) * 0x01000193) & 0xffffffff;
+    }
+    return h.toRadixString(36);
+  }
+
   AndroidNotificationChannel _mediaChannel() {
     final id = priorities.mediaSound;
     if (id == PriorityConfig.appSound) return _channel;
+    if (priorities.mediaFromPhone) {
+      final uri = priorities.mediaPhoneUri!;
+      return AndroidNotificationChannel(
+        'prio_media_tel_${soundKey(uri)}',
+        'Prioridad media · ${priorities.mediaSoundName}',
+        description: 'Avisos que se repiten hasta tocar Hecho',
+        importance: Importance.high,
+        sound: UriAndroidNotificationSound(uri),
+      );
+    }
     return AndroidNotificationChannel(
-      'prio_media_$id',
+      'prio_media_${priorities.mediaSoundId}',
       'Prioridad media · ${priorities.mediaSoundName}',
       description: 'Avisos que se repiten hasta tocar Hecho',
       importance: Importance.high,
-      sound: UriAndroidNotificationSound(_raw(id)),
+      sound: UriAndroidNotificationSound(_raw(priorities.mediaSoundId)),
     );
   }
 
   AndroidNotificationChannel _altaChannel() {
-    final sound = priorities.altaSoundInfo;
+    final phone = priorities.altaFromPhone;
+    final key = phone
+        ? 'tel_${soundKey(priorities.altaPhoneUri!)}'
+        : priorities.altaSoundInfo.id;
     final vib = priorities.altaVibrate;
     return AndroidNotificationChannel(
-      'prio_alta_${sound.id}_${vib ? 'v' : 'n'}',
-      'Prioridad alta · ${sound.name}${vib ? ' · vibra' : ''}',
+      'prio_alta_${key}_${vib ? 'v' : 'n'}',
+      'Prioridad alta · ${priorities.altaSoundName}${vib ? ' · vibra' : ''}',
       description: 'Avisos que suenan seguido hasta tocar Hecho',
       importance: Importance.max,
-      sound: UriAndroidNotificationSound(_raw(sound.id)),
+      sound: UriAndroidNotificationSound(
+        phone ? priorities.altaPhoneUri! : _raw(key),
+      ),
       enableVibration: vib,
       vibrationPattern: vib
           ? Int64List.fromList(const [0, 900, 300, 900, 300, 900, 300, 900])
@@ -349,8 +376,24 @@ class NotificationService implements ReminderScheduler {
   }
 
   /// Lo que suena cada aviso de prioridad alta ("cuántas veces seguido").
+  /// Nunca más de 55 segundos, para que no se pise con la repetición.
   int get _ringMillis =>
-      priorities.altaSoundInfo.millis * priorities.altaTimes + 300;
+      (priorities.altaMillis * priorities.altaTimes + 300).clamp(1000, 55000);
+
+  /// Sonido de cada prioridad (null = el de notificación del teléfono).
+  String? soundUriFor(ReminderPriority p) => switch (p) {
+    ReminderPriority.normal => _soundUri,
+    ReminderPriority.media =>
+      priorities.mediaSound == PriorityConfig.appSound
+          ? _soundUri
+          : priorities.mediaFromPhone
+          ? priorities.mediaPhoneUri
+          : _raw(priorities.mediaSoundId),
+    ReminderPriority.alta =>
+      priorities.altaFromPhone
+          ? priorities.altaPhoneUri
+          : _raw(priorities.altaSoundInfo.id),
+  };
 
   /// Cada recordatorio usa los números de aviso `id * 100` a `id * 100 + 99`:
   /// uno por cada día de la semana o fecha suelta, y el último para "Posponer".
@@ -518,8 +561,29 @@ class NotificationService implements ReminderScheduler {
         );
       }
     }
-    if (first == null) return const [];
-    return repeatsOf(first).where((t) => t.isAfter(now)).toList();
+    final out = first == null
+        ? <DateTime>[]
+        : repeatsOf(first).where((t) => t.isAfter(now)).toList();
+    // Uno que se repite y se pospuso ("1 hora", "Mañana"): a esa hora vuelve
+    // a empezar a repetir, igual que uno que no se repite.
+    final snoozed = r.snoozedUntil;
+    final doneAfter =
+        snoozed != null &&
+        r.lastDoneAt != null &&
+        !r.lastDoneAt!.isBefore(snoozed);
+    if (r.repeats && snoozed != null && !doneAfter) {
+      final again = repeatsOf(snoozed).where((t) => t.isAfter(now)).toList();
+      if (again.isNotEmpty) {
+        // Mientras repite lo pospuesto, no se suman las de la vez normal.
+        out.removeWhere((t) => !t.isBefore(snoozed) && !t.isAfter(again.last));
+        out.addAll(again);
+        out.sort();
+      }
+    }
+    final unique = out.toSet().toList();
+    return unique.length > PriorityConfig.maxRepeats
+        ? unique.sublist(0, PriorityConfig.maxRepeats)
+        : unique;
   }
 
   @override
@@ -541,23 +605,62 @@ class NotificationService implements ReminderScheduler {
     } catch (_) {}
   }
 
+  /// Para la prueba: sin sonido (lo hace sonar la app), con o sin vibrar.
+  static final _testVibrate = AndroidNotificationChannel(
+    'prueba_vibra',
+    'Avisos de prueba',
+    description: 'El aviso de "Probar"; el sonido lo hace la app',
+    importance: Importance.high,
+    playSound: false,
+    vibrationPattern: Int64List.fromList(const [0, 400, 200, 400]),
+  );
+  static const _testQuiet = AndroidNotificationChannel(
+    'prueba_sin_vibrar',
+    'Avisos de prueba (sin vibrar)',
+    description: 'El aviso de "Probar"; el sonido lo hace la app',
+    importance: Importance.high,
+    playSound: false,
+    enableVibration: false,
+  );
+
   /// Hace sonar un aviso de prueba con la prioridad elegida.
-  Future<void> showPriorityTest(
+  ///
+  /// Con la app abierta, algunos teléfonos muestran el aviso y vibran pero no
+  /// lo hacen sonar: por eso el aviso de prueba va sin sonido y el sonido lo
+  /// hace la app (el mismo que va a tener el recordatorio). Devuelve un
+  /// mensaje si el volumen está en cero.
+  Future<String?> showPriorityTest(
     ReminderPriority priority, {
     bool loud = false,
+    String? title,
+    String body = 'Así te va a sonar.',
   }) async {
-    final r = Reminder(
-      title: 'Prueba · prioridad ${priority.label.toLowerCase()}',
-      dueAt: DateTime.now(),
-      priority: priority,
-      loud: loud,
-    );
+    final alta = priority == ReminderPriority.alta;
+    final vibrate = !alta || priorities.altaVibrate;
+    final ch = await _ensure(vibrate ? _testVibrate : _testQuiet);
     await _plugin.show(
       id: 0,
-      title: r.title,
-      body: 'Así te va a sonar.',
-      notificationDetails: await _detailsFor(r),
+      title: title ?? 'Prueba · prioridad ${priority.label.toLowerCase()}',
+      body: body,
+      notificationDetails: _build(
+        ch,
+        max: alta,
+        timeoutMs: alta ? _ringMillis : null,
+      ),
     );
+    await SoundPicker.play(
+      soundUriFor(priority),
+      alarm: loud,
+      millis: alta ? _ringMillis : 4000,
+      loop: alta,
+    );
+    if (await SoundPicker.isMuted(alarm: loud)) {
+      return loud
+          ? 'El volumen de la alarma está en cero: subilo para escucharlo.'
+          : 'El teléfono está en silencio o vibrar (o el volumen de las '
+                'notificaciones en cero): subilo para escucharlo.';
+    }
+    return null;
   }
 
   @override

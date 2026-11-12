@@ -19,6 +19,11 @@ class PriorityConfig {
     this.altaVibrate = true,
     this.altaFullScreen = true,
     this.altaSound = 'a_sirena',
+    this.mediaPhoneUri,
+    this.mediaPhoneName,
+    this.altaPhoneUri,
+    this.altaPhoneName,
+    this.altaPhoneMillis,
   });
 
   /// Media: cada cuántos minutos repite.
@@ -45,7 +50,20 @@ class PriorityConfig {
   final bool altaFullScreen;
   final String altaSound;
 
+  /// Sonido elegido del teléfono (cuando el sonido es [phoneSound]).
+  final String? mediaPhoneUri;
+  final String? mediaPhoneName;
+  final String? altaPhoneUri;
+  final String? altaPhoneName;
+
+  /// Lo que dura el sonido del teléfono de la alta (para "cuántas veces").
+  final int? altaPhoneMillis;
+
   static const appSound = 'app';
+  static const phoneSound = 'tel';
+
+  bool get mediaFromPhone => mediaSound == phoneSound && mediaPhoneUri != null;
+  bool get altaFromPhone => altaSound == phoneSound && altaPhoneUri != null;
 
   /// Opciones de las listas.
   static const everyOptions = [3, 5, 10, 15, 30];
@@ -69,8 +87,24 @@ class PriorityConfig {
     orElse: () => altaSounds.first,
   );
 
+  String get altaSoundName =>
+      altaFromPhone ? altaPhoneName ?? 'Del teléfono' : altaSoundInfo.name;
+
+  /// Lo que dura una vez el sonido de la alta. Los del teléfono pueden ser
+  /// largos: se toman hasta 20 segundos.
+  int get altaMillis => altaFromPhone
+      ? (altaPhoneMillis ?? 3000).clamp(1000, 20000)
+      : altaSoundInfo.millis;
+
+  /// Sonido propio de la media (si el elegido no existe, el primero).
+  String get mediaSoundId => mediaSounds.any((s) => s.id == mediaSound)
+      ? mediaSound
+      : mediaSounds.first.id;
+
   String get mediaSoundName => mediaSound == appSound
       ? 'El de la app'
+      : mediaFromPhone
+      ? mediaPhoneName ?? 'Del teléfono'
       : mediaSounds
             .firstWhere(
               (s) => s.id == mediaSound,
@@ -91,6 +125,11 @@ class PriorityConfig {
     bool? altaVibrate,
     bool? altaFullScreen,
     String? altaSound,
+    String? mediaPhoneUri,
+    String? mediaPhoneName,
+    String? altaPhoneUri,
+    String? altaPhoneName,
+    int? altaPhoneMillis,
   }) => PriorityConfig(
     mediaEvery: mediaEvery ?? this.mediaEvery,
     mediaFor: mediaFor ?? this.mediaFor,
@@ -104,6 +143,11 @@ class PriorityConfig {
     altaVibrate: altaVibrate ?? this.altaVibrate,
     altaFullScreen: altaFullScreen ?? this.altaFullScreen,
     altaSound: altaSound ?? this.altaSound,
+    mediaPhoneUri: mediaPhoneUri ?? this.mediaPhoneUri,
+    mediaPhoneName: mediaPhoneName ?? this.mediaPhoneName,
+    altaPhoneUri: altaPhoneUri ?? this.altaPhoneUri,
+    altaPhoneName: altaPhoneName ?? this.altaPhoneName,
+    altaPhoneMillis: altaPhoneMillis ?? this.altaPhoneMillis,
   );
 
   Map<String, dynamic> toJson() => {
@@ -119,6 +163,11 @@ class PriorityConfig {
     'aVibrar': altaVibrate,
     'aPantalla': altaFullScreen,
     'aSonido': altaSound,
+    'mTelUri': ?mediaPhoneUri,
+    'mTelNombre': ?mediaPhoneName,
+    'aTelUri': ?altaPhoneUri,
+    'aTelNombre': ?altaPhoneName,
+    'aTelMs': ?altaPhoneMillis,
   };
 
   String encode() => jsonEncode(toJson());
@@ -131,6 +180,7 @@ class PriorityConfig {
       int i(String k, int def) => j[k] is int ? j[k] as int : def;
       bool b(String k, bool def) => j[k] is bool ? j[k] as bool : def;
       String s(String k, String def) => j[k] is String ? j[k] as String : def;
+      String? o(String k) => j[k] is String ? j[k] as String : null;
       return PriorityConfig(
         mediaEvery: i('mCada', d.mediaEvery),
         mediaFor: i('mDurante', d.mediaFor),
@@ -144,6 +194,11 @@ class PriorityConfig {
         altaVibrate: b('aVibrar', d.altaVibrate),
         altaFullScreen: b('aPantalla', d.altaFullScreen),
         altaSound: s('aSonido', d.altaSound),
+        mediaPhoneUri: o('mTelUri'),
+        mediaPhoneName: o('mTelNombre'),
+        altaPhoneUri: o('aTelUri'),
+        altaPhoneName: o('aTelNombre'),
+        altaPhoneMillis: j['aTelMs'] is int ? j['aTelMs'] as int : null,
       );
     } catch (_) {
       return d;

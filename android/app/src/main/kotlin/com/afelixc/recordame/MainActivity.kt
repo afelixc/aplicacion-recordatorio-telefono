@@ -4,6 +4,9 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.content.Intent
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.MediaMetadataRetriever
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
@@ -43,8 +46,21 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "elegir" -> pick(call.argument<String>("actual"), result)
                     "probar" -> {
-                        play(call.argument<String>("uri"))
+                        play(
+                            call.argument<String>("uri"),
+                            call.argument<Boolean>("alarma") ?: false,
+                            call.argument<Int>("ms") ?: 4000,
+                            call.argument<Boolean>("repetir") ?: false,
+                        )
                         result.success(null)
+                    }
+                    "volumen" -> result.success(volumes())
+                    "duracion" -> {
+                        val uri = call.argument<String>("uri")
+                        Thread {
+                            val ms = durationOf(uri)
+                            handler.post { result.success(ms) }
+                        }.start()
                     }
                     "parar" -> {
                         stop()
@@ -281,17 +297,57 @@ class MainActivity : FlutterActivity() {
         null
     }
 
-    private fun play(uri: String?) {
+    /**
+     * Hace sonar un sonido desde la app. [alarm] usa el volumen de la alarma
+     * (los avisos "aunque esté en silencio"); si no, el de las notificaciones.
+     * [loop] lo repite hasta que pasen [millis] (la prioridad alta).
+     */
+    private fun play(uri: String?, alarm: Boolean = false, millis: Int = 4000, loop: Boolean = false) {
         stop()
         val target = if (uri == null) {
             RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         } else {
             Uri.parse(uri)
         }
-        playing = RingtoneManager.getRingtone(this, target)
-        playing?.play()
+        val ringtone = RingtoneManager.getRingtone(this, target) ?: return
+        ringtone.audioAttributes = AudioAttributes.Builder()
+            .setUsage(if (alarm) AudioAttributes.USAGE_ALARM else AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        if (loop && Build.VERSION.SDK_INT >= 28) ringtone.isLooping = true
+        playing = ringtone
+        ringtone.play()
         // Que no suene para siempre si se eligió un tono de llamada.
-        handler.postDelayed(stopSound, 4000)
+        handler.postDelayed(stopSound, millis.toLong().coerceIn(500L, 60000L))
+    }
+
+    /** Volumen de las notificaciones y de la alarma (0 = no se escucha). */
+    private fun volumes(): Map<String, Int> {
+        val audio = getSystemService(AUDIO_SERVICE) as AudioManager
+        return mapOf(
+            "notificaciones" to audio.getStreamVolume(AudioManager.STREAM_NOTIFICATION),
+            "alarma" to audio.getStreamVolume(AudioManager.STREAM_ALARM),
+            // 0 = silencio, 1 = vibrar, 2 = normal.
+            "modo" to audio.ringerMode,
+        )
+    }
+
+    /** Cuánto dura un sonido del teléfono, en milisegundos (null si no se sabe). */
+    private fun durationOf(uri: String?): Int? {
+        if (uri == null) return null
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(this, Uri.parse(uri))
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toIntOrNull()
+        } catch (e: Exception) {
+            null
+        } finally {
+            try {
+                retriever.release()
+            } catch (e: Exception) {
+                // Nada que hacer.
+            }
+        }
     }
 
     private fun stop() {
