@@ -156,6 +156,31 @@ class $RemindersTable extends Reminders
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _priorityMeta = const VerificationMeta(
+    'priority',
+  );
+  @override
+  late final GeneratedColumn<int> priority = GeneratedColumn<int>(
+    'priority',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _loudMeta = const VerificationMeta('loud');
+  @override
+  late final GeneratedColumn<bool> loud = GeneratedColumn<bool>(
+    'loud',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("loud" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -171,6 +196,8 @@ class $RemindersTable extends Reminders
     repeatDates,
     lastDoneAt,
     snoozedUntil,
+    priority,
+    loud,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -281,6 +308,18 @@ class $RemindersTable extends Reminders
         ),
       );
     }
+    if (data.containsKey('priority')) {
+      context.handle(
+        _priorityMeta,
+        priority.isAcceptableOrUnknown(data['priority']!, _priorityMeta),
+      );
+    }
+    if (data.containsKey('loud')) {
+      context.handle(
+        _loudMeta,
+        loud.isAcceptableOrUnknown(data['loud']!, _loudMeta),
+      );
+    }
     return context;
   }
 
@@ -342,6 +381,14 @@ class $RemindersTable extends Reminders
         DriftSqlType.dateTime,
         data['${effectivePrefix}snoozed_until'],
       ),
+      priority: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}priority'],
+      )!,
+      loud: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}loud'],
+      )!,
     );
   }
 
@@ -367,6 +414,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
   final String? repeatDates;
   final DateTime? lastDoneAt;
   final DateTime? snoozedUntil;
+  final int priority;
+  final bool loud;
   const ReminderRow({
     required this.id,
     required this.title,
@@ -381,6 +430,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     this.repeatDates,
     this.lastDoneAt,
     this.snoozedUntil,
+    required this.priority,
+    required this.loud,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -408,6 +459,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     if (!nullToAbsent || snoozedUntil != null) {
       map['snoozed_until'] = Variable<DateTime>(snoozedUntil);
     }
+    map['priority'] = Variable<int>(priority);
+    map['loud'] = Variable<bool>(loud);
     return map;
   }
 
@@ -436,6 +489,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       snoozedUntil: snoozedUntil == null && nullToAbsent
           ? const Value.absent()
           : Value(snoozedUntil),
+      priority: Value(priority),
+      loud: Value(loud),
     );
   }
 
@@ -458,6 +513,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       repeatDates: serializer.fromJson<String?>(json['repeatDates']),
       lastDoneAt: serializer.fromJson<DateTime?>(json['lastDoneAt']),
       snoozedUntil: serializer.fromJson<DateTime?>(json['snoozedUntil']),
+      priority: serializer.fromJson<int>(json['priority']),
+      loud: serializer.fromJson<bool>(json['loud']),
     );
   }
   @override
@@ -477,6 +534,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       'repeatDates': serializer.toJson<String?>(repeatDates),
       'lastDoneAt': serializer.toJson<DateTime?>(lastDoneAt),
       'snoozedUntil': serializer.toJson<DateTime?>(snoozedUntil),
+      'priority': serializer.toJson<int>(priority),
+      'loud': serializer.toJson<bool>(loud),
     };
   }
 
@@ -494,6 +553,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     Value<String?> repeatDates = const Value.absent(),
     Value<DateTime?> lastDoneAt = const Value.absent(),
     Value<DateTime?> snoozedUntil = const Value.absent(),
+    int? priority,
+    bool? loud,
   }) => ReminderRow(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -510,6 +571,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     repeatDates: repeatDates.present ? repeatDates.value : this.repeatDates,
     lastDoneAt: lastDoneAt.present ? lastDoneAt.value : this.lastDoneAt,
     snoozedUntil: snoozedUntil.present ? snoozedUntil.value : this.snoozedUntil,
+    priority: priority ?? this.priority,
+    loud: loud ?? this.loud,
   );
   ReminderRow copyWithCompanion(RemindersCompanion data) {
     return ReminderRow(
@@ -540,6 +603,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
       snoozedUntil: data.snoozedUntil.present
           ? data.snoozedUntil.value
           : this.snoozedUntil,
+      priority: data.priority.present ? data.priority.value : this.priority,
+      loud: data.loud.present ? data.loud.value : this.loud,
     );
   }
 
@@ -558,7 +623,9 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
           ..write('repeatWeekdays: $repeatWeekdays, ')
           ..write('repeatDates: $repeatDates, ')
           ..write('lastDoneAt: $lastDoneAt, ')
-          ..write('snoozedUntil: $snoozedUntil')
+          ..write('snoozedUntil: $snoozedUntil, ')
+          ..write('priority: $priority, ')
+          ..write('loud: $loud')
           ..write(')'))
         .toString();
   }
@@ -578,6 +645,8 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
     repeatDates,
     lastDoneAt,
     snoozedUntil,
+    priority,
+    loud,
   );
   @override
   bool operator ==(Object other) =>
@@ -595,7 +664,9 @@ class ReminderRow extends DataClass implements Insertable<ReminderRow> {
           other.repeatWeekdays == this.repeatWeekdays &&
           other.repeatDates == this.repeatDates &&
           other.lastDoneAt == this.lastDoneAt &&
-          other.snoozedUntil == this.snoozedUntil);
+          other.snoozedUntil == this.snoozedUntil &&
+          other.priority == this.priority &&
+          other.loud == this.loud);
 }
 
 class RemindersCompanion extends UpdateCompanion<ReminderRow> {
@@ -612,6 +683,8 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
   final Value<String?> repeatDates;
   final Value<DateTime?> lastDoneAt;
   final Value<DateTime?> snoozedUntil;
+  final Value<int> priority;
+  final Value<bool> loud;
   const RemindersCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
@@ -626,6 +699,8 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     this.repeatDates = const Value.absent(),
     this.lastDoneAt = const Value.absent(),
     this.snoozedUntil = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.loud = const Value.absent(),
   });
   RemindersCompanion.insert({
     this.id = const Value.absent(),
@@ -641,6 +716,8 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     this.repeatDates = const Value.absent(),
     this.lastDoneAt = const Value.absent(),
     this.snoozedUntil = const Value.absent(),
+    this.priority = const Value.absent(),
+    this.loud = const Value.absent(),
   }) : title = Value(title),
        dueAt = Value(dueAt);
   static Insertable<ReminderRow> custom({
@@ -657,6 +734,8 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     Expression<String>? repeatDates,
     Expression<DateTime>? lastDoneAt,
     Expression<DateTime>? snoozedUntil,
+    Expression<int>? priority,
+    Expression<bool>? loud,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -672,6 +751,8 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
       if (repeatDates != null) 'repeat_dates': repeatDates,
       if (lastDoneAt != null) 'last_done_at': lastDoneAt,
       if (snoozedUntil != null) 'snoozed_until': snoozedUntil,
+      if (priority != null) 'priority': priority,
+      if (loud != null) 'loud': loud,
     });
   }
 
@@ -689,6 +770,8 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     Value<String?>? repeatDates,
     Value<DateTime?>? lastDoneAt,
     Value<DateTime?>? snoozedUntil,
+    Value<int>? priority,
+    Value<bool>? loud,
   }) {
     return RemindersCompanion(
       id: id ?? this.id,
@@ -704,6 +787,8 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
       repeatDates: repeatDates ?? this.repeatDates,
       lastDoneAt: lastDoneAt ?? this.lastDoneAt,
       snoozedUntil: snoozedUntil ?? this.snoozedUntil,
+      priority: priority ?? this.priority,
+      loud: loud ?? this.loud,
     );
   }
 
@@ -749,6 +834,12 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
     if (snoozedUntil.present) {
       map['snoozed_until'] = Variable<DateTime>(snoozedUntil.value);
     }
+    if (priority.present) {
+      map['priority'] = Variable<int>(priority.value);
+    }
+    if (loud.present) {
+      map['loud'] = Variable<bool>(loud.value);
+    }
     return map;
   }
 
@@ -767,7 +858,9 @@ class RemindersCompanion extends UpdateCompanion<ReminderRow> {
           ..write('repeatWeekdays: $repeatWeekdays, ')
           ..write('repeatDates: $repeatDates, ')
           ..write('lastDoneAt: $lastDoneAt, ')
-          ..write('snoozedUntil: $snoozedUntil')
+          ..write('snoozedUntil: $snoozedUntil, ')
+          ..write('priority: $priority, ')
+          ..write('loud: $loud')
           ..write(')'))
         .toString();
   }
@@ -1250,6 +1343,8 @@ typedef $$RemindersTableCreateCompanionBuilder = RemindersCompanion Function({
   Value<String?> repeatDates,
   Value<DateTime?> lastDoneAt,
   Value<DateTime?> snoozedUntil,
+  Value<int> priority,
+  Value<bool> loud,
 });
 typedef $$RemindersTableUpdateCompanionBuilder = RemindersCompanion Function({
   Value<int> id,
@@ -1265,6 +1360,8 @@ typedef $$RemindersTableUpdateCompanionBuilder = RemindersCompanion Function({
   Value<String?> repeatDates,
   Value<DateTime?> lastDoneAt,
   Value<DateTime?> snoozedUntil,
+  Value<int> priority,
+  Value<bool> loud,
 });
 
 class $$RemindersTableFilterComposer
@@ -1338,6 +1435,16 @@ class $$RemindersTableFilterComposer
 
   ColumnFilters<DateTime> get snoozedUntil => $composableBuilder(
     column: $table.snoozedUntil,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get loud => $composableBuilder(
+    column: $table.loud,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -1415,6 +1522,16 @@ class $$RemindersTableOrderingComposer
     column: $table.snoozedUntil,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get priority => $composableBuilder(
+    column: $table.priority,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get loud => $composableBuilder(
+    column: $table.loud,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RemindersTableAnnotationComposer
@@ -1478,6 +1595,12 @@ class $$RemindersTableAnnotationComposer
     column: $table.snoozedUntil,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get priority =>
+      $composableBuilder(column: $table.priority, builder: (column) => column);
+
+  GeneratedColumn<bool> get loud =>
+      $composableBuilder(column: $table.loud, builder: (column) => column);
 }
 
 class $$RemindersTableTableManager
@@ -1524,6 +1647,8 @@ class $$RemindersTableTableManager
                 Value<String?> repeatDates = const Value.absent(),
                 Value<DateTime?> lastDoneAt = const Value.absent(),
                 Value<DateTime?> snoozedUntil = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<bool> loud = const Value.absent(),
               }) => RemindersCompanion(
                 id: id,
                 title: title,
@@ -1538,6 +1663,8 @@ class $$RemindersTableTableManager
                 repeatDates: repeatDates,
                 lastDoneAt: lastDoneAt,
                 snoozedUntil: snoozedUntil,
+                priority: priority,
+                loud: loud,
               ),
           createCompanionCallback:
               ({
@@ -1554,6 +1681,8 @@ class $$RemindersTableTableManager
                 Value<String?> repeatDates = const Value.absent(),
                 Value<DateTime?> lastDoneAt = const Value.absent(),
                 Value<DateTime?> snoozedUntil = const Value.absent(),
+                Value<int> priority = const Value.absent(),
+                Value<bool> loud = const Value.absent(),
               }) => RemindersCompanion.insert(
                 id: id,
                 title: title,
@@ -1568,6 +1697,8 @@ class $$RemindersTableTableManager
                 repeatDates: repeatDates,
                 lastDoneAt: lastDoneAt,
                 snoozedUntil: snoozedUntil,
+                priority: priority,
+                loud: loud,
               ),
           withReferenceMapper: (p0) => p0
               .map(

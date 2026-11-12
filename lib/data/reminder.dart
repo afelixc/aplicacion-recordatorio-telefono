@@ -1,5 +1,19 @@
 import 'recurrence.dart';
 
+/// Qué tan insistente es el aviso (Configuración → Notificaciones →
+/// Prioridades de notificaciones).
+enum ReminderPriority {
+  normal('Normal'),
+  media('Media'),
+  alta('Alta');
+
+  const ReminderPriority(this.label);
+  final String label;
+
+  static ReminderPriority fromIndex(int? i) =>
+      i != null && i >= 0 && i < values.length ? values[i] : normal;
+}
+
 /// Un recordatorio.
 class Reminder {
   const Reminder({
@@ -12,6 +26,8 @@ class Reminder {
     this.lastDoneAt,
     this.snoozedUntil,
     this.calendarEventId,
+    this.priority = ReminderPriority.normal,
+    this.loud = false,
   });
 
   /// Null mientras no se guardó.
@@ -36,6 +52,11 @@ class Reminder {
   /// en "días puntuales"), o null si no está en el calendario.
   final String? calendarEventId;
 
+  final ReminderPriority priority;
+
+  /// Suena aunque el teléfono esté en silencio (se tilda en cada uno).
+  final bool loud;
+
   bool get repeats => recurrence.repeats;
 
   /// Próxima vez que toca después de [now], o null si ya no hay más.
@@ -57,6 +78,8 @@ class Reminder {
     bool clearSnoozedUntil = false,
     String? calendarEventId,
     bool clearCalendarEventId = false,
+    ReminderPriority? priority,
+    bool? loud,
   }) {
     return Reminder(
       id: id ?? this.id,
@@ -72,6 +95,8 @@ class Reminder {
       calendarEventId: clearCalendarEventId
           ? null
           : calendarEventId ?? this.calendarEventId,
+      priority: priority ?? this.priority,
+      loud: loud ?? this.loud,
     );
   }
 }

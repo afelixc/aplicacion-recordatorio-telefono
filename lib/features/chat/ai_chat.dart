@@ -18,6 +18,8 @@ import '../notebook/notebook_page.dart';
 import '../notebook/notes.dart';
 import 'examples_sheet.dart';
 import 'talking_panel.dart';
+import '../notifications/priority_config.dart';
+import '../settings/priorities_page.dart';
 
 enum _Status { thinking, saved, question, error }
 
@@ -124,6 +126,8 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
   Future<void> _send(String text) async {
     text = text.trim();
     if (text.isEmpty || _thinking) return;
+    // Se esconde el teclado para que se vea la tarjeta entera.
+    FocusManager.instance.primaryFocus?.unfocus();
     _input.clear();
     _tabs.animateTo(0);
     widget.settings.addChat(ChatEntry(text, mine: true, at: DateTime.now()));
@@ -252,6 +256,17 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
     );
   }
 
+  /// Cambia la prioridad o el "sonar en silencio" de uno ya guardado.
+  Future<void> _setPriority(
+    int i, {
+    ReminderPriority? priority,
+    bool? loud,
+  }) async {
+    final r = _last!.items[i].reminder.copyWith(priority: priority, loud: loud);
+    setState(() => _last = _last!.withItem(i, _Item(r)));
+    await AppScope.of(context).reminders.save(r);
+  }
+
   Future<void> _restore(int i) async {
     final r = _last!.items[i].reminder;
     final saved = await AppScope.of(context).reminders.save(r);
@@ -325,6 +340,8 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
                   onModify: _modify,
                   onCancel: _cancel,
                   onRestore: _restore,
+                  onPriority: (i, p) => _setPriority(i, priority: p),
+                  onLoud: (i, v) => _setPriority(i, loud: v),
                   onStartOver: _startOver,
                 ),
               ),
@@ -383,6 +400,8 @@ class _LastView extends StatelessWidget {
     required this.onModify,
     required this.onCancel,
     required this.onRestore,
+    required this.onPriority,
+    required this.onLoud,
     required this.onStartOver,
   });
 
@@ -395,6 +414,8 @@ class _LastView extends StatelessWidget {
   final ValueChanged<int> onModify;
   final ValueChanged<int> onCancel;
   final ValueChanged<int> onRestore;
+  final void Function(int, ReminderPriority) onPriority;
+  final void Function(int, bool) onLoud;
   final VoidCallback onStartOver;
 
   @override
@@ -425,19 +446,25 @@ class _LastView extends StatelessWidget {
                 'cuándo.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onSurfaceVariant,
+                  fontSize: 11,
                 ),
               ),
             ),
             const SizedBox(width: 8),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+                visualDensity: const VisualDensity(
+                  horizontal: -3,
+                  vertical: -3,
+                ),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: const TextStyle(fontSize: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              icon: const Icon(Icons.lightbulb_outline, size: 16),
+              icon: const Icon(Icons.lightbulb_outline, size: 14),
               label: const Text('Ejemplos'),
               onPressed: onExamples,
             ),
@@ -463,6 +490,7 @@ class _LastView extends StatelessWidget {
                   icon: Icons.menu_book_outlined,
                   label: 'Libreta',
                   badge: ToDoBadge(notebookToDo),
+                  big: true,
                   color: const Color(0xFFC98A00),
                   onPressed: onNotebook,
                 ),
@@ -540,20 +568,29 @@ class _LastView extends StatelessWidget {
                   active: item.active,
                   // Lo que dijo va arriba de todo, en la primera tarjeta.
                   said: i == 0 ? saidLine : null,
+                  footer: item.active
+                      ? _PriorityPicker(
+                          reminder: item.reminder,
+                          onPriority: (p) => onPriority(i, p),
+                          onLoud: (v) => onLoud(i, v),
+                        )
+                      : null,
                   actions: item.active
                       ? [
                           Expanded(
                             child: OutlinedButton.icon(
-                              icon: const Icon(Icons.close),
-                              label: const Text('Cancelar'),
+                              style: _smallButton,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancelar', maxLines: 1),
                               onPressed: () => onCancel(i),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: FilledButton.tonalIcon(
-                              icon: const Icon(Icons.edit),
-                              label: const Text('Modificar'),
+                              style: _smallButton,
+                              icon: const Icon(Icons.edit, size: 18),
+                              label: const Text('Modificar', maxLines: 1),
                               onPressed: () => onModify(i),
                             ),
                           ),
@@ -600,7 +637,11 @@ class _BigButton extends StatefulWidget {
     required this.color,
     required this.onPressed,
     this.badge,
+    this.big = false,
   });
+
+  /// Letra y dibujo un poco más grandes (la Libreta, pedido del usuario).
+  final bool big;
 
   /// Va en el segundo renglón, en lugar de texto (p. ej. "2 por hacer").
   final Widget? badge;
@@ -643,12 +684,12 @@ class _BigButtonState extends State<_BigButton> {
           borderRadius: BorderRadius.circular(16),
           onTap: _tap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 6),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(widget.icon, size: 32, color: c),
-                const SizedBox(height: 6),
+                Icon(widget.icon, size: widget.big ? 36 : 30, color: c),
+                const SizedBox(height: 4),
                 Text(
                   widget.label,
                   textAlign: TextAlign.center,
@@ -656,7 +697,7 @@ class _BigButtonState extends State<_BigButton> {
                   style: TextStyle(
                     color: c,
                     fontWeight: FontWeight.w800,
-                    fontSize: 15,
+                    fontSize: widget.big ? 18 : 15,
                   ),
                 ),
                 if (widget.badge != null) ...[
@@ -672,18 +713,172 @@ class _BigButtonState extends State<_BigButton> {
   }
 }
 
+/// Botones chicos, en un renglón (Cancelar / Modificar).
+final _smallButton = ButtonStyle(
+  visualDensity: VisualDensity.compact,
+  padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 8)),
+  textStyle: const WidgetStatePropertyAll(
+    TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
+  ),
+);
+
+/// Prioridad del recordatorio (Normal · Media · Alta) y "Sonar aunque esté
+/// en silencio", debajo de Cancelar / Modificar.
+class _PriorityPicker extends StatelessWidget {
+  const _PriorityPicker({
+    required this.reminder,
+    required this.onPriority,
+    required this.onLoud,
+  });
+
+  final Reminder reminder;
+  final ValueChanged<ReminderPriority> onPriority;
+  final ValueChanged<bool> onLoud;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final config = AppScope.of(context).notifications?.priorities;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(height: 18),
+        Text(
+          'PRIORIDAD',
+          style: theme.textTheme.labelSmall?.copyWith(
+            letterSpacing: 1,
+            fontWeight: FontWeight.w800,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            for (final p in ReminderPriority.values) ...[
+              if (p != ReminderPriority.normal) const SizedBox(width: 6),
+              Expanded(
+                child: _PriorityButton(
+                  key: Key('priority-${p.name}'),
+                  label: p.label,
+                  color: priorityColor(p),
+                  selected: reminder.priority == p,
+                  onTap: () => onPriority(p),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (config != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            _explain(reminder.priority, config),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        InkWell(
+          key: const Key('priority-loud'),
+          onTap: () => onLoud(!reminder.loud),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: Checkbox(
+                  value: reminder.loud,
+                  visualDensity: VisualDensity.compact,
+                  onChanged: (v) => onLoud(v ?? false),
+                ),
+              ),
+              const Icon(Icons.notifications_off_outlined, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                'Sonar aunque esté en silencio',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _explain(ReminderPriority p, PriorityConfig c) => switch (p) {
+    ReminderPriority.normal => 'Te avisa una vez, a la hora del recordatorio.',
+    ReminderPriority.media =>
+      'Repite cada ${c.mediaEvery} min '
+          '${c.mediaInHours ? 'de ${c.mediaFrom} a ${c.mediaTo} h' : 'durante ${PriorityConfig.forLabel(c.mediaFor).toLowerCase()}'}'
+          ', hasta que toques "Hecho".',
+    ReminderPriority.alta =>
+      'Suena ${c.altaTimes} veces seguidas'
+          '${c.altaVibrate ? ' y vibra' : ''}; repite cada ${c.altaEvery} min '
+          'hasta que toques "Hecho".',
+  };
+}
+
+class _PriorityButton extends StatelessWidget {
+  const _PriorityButton({
+    super.key,
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? color.withValues(alpha: 0.15) : Colors.transparent,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: selected ? color : scheme.outlineVariant,
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: selected ? color : scheme.onSurface,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ReminderCard extends StatelessWidget {
   const _ReminderCard({
     required this.reminder,
     required this.active,
     required this.actions,
     this.said,
+    this.footer,
   });
 
   final Reminder reminder;
   final bool active;
   final List<Widget> actions;
   final Widget? said;
+
+  /// Debajo de los botones: la prioridad.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -734,6 +929,7 @@ class _ReminderCard extends StatelessWidget {
             if (next != null) Text('Próximo: ${Fmt.when(next)}'),
             const SizedBox(height: 10),
             Row(children: actions),
+            ?footer,
           ],
         ),
       ),

@@ -226,6 +226,20 @@ void main() {
       DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9),
     );
 
+    // Prioridad y "sonar en silencio", debajo de los botones.
+    expect(saved.priority, ReminderPriority.normal);
+    await tester.ensureVisible(find.byKey(const Key('priority-alta')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('priority-alta')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('priority-loud')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('priority-loud')));
+    await tester.pumpAndSettle();
+    final changed = (await repo.watchAll().first).single;
+    expect(changed.priority, ReminderPriority.alta);
+    expect(changed.loud, isTrue);
+
     // Cancelar lo borra; "Volver a activarlo" lo recupera.
     await tester.ensureVisible(find.text('Cancelar'));
     await tester.pumpAndSettle();

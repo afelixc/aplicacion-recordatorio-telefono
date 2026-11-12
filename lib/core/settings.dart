@@ -372,6 +372,7 @@ class AppSettings extends ChangeNotifier {
     'colores_dia': dayColors.encode(),
     'colores_noche': nightColors.encode(),
     'libreta': NoteFolder.encodeAll(folders),
+    'prioridades': ?prioritiesRaw,
     for (final id in providerIds)
       if (_models[id] != null) 'model_$id': _models[id]!,
     for (final id in providerIds)
@@ -396,6 +397,7 @@ class AppSettings extends ChangeNotifier {
           e.key == 'color_pending' ||
           e.key == 'color_done' ||
           e.key == 'libreta' ||
+          e.key == 'prioridades' ||
           e.key.startsWith('model_') ||
           e.key.startsWith('balance_')) {
         await _store.write(e.key, e.value);
@@ -410,7 +412,12 @@ class AppSettings extends ChangeNotifier {
     await load(providerIds);
   }
 
+  /// Lo que hace cada prioridad de aviso (JSON de `PriorityConfig`; lo
+  /// guarda `NotificationService.setPriorities`). Solo para la copia.
+  String? prioritiesRaw;
+
   Future<void> load(Iterable<String> providerIds) async {
+    prioritiesRaw = await _store.read('prioridades');
     try {
       final loaded = NoteFolder.decodeAll(await _store.read('libreta'));
       folders

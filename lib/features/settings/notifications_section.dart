@@ -6,6 +6,7 @@ import '../../data/scheduling_reminder_repository.dart';
 import '../notifications/notification_service.dart';
 import '../notifications/notification_sound.dart';
 import 'battery_help.dart';
+import 'priorities_page.dart';
 
 /// Estado de las notificaciones, accesos a los ajustes de Android y avisos de prueba.
 class NotificationsSection extends StatefulWidget {
@@ -90,7 +91,9 @@ class _NotificationsSectionState extends State<NotificationsSection>
                     },
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                PrioritiesSection(service: service),
+                const SizedBox(height: 16),
                 if (s == null)
                   const LinearProgressIndicator()
                 else ...[

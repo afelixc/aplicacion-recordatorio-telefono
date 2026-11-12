@@ -261,6 +261,8 @@ class BackupService {
     'hechoEl': _date(r.completedAt),
     'ultimaVezHecho': _date(r.lastDoneAt),
     'pospuestoHasta': _date(r.snoozedUntil),
+    'prioridad': r.priority.index,
+    'enSilencio': r.loud,
   };
 
   static Reminder? _reminderFromJson(Map<String, dynamic> j) {
@@ -280,6 +282,8 @@ class BackupService {
       completedAt: d('hechoEl'),
       lastDoneAt: d('ultimaVezHecho'),
       snoozedUntil: d('pospuestoHasta'),
+      priority: ReminderPriority.fromIndex(j['prioridad'] as int?),
+      loud: j['enSilencio'] == true,
     );
   }
 

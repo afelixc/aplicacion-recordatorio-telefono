@@ -22,6 +22,10 @@ class Reminders extends Table {
   TextColumn get repeatDates => text().nullable()();
   DateTimeColumn get lastDoneAt => dateTime().nullable()();
   DateTimeColumn get snoozedUntil => dateTime().nullable()();
+
+  // Prioridad (versión 4 de la base): 0 normal, 1 media, 2 alta.
+  IntColumn get priority => integer().withDefault(const Constant(0))();
+  BoolColumn get loud => boolean().withDefault(const Constant(false))();
 }
 
 /// Consultas a la IA, para mostrar el consumo (versión 3 de la base).
@@ -51,7 +55,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Subir este número y agregar los pasos en [migration] cuando cambien las tablas.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -64,6 +68,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(reminders, reminders.snoozedUntil);
       }
       if (from < 3) await m.createTable(usageRecords);
+      if (from < 4) {
+        await m.addColumn(reminders, reminders.priority);
+        await m.addColumn(reminders, reminders.loud);
+      }
     },
   );
 }

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Evita que la compilación de release borre el ícono de la notificación y los sonidos propios. -->
+<!-- Evita que la compilación de release borre el ícono de la notificación y los sonidos propios.
+     Generado por tool/generar_sonidos.py. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@drawable/ic_notification,@raw/campanita,@raw/timbre,@raw/suave,@raw/alerta" />
+    tools:keep="@drawable/ic_notification,@raw/campanita,@raw/timbre,@raw/suave,@raw/alerta,@raw/m_campanita_doble,@raw/m_gotas,@raw/m_xilofon,@raw/m_ding_dong,@raw/m_pajarito,@raw/m_marimba,@raw/a_sirena,@raw/a_despertador,@raw/a_bocina,@raw/a_alarma_digital,@raw/a_melodia,@raw/a_trompeta,@raw/a_policia,@raw/a_ambulancia,@raw/a_incendio,@raw/a_escuela,@raw/a_alerta_roja,@raw/a_barco,@raw/a_radar,@raw/a_fanfarria,@raw/a_gallo,@raw/a_pitido" />

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/widgets.dart';
@@ -16,6 +17,7 @@ import '../../data/recurrence.dart';
 import '../../data/reminder.dart';
 import '../../data/scheduling_reminder_repository.dart';
 import 'notification_sound.dart';
+import 'priority_config.dart';
 import 'reminder_actions.dart';
 import 'reminder_scheduler.dart';
 import 'snooze_options.dart';
@@ -63,6 +65,9 @@ class NotificationService implements ReminderScheduler {
   String? _soundUri;
   String _soundName = builtInSounds.first.name;
 
+  /// Lo que hace cada prioridad (media y alta repiten el aviso).
+  PriorityConfig priorities = const PriorityConfig();
+
   String? get soundUri => _soundUri;
   String get soundName => _soundName;
 
@@ -80,6 +85,17 @@ class NotificationService implements ReminderScheduler {
     _channelId = p.getString('notif_channel') ?? _defaultChannelId;
     _soundUri = p.getString('notif_sound_uri');
     _soundName = p.getString('notif_sound_name') ?? builtInSounds.first.name;
+    priorities = PriorityConfig.decode(p.getString(prioritiesKey));
+  }
+
+  static const prioritiesKey = 'prioridades';
+
+  /// Guarda lo que hace cada prioridad. Después hay que volver a programar
+  /// los avisos (`resync`).
+  Future<void> setPriorities(PriorityConfig config) async {
+    priorities = config;
+    final p = await SharedPreferences.getInstance();
+    await p.setString(prioritiesKey, config.encode());
   }
 
   /// Cambia el sonido de los avisos. Después hay que volver a programar los
@@ -92,6 +108,8 @@ class NotificationService implements ReminderScheduler {
     await _android?.createNotificationChannel(_channel);
     if (old != _channelId) {
       await _android?.deleteNotificationChannel(channelId: old);
+      await _android?.deleteNotificationChannel(channelId: '${old}_fuerte');
+      _created.remove('${old}_fuerte');
     }
     final p = await SharedPreferences.getInstance();
     await p.setString('notif_channel', _channelId);
@@ -164,6 +182,10 @@ class NotificationService implements ReminderScheduler {
     );
   }
 
+  /// Permiso para que la prioridad alta ocupe toda la pantalla (Android 14).
+  Future<void> requestFullScreen() async =>
+      _android?.requestFullScreenIntentPermission();
+
   Future<void> requestExactAlarms() async =>
       _android?.requestExactAlarmsPermission();
 
@@ -195,33 +217,158 @@ class NotificationService implements ReminderScheduler {
     }
   }
 
-  NotificationDetails _details() => NotificationDetails(
+  NotificationDetails _details() => _build(_channel);
+
+  List<AndroidNotificationAction> get _actions => [
+    const AndroidNotificationAction(ReminderActions.doneActionId, 'Hecho'),
+    for (final o in snoozeOptions.where((o) => o.showInNotification))
+      AndroidNotificationAction(o.id, o.label),
+  ];
+
+  NotificationDetails _build(
+    AndroidNotificationChannel ch, {
+    bool alarm = false,
+    bool insistent = false,
+    bool fullScreen = false,
+    int? timeoutMs,
+    bool max = false,
+  }) => NotificationDetails(
     android: AndroidNotificationDetails(
-      _channel.id,
-      _channel.name,
-      channelDescription: _channel.description,
-      importance: Importance.high,
-      sound: _channel.sound,
-      priority: Priority.high,
-      category: AndroidNotificationCategory.reminder,
+      ch.id,
+      ch.name,
+      channelDescription: ch.description,
+      importance: ch.importance,
+      sound: ch.sound,
+      playSound: ch.playSound,
+      enableVibration: ch.enableVibration,
+      vibrationPattern: ch.vibrationPattern,
+      priority: max ? Priority.max : Priority.high,
+      category: alarm
+          ? AndroidNotificationCategory.alarm
+          : AndroidNotificationCategory.reminder,
+      audioAttributesUsage: ch.audioAttributesUsage,
+      additionalFlags: insistent ? Int32List.fromList(const [4]) : null,
+      fullScreenIntent: fullScreen,
+      timeoutAfter: timeoutMs,
+      groupKey: 'recordame',
       color: const Color(0xFF2B3A67),
-      actions: [
-        const AndroidNotificationAction(ReminderActions.doneActionId, 'Hecho'),
-        for (final o in snoozeOptions.where((o) => o.showInNotification))
-          AndroidNotificationAction(o.id, o.label),
-      ],
+      actions: _actions,
     ),
   );
 
+  // --- Canales de las prioridades ---
+  // Android fija el sonido y la vibración de cada canal: hay uno por sonido.
+  // Los que terminan en "_fuerte" suenan con el volumen de la alarma, aunque
+  // el teléfono esté en silencio o en "No molestar".
+
+  final _created = <String>{};
+
+  static String _raw(String id) => 'android.resource://$_package/raw/$id';
+
+  AndroidNotificationChannel _loud(AndroidNotificationChannel c) =>
+      AndroidNotificationChannel(
+        '${c.id}_fuerte',
+        '${c.name} (aunque esté en silencio)',
+        description: c.description,
+        importance: Importance.max,
+        sound: c.sound,
+        playSound: c.playSound,
+        enableVibration: c.enableVibration,
+        vibrationPattern: c.vibrationPattern,
+        bypassDnd: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
+      );
+
+  AndroidNotificationChannel _mediaChannel() {
+    final id = priorities.mediaSound;
+    if (id == PriorityConfig.appSound) return _channel;
+    return AndroidNotificationChannel(
+      'prio_media_$id',
+      'Prioridad media · ${priorities.mediaSoundName}',
+      description: 'Avisos que se repiten hasta tocar Hecho',
+      importance: Importance.high,
+      sound: UriAndroidNotificationSound(_raw(id)),
+    );
+  }
+
+  AndroidNotificationChannel _altaChannel() {
+    final sound = priorities.altaSoundInfo;
+    final vib = priorities.altaVibrate;
+    return AndroidNotificationChannel(
+      'prio_alta_${sound.id}_${vib ? 'v' : 'n'}',
+      'Prioridad alta · ${sound.name}${vib ? ' · vibra' : ''}',
+      description: 'Avisos que suenan seguido hasta tocar Hecho',
+      importance: Importance.max,
+      sound: UriAndroidNotificationSound(_raw(sound.id)),
+      enableVibration: vib,
+      vibrationPattern: vib
+          ? Int64List.fromList(const [0, 900, 300, 900, 300, 900, 300, 900])
+          : null,
+    );
+  }
+
+  /// Sin sonido: queda a la vista después de que sonó la prioridad alta.
+  static const _quiet = AndroidNotificationChannel(
+    'recordame_quedan',
+    'Avisos que quedan a la vista',
+    description: 'El aviso que queda después de sonar la prioridad alta',
+    importance: Importance.defaultImportance,
+    playSound: false,
+    enableVibration: false,
+  );
+
+  Future<AndroidNotificationChannel> _ensure(
+    AndroidNotificationChannel c,
+  ) async {
+    if (_created.add(c.id)) await _android?.createNotificationChannel(c);
+    return c;
+  }
+
+  /// Cómo suena el aviso de un recordatorio según su prioridad.
+  Future<NotificationDetails> _detailsFor(Reminder r, {int? timeoutMs}) async {
+    switch (r.priority) {
+      case ReminderPriority.normal:
+        final ch = await _ensure(r.loud ? _loud(_channel) : _channel);
+        return _build(ch, alarm: r.loud);
+      case ReminderPriority.media:
+        final base = _mediaChannel();
+        final ch = await _ensure(r.loud ? _loud(base) : base);
+        return _build(ch, alarm: r.loud, timeoutMs: timeoutMs);
+      case ReminderPriority.alta:
+        final base = _altaChannel();
+        final ch = await _ensure(r.loud ? _loud(base) : base);
+        return _build(
+          ch,
+          alarm: true,
+          max: true,
+          insistent: true,
+          fullScreen: priorities.altaFullScreen,
+          timeoutMs: _ringMillis,
+        );
+    }
+  }
+
+  /// Lo que suena cada aviso de prioridad alta ("cuántas veces seguido").
+  int get _ringMillis =>
+      priorities.altaSoundInfo.millis * priorities.altaTimes + 300;
+
   /// Cada recordatorio usa los números de aviso `id * 100` a `id * 100 + 99`:
   /// uno por cada día de la semana o fecha suelta, y el último para "Posponer".
+  /// En la prioridad alta, `+ 50` es el aviso que queda a la vista después de
+  /// sonar. Las repeticiones de media y alta usan `_repeatBase + id * 100 + n`.
   static const _slots = 100;
   static const _snoozeSlot = 99;
+  static const _staySlot = 50;
+  static const _repeatBase = 1000000000;
+
+  static int _ownerOf(int notificationId) => notificationId >= _repeatBase
+      ? (notificationId - _repeatBase) ~/ _slots
+      : notificationId ~/ _slots;
 
   /// Recordatorio al que pertenece un aviso.
   static int? reminderIdOf(NotificationResponse response) =>
       int.tryParse(response.payload ?? '') ??
-      (response.id == null ? null : response.id! ~/ _slots);
+      (response.id == null ? null : _ownerOf(response.id!));
 
   @override
   Future<void> schedule(Reminder reminder) async {
@@ -240,19 +387,46 @@ class NotificationService implements ReminderScheduler {
 
     try {
       final exact = await _android?.canScheduleExactNotifications() ?? true;
-      Future<void> at(int slot, DateTime when, [DateTimeComponents? repeat]) =>
-          _plugin.zonedSchedule(
-            id: id * _slots + slot,
-            title: reminder.title,
-            body: 'Recordatorio · ${Fmt.time(when)} h',
-            scheduledDate: tz.TZDateTime.from(when, tz.local),
-            notificationDetails: _details(),
-            androidScheduleMode: exact
-                ? AndroidScheduleMode.exactAllowWhileIdle
-                : AndroidScheduleMode.inexactAllowWhileIdle,
-            matchDateTimeComponents: repeat,
-            payload: '$id',
-          );
+      // Media y alta usan el modo "despertador" de Android, que no se demora
+      // con la pantalla apagada.
+      final mode = !exact
+          ? AndroidScheduleMode.inexactAllowWhileIdle
+          : reminder.priority == ReminderPriority.normal
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.alarmClock;
+      final details = await _detailsFor(reminder);
+      final alta = reminder.priority == ReminderPriority.alta;
+      final stay = alta ? _build(await _ensure(_quiet)) : null;
+
+      Future<void> post(
+        int notificationId,
+        DateTime when,
+        NotificationDetails d, [
+        DateTimeComponents? repeat,
+      ]) => _plugin.zonedSchedule(
+        id: notificationId,
+        title: reminder.title,
+        body: 'Recordatorio · ${Fmt.time(when)} h',
+        scheduledDate: tz.TZDateTime.from(when, tz.local),
+        notificationDetails: d,
+        androidScheduleMode: mode,
+        matchDateTimeComponents: repeat,
+        payload: '$id',
+      );
+
+      Future<void> at(
+        int slot,
+        DateTime when, [
+        DateTimeComponents? repeat,
+      ]) async {
+        await post(id * _slots + slot, when, details, repeat);
+        // La alta suena un rato y se va; después queda este, sin sonido.
+        if (stay != null) {
+          final after = when.add(Duration(milliseconds: _ringMillis + 1000));
+          final staySlot = slot == _snoozeSlot ? 98 : slot + _staySlot;
+          await post(id * _slots + staySlot, after, stay, repeat);
+        }
+      }
 
       switch (rule.kind) {
         case RepeatKind.none:
@@ -288,6 +462,20 @@ class NotificationService implements ReminderScheduler {
       if (snoozed != null && snoozed.isAfter(now)) {
         await at(_snoozeSlot, snoozed);
       }
+
+      // Media y alta: vuelve a avisar cada tanto hasta que se toque "Hecho".
+      final times = repeatTimes(reminder, priorities, now);
+      for (var n = 0; n < times.length; n++) {
+        final last = n == times.length - 1;
+        final d = reminder.priority == ReminderPriority.media
+            ? await _detailsFor(
+                reminder,
+                // Cada repetición se va cuando llega la siguiente.
+                timeoutMs: last ? null : priorities.mediaEvery * 60000 - 3000,
+              )
+            : details;
+        await post(_repeatBase + id * _slots + n + 1, times[n], d);
+      }
       lastError = null;
     } catch (e) {
       // El recordatorio queda guardado igual; el error se ve en Configuración.
@@ -296,14 +484,80 @@ class NotificationService implements ReminderScheduler {
     }
   }
 
+  /// Horas en las que se repite el aviso de un recordatorio de prioridad
+  /// media o alta: las de la vez que toca ahora (o la próxima), que todavía
+  /// no pasaron. La vez ya hecha o pospuesta no se repite.
+  static List<DateTime> repeatTimes(
+    Reminder r,
+    PriorityConfig config,
+    DateTime now,
+  ) {
+    if (r.done || r.priority == ReminderPriority.normal) return const [];
+    List<DateTime> repeatsOf(DateTime first) =>
+        r.priority == ReminderPriority.media
+        ? config.mediaRepeats(first)
+        : config.altaRepeats(first);
+    DateTime? first;
+    if (!r.repeats) {
+      first = r.dueAt;
+    } else {
+      // La vez más vieja que todavía se estaría repitiendo.
+      const lookBack = Duration(hours: 24);
+      first = r.recurrence.nextAfter(r.dueAt, now.subtract(lookBack));
+      while (first != null && !first.isAfter(now)) {
+        final repeats = repeatsOf(first);
+        final doneThis = r.lastDoneAt != null && !r.lastDoneAt!.isBefore(first);
+        final snoozedThis =
+            r.snoozedUntil != null && r.snoozedUntil!.isAfter(first);
+        final active =
+            repeats.isNotEmpty && repeats.last.isAfter(now) && !doneThis;
+        if (active && !snoozedThis) break;
+        first = r.recurrence.nextAfter(
+          r.dueAt,
+          first.add(const Duration(minutes: 1)),
+        );
+      }
+    }
+    if (first == null) return const [];
+    return repeatsOf(first).where((t) => t.isAfter(now)).toList();
+  }
+
   @override
   Future<void> cancel(int reminderId) async {
     for (final p in await _plugin.pendingNotificationRequests()) {
       // `p.id == reminderId`: avisos de la versión 1.0.5 o anterior.
-      if (p.id ~/ _slots == reminderId || p.id == reminderId) {
+      if (_ownerOf(p.id) == reminderId || p.id == reminderId) {
         await _plugin.cancel(id: p.id);
       }
     }
+    // Los que están a la vista (los que se repiten quedan varios).
+    try {
+      for (final a in await _plugin.getActiveNotifications()) {
+        final nid = a.id;
+        if (nid != null && nid != 0 && _ownerOf(nid) == reminderId) {
+          await _plugin.cancel(id: nid);
+        }
+      }
+    } catch (_) {}
+  }
+
+  /// Hace sonar un aviso de prueba con la prioridad elegida.
+  Future<void> showPriorityTest(
+    ReminderPriority priority, {
+    bool loud = false,
+  }) async {
+    final r = Reminder(
+      title: 'Prueba · prioridad ${priority.label.toLowerCase()}',
+      dueAt: DateTime.now(),
+      priority: priority,
+      loud: loud,
+    );
+    await _plugin.show(
+      id: 0,
+      title: r.title,
+      body: 'Así te va a sonar.',
+      notificationDetails: await _detailsFor(r),
+    );
   }
 
   @override

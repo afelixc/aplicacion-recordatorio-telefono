@@ -25,6 +25,8 @@ class DriftReminderRepository implements ReminderRepository {
     lastDoneAt: r.lastDoneAt,
     snoozedUntil: r.snoozedUntil,
     calendarEventId: r.calendarEventId,
+    priority: ReminderPriority.fromIndex(r.priority),
+    loud: r.loud,
   );
 
   @override
@@ -54,6 +56,8 @@ class DriftReminderRepository implements ReminderRepository {
       lastDoneAt: Value(reminder.lastDoneAt),
       snoozedUntil: Value(reminder.snoozedUntil),
       calendarEventId: Value(reminder.calendarEventId),
+      priority: Value(reminder.priority.index),
+      loud: Value(reminder.loud),
       updatedAt: Value(DateTime.now()),
     );
     if (reminder.id == null) {

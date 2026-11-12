@@ -85,7 +85,7 @@ class SettingsScreen extends StatelessWidget {
             _MenuItem(
               icon: Icons.notifications_outlined,
               title: 'Notificaciones',
-              subtitle: 'Permisos, batería y aviso de prueba',
+              subtitle: 'Sonido, prioridades y permisos',
               page: (_) => _Page(
                 title: 'Notificaciones',
                 child: scope.notifications == null
