@@ -746,12 +746,27 @@ class _CalendarPicker extends StatelessWidget {
     );
   }
 
-  Widget _change(ColorScheme scheme) => Text(
-    'Cambiar',
-    style: TextStyle(
-      color: scheme.primary,
-      fontWeight: FontWeight.w700,
-      fontSize: 13,
+  /// "Cambiar": abajo del mail, como botoncito con recuadro.
+  Widget _change(ColorScheme scheme) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    decoration: BoxDecoration(
+      border: Border.all(color: scheme.primary),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.swap_horiz, size: 16, color: scheme.primary),
+        const SizedBox(width: 4),
+        Text(
+          'Cambiar calendario',
+          style: TextStyle(
+            color: scheme.primary,
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+          ),
+        ),
+      ],
     ),
   );
 
@@ -822,8 +837,8 @@ String _tags(PhoneCalendar c) => [
   if (!c.synced) 'El teléfono no lo está sincronizando',
 ].join(' · ');
 
-/// El calendario elegido, compacto: arriba el nombre y "Cambiar", abajo el
-/// mail a lo largo en un renglón (se achica si no entra) y "El principal".
+/// El calendario elegido (pedido del usuario): arriba el mail completo a lo
+/// largo (se achica si no entra), abajo "El principal" y al final "Cambiar".
 class _CalendarText extends StatelessWidget {
   const _CalendarText({required this.calendar, required this.trailing});
 
@@ -835,9 +850,9 @@ class _CalendarText extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final tags = _tags(calendar);
-    final account =
-        calendar.account.isNotEmpty && calendar.account != calendar.name
-        ? calendar.account
+    final mail = calendar.account.isNotEmpty ? calendar.account : calendar.name;
+    final name = calendar.name.isNotEmpty && calendar.name != mail
+        ? calendar.name
         : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -847,44 +862,41 @@ class _CalendarText extends StatelessWidget {
             Icon(Icons.event, color: scheme.primary, size: 18),
             const SizedBox(width: 6),
             Expanded(
-              child: Text(
-                calendar.name.isEmpty ? '(sin nombre)' : calendar.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  mail.isEmpty ? '(sin nombre)' : mail,
+                  maxLines: 1,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            trailing,
           ],
         ),
-        if (account != null)
-          SizedBox(
-            width: double.infinity,
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                account,
-                maxLines: 1,
-                style: theme.textTheme.bodySmall?.copyWith(fontSize: 12.5),
-              ),
-            ),
+        if (name != null)
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(fontSize: 12.5),
           ),
         if (tags.isNotEmpty)
           Text(
             tags,
             style: theme.textTheme.bodySmall?.copyWith(
-              fontSize: 11.5,
+              fontSize: 12,
               color: calendar.primary
                   ? Colors.green.shade700
                   : scheme.onSurfaceVariant,
               fontWeight: calendar.primary ? FontWeight.w700 : null,
             ),
           ),
+        const SizedBox(height: 4),
+        trailing,
       ],
     );
   }
