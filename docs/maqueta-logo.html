@@ -1,0 +1,134 @@
+<title>Logo de Recordame</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap">
+<style>
+/* Grilla de opciones: cada tarjeta con el logo grande, sus 3 colores y cómo se ve chico en la pantalla del teléfono. */
+:root{
+  --bg:#eef1f5; --fg:#1d2430; --muted:#5f6b7a; --card:#ffffff; --line:#d5dbe3; --accent:#2c3a66;
+  --wall1:#3b5b8c; --wall2:#7aa3c9;
+  --body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --card:#1b2129; --line:#33404f; --accent:#9fb2f0;
+  --wall1:#1c2b45; --wall2:#33507a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --card:#1b2129; --line:#33404f; --accent:#9fb2f0;
+  --wall1:#1c2b45; --wall2:#33507a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px}
+h1{font-size:26px;font-weight:900;margin:0 0 4px}
+.lead{color:var(--muted);margin:0 0 18px;max-width:68ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px;max-width:1200px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card.now{border-style:dashed}
+.head{display:flex;align-items:center;gap:10px}
+.letter{width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--card);display:grid;place-items:center;font-weight:900;flex:none}
+.head b{font-size:17px;font-weight:900}
+.big{display:flex;gap:14px;align-items:center;justify-content:center}
+.big svg{width:150px;height:150px;border-radius:34px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.big .round{width:72px;height:72px;border-radius:50%;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.desc{margin:0;color:var(--muted);font-size:14px}
+.sw{display:flex;gap:8px;flex-wrap:wrap}
+.sw span{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:20px;padding:3px 9px 3px 4px}
+.sw i{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+.home{background:linear-gradient(160deg,var(--wall1),var(--wall2));border-radius:14px;padding:12px 10px 8px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:center}
+.app{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.app svg,.app .other{width:44px;height:44px;border-radius:13px}
+.other{background:rgba(255,255,255,.25)}
+.pick{margin-top:2px;font-size:13px;font-weight:800;color:var(--accent)}
+</style>
+
+<h1>Logo nuevo de Recordame</h1>
+<p class="lead">Seis opciones, cada una con 3 colores como máximo. Al lado del logo grande está cómo queda redondo (algunos teléfonos lo recortan así) y abajo, chiquito en la pantalla de inicio. Decime la letra de la que te guste, o qué mezclar.</p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+// Cada logo es un dibujo en un cuadrado de 108 × 108 (como los íconos de Android).
+const logos = [
+  {
+    id:'A', name:'Campana con tilde, renovada', now:true,
+    desc:'La idea de hoy, más limpia: campana redonda y el tilde blanco que dice "hecho".',
+    colors:[['Azul noche','#2C3A66'],['Naranja','#F2A33A'],['Blanco','#FFFFFF']],
+    svg:(c)=>`<rect width="108" height="108" fill="${c[0]}"/>
+      <path d="M54 22c-15 0-25 11-25 26v14l-7 10h64l-7-10V48c0-15-10-26-25-26z" fill="${c[1]}"/>
+      <rect x="49" y="15" width="10" height="9" rx="4" fill="${c[1]}"/>
+      <circle cx="54" cy="80" r="7" fill="${c[1]}"/>
+      <path d="M41 50l9 9 17-18" fill="none" stroke="${c[2]}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`
+  },
+  {
+    id:'B', name:'Globito de chat con campana',
+    desc:'Junta las dos cosas de la app: le hablás (globito) y te avisa (campana).',
+    colors:[['Naranja','#F28C28'],['Blanco','#FFFFFF'],['Azul noche','#2C3A66']],
+    svg:(c)=>`<rect width="108" height="108" fill="${c[0]}"/>
+      <path d="M22 26h64a8 8 0 0 1 8 8v36a8 8 0 0 1-8 8H48l-16 13v-13H22a8 8 0 0 1-8-8V34a8 8 0 0 1 8-8z" fill="${c[1]}"/>
+      <path d="M54 36c-8 0-13 6-13 14v7l-4 6h34l-4-6v-7c0-8-5-14-13-14z" fill="${c[2]}"/>
+      <circle cx="54" cy="67" r="4" fill="${c[2]}"/>`
+  },
+  {
+    id:'C', name:'Hoja de almanaque con tilde',
+    desc:'Almanaque con el día marcado como hecho. Se entiende al toque que es para fechas.',
+    colors:[['Verde','#1F8A5B'],['Blanco','#FFFFFF'],['Azul noche','#1E2A4A']],
+    svg:(c)=>`<rect width="108" height="108" fill="${c[0]}"/>
+      <rect x="24" y="28" width="60" height="56" rx="9" fill="${c[1]}"/>
+      <rect x="24" y="28" width="60" height="16" rx="9" fill="${c[2]}"/>
+      <rect x="24" y="36" width="60" height="8" fill="${c[2]}"/>
+      <rect x="36" y="20" width="7" height="15" rx="3.5" fill="${c[2]}"/>
+      <rect x="65" y="20" width="7" height="15" rx="3.5" fill="${c[2]}"/>
+      <path d="M40 64l9 9 19-19" fill="none" stroke="${c[0]}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`
+  },
+  {
+    id:'D', name:'Letra R con campanita',
+    desc:'La R de Recordame, y la colita de la R termina en el badajo de una campana.',
+    colors:[['Azul noche','#2C3A66'],['Amarillo','#F5B83D'],['Blanco','#FFFFFF']],
+    svg:(c)=>`<rect width="108" height="108" fill="${c[0]}"/>
+      <path d="M36 82V26h22c12 0 20 7 20 18 0 9-6 15-14 17l15 21" fill="none" stroke="${c[2]}" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="80" cy="84" r="8" fill="${c[1]}"/>
+      <path d="M47 37v14h10c5 0 9-3 9-7s-4-7-9-7z" fill="${c[0]}"/>`
+  },
+  {
+    id:'E', name:'Despertador',
+    desc:'Reloj despertador con las agujas formando un tilde. Muy llamativo en la pantalla.',
+    colors:[['Rojo','#D64545'],['Blanco','#FFFFFF'],['Azul noche','#2C3A66']],
+    svg:(c)=>`<rect width="108" height="108" fill="${c[0]}"/>
+      <circle cx="30" cy="30" r="10" fill="${c[1]}"/>
+      <circle cx="78" cy="30" r="10" fill="${c[1]}"/>
+      <path d="M36 82l-6 8M72 82l6 8" stroke="${c[1]}" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="54" cy="58" r="28" fill="${c[1]}"/>
+      <circle cx="54" cy="58" r="21" fill="none" stroke="${c[2]}" stroke-width="3"/>
+      <path d="M44 58l8 8 14-16" fill="none" stroke="${c[2]}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`
+  },
+  {
+    id:'F', name:'Libreta con campanita',
+    desc:'Una libreta con su espiral y la campanita en la tapa: anotás y te recuerda.',
+    colors:[['Amarillo','#E9A21F'],['Blanco','#FFFFFF'],['Azul noche','#2C3A66']],
+    svg:(c)=>`<rect width="108" height="108" fill="${c[2]}"/>
+      <rect x="28" y="20" width="54" height="70" rx="8" fill="${c[0]}"/>
+      ${[30,42,54,66,78].map(y=>`<rect x="22" y="${y-3}" width="14" height="6" rx="3" fill="${c[1]}"/>`).join('')}
+      <path d="M57 36c-8 0-13 6-13 14v7l-4 6h34l-4-6v-7c0-8-5-14-13-14z" fill="${c[1]}"/>
+      <circle cx="57" cy="68" r="4.5" fill="${c[1]}"/>`
+  },
+];
+
+const grid = document.getElementById('grid');
+for (const l of logos) {
+  const c = l.colors.map(x => x[1]);
+  const icon = (cls='') => `<svg class="${cls}" viewBox="0 0 108 108" role="img" aria-label="Logo ${l.id}">${l.svg(c)}</svg>`;
+  const el = document.createElement('div');
+  el.className = 'card' + (l.now ? ' now' : '');
+  el.innerHTML = `
+    <div class="head"><span class="letter">${l.id}</span><b>${l.name}</b></div>
+    <div class="big">${icon()}${icon('round')}</div>
+    <p class="desc">${l.desc}</p>
+    <div class="sw">${l.colors.map(([n,h]) => `<span><i style="background:${h}"></i>${n}</span>`).join('')}</div>
+    <div class="home">
+      <div class="app"><div class="other"></div>Fotos</div>
+      <div class="app">${icon()}Recordame</div>
+      <div class="app"><div class="other"></div>WhatsApp</div>
+      <div class="app"><div class="other"></div>Cámara</div>
+    </div>
+    ${l.now ? '<div class="pick">Parecida a la que tenés hoy</div>' : ''}`;
+  grid.appendChild(el);
+}
+</script>
