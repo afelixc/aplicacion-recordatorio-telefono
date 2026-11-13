@@ -860,7 +860,8 @@ class _ListSample extends StatelessWidget {
   }
 }
 
-/// Dibujo del ícono de Recordame con los colores de una combinación.
+/// Dibujo del ícono de Recordame (libreta con campanita) con los colores
+/// de una combinación. Es el mismo dibujo que `tool/generar_iconos.py`.
 class AppIconPreview extends StatelessWidget {
   const AppIconPreview(this.icon, {super.key, this.size = 48});
 
@@ -872,25 +873,51 @@ class AppIconPreview extends StatelessWidget {
     width: size,
     height: size,
     decoration: BoxDecoration(
-      color: icon.background,
-      borderRadius: BorderRadius.circular(size * 0.23),
-      border: icon.background == Colors.white || icon.id == 'blanco'
+      borderRadius: BorderRadius.circular(size * 0.22),
+      border: icon.id == 'blanco'
           ? Border.all(color: const Color(0xFFD7DBE5))
           : null,
     ),
-    child: Stack(
-      alignment: Alignment.center,
-      children: [
-        Icon(Icons.notifications, size: size * 0.72, color: icon.bell),
-        Padding(
-          padding: EdgeInsets.only(bottom: size * 0.06),
-          child: Icon(
-            Icons.check_rounded,
-            size: size * 0.32,
-            color: icon.background,
-          ),
-        ),
-      ],
-    ),
+    child: CustomPaint(painter: _LogoPainter(icon)),
   );
+}
+
+class _LogoPainter extends CustomPainter {
+  _LogoPainter(this.icon);
+
+  final AppIcon icon;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final f = size.width / 108;
+    canvas.scale(f);
+    final bg = icon.background;
+    final book = icon.bell;
+    // Espiral blanca (en el de fondo blanco, del color de la libreta);
+    // campanita blanca salvo que la libreta sea muy clara.
+    final ring = bg.computeLuminance() > 0.8 ? book : Colors.white;
+    final det = book.computeLuminance() > 0.5 ? bg : Colors.white;
+    RRect box(double x, double y, double w, double h, double r) =>
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r));
+    canvas.drawRRect(box(0, 0, 108, 108, 108 * 0.22), Paint()..color = bg);
+    canvas.drawRRect(box(28, 20, 54, 70, 8), Paint()..color = book);
+    for (final y in [30.0, 42.0, 54.0, 66.0, 78.0]) {
+      canvas.drawRRect(box(22, y - 3, 14, 6, 3), Paint()..color = ring);
+    }
+    final bell = Path()
+      ..moveTo(57, 36)
+      ..cubicTo(49, 36, 44, 42, 44, 50)
+      ..lineTo(44, 57)
+      ..lineTo(40, 63)
+      ..lineTo(74, 63)
+      ..lineTo(70, 57)
+      ..lineTo(70, 50)
+      ..cubicTo(70, 42, 65, 36, 57, 36)
+      ..close();
+    canvas.drawPath(bell, Paint()..color = det);
+    canvas.drawCircle(const Offset(57, 68), 4.5, Paint()..color = det);
+  }
+
+  @override
+  bool shouldRepaint(_LogoPainter old) => old.icon != icon;
 }
