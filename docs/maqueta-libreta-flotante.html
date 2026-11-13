@@ -1,0 +1,400 @@
+<title>Libreta flotante y notas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
+<style>
+/* Grilla de teléfonos, cada uno con su explicación debajo. Mismo estilo que las maquetas anteriores de Recordame. */
+:root{
+  --bg:#eef1f5; --fg:#1d2430; --muted:#5f6b7a; --phone:#ffffff; --bar:#2c3a66; --barfg:#fff;
+  --line:#d5dbe3; --accent:#2c3a66; --soft:#e6e9f4; --navbg:#eceef6;
+  --manual:#2c3a66; --manualbg:#e6e9f4; --lib:#c98a00; --libbg:#fbf3df;
+  --ok:#2e8b57; --okbg:#e3f3ea; --danger:#c62828; --dangerbg:#fdecec; --sel:#dbe3fb;
+  --sheet:#f3f2f8; --sys:#9aa1ad;
+  --body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24315a; --barfg:#e8edff;
+  --line:#33404f; --accent:#9fb2f0; --soft:#25304a; --navbg:#20262f;
+  --manual:#9fb2f0; --manualbg:#222c45; --lib:#f0c04a; --libbg:#3a3214;
+  --ok:#5cc28a; --okbg:#1d3326; --danger:#ff7b7b; --dangerbg:#3a1f22; --sel:#25304a;
+  --sheet:#222831; --sys:#6b7380; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --fg:#e6ebf2; --muted:#9aa6b5; --phone:#1b2129; --bar:#24315a; --barfg:#e8edff;
+  --line:#33404f; --accent:#9fb2f0; --soft:#25304a; --navbg:#20262f;
+  --manual:#9fb2f0; --manualbg:#222c45; --lib:#f0c04a; --libbg:#3a3214;
+  --ok:#5cc28a; --okbg:#1d3326; --danger:#ff7b7b; --dangerbg:#3a1f22; --sel:#25304a;
+  --sheet:#222831; --sys:#6b7380; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px}
+h1{font-size:26px;font-weight:900;margin:0 0 4px;text-wrap:balance}
+.lead{color:var(--muted);margin:0 0 18px;max-width:70ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:26px;max-width:1280px}
+figure{margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
+figcaption{font-size:14px;min-width:0}
+figcaption b{display:block;font-size:16px;font-weight:900;margin-bottom:2px}
+figcaption ul{margin:4px 0 0;padding-left:18px;color:var(--muted)}
+.n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--phone);font-size:13px;font-weight:900;margin-right:6px}
+
+.phone{width:290px;max-width:100%;height:600px;background:var(--phone);border:9px solid #10151c;border-radius:30px;overflow:hidden;
+  display:flex;flex-direction:column;position:relative;box-shadow:0 10px 28px rgba(0,0,0,.18);font-size:13px}
+.top{background:var(--bar);color:var(--barfg);padding:12px;font-weight:900;letter-spacing:.12em;text-align:center;font-size:15px}
+.top.left{text-align:left;letter-spacing:0;display:flex;gap:8px;align-items:center;font-size:14px}
+.screen{flex:1;overflow:hidden;padding:10px;display:flex;flex-direction:column;gap:8px;position:relative}
+.nav{display:grid;grid-template-columns:repeat(4,1fr);background:var(--navbg);padding:6px 2px 4px}
+.nav div{text-align:center;font-size:10.5px;color:var(--muted);white-space:nowrap}
+.nav i{display:block;font-style:normal;font-size:17px;line-height:22px;margin:0 auto 1px;width:44px;border-radius:12px}
+.nav .on{color:var(--fg);font-weight:800}
+.nav .on i{background:var(--sel)}
+.sysbar{height:18px;background:var(--navbg);display:flex;justify-content:space-around;align-items:center;color:var(--sys);font-size:11px}
+
+.plan{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700}
+.seg{flex:1;display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--muted);border-radius:20px;overflow:hidden;text-align:center}
+.seg span{padding:2px 0;color:var(--muted)}
+.seg .on{background:var(--accent);color:var(--phone)}
+.tabs2{display:grid;grid-template-columns:1fr 1fr;text-align:center;font-size:12px;border-bottom:1px solid var(--line)}
+.tabs2 span{padding:5px 0;color:var(--muted)}
+.tabs2 .on{color:var(--accent);font-weight:800;border-bottom:3px solid var(--accent)}
+.hint{font-size:10.5px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.hint span{flex:1}
+.chip{border:1px solid var(--line);border-radius:8px;padding:2px 7px;font-size:10.5px;font-weight:700;white-space:nowrap;color:var(--fg)}
+
+/* Los dos botones, más chicos */
+.bigs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big{border:2px solid;border-radius:14px;padding:6px 4px;text-align:center;font-weight:900;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:62px}
+.big.m{color:var(--manual);background:var(--manualbg)}
+.big.l{color:var(--lib);background:var(--libbg)}
+.big .ic{font-size:18px;line-height:1}
+.big .t{font-size:12.5px;line-height:1.15}
+.big.l .t{font-size:14px}
+.pend{color:var(--danger);font-weight:900;font-size:11.5px}
+.pend.ok{color:var(--ok)}
+.old{opacity:.55}
+.was{font-size:10px;color:var(--muted);text-align:center}
+
+.card{border:1.5px solid var(--ok);border-radius:12px;padding:8px;background:var(--phone)}
+.card .said{font-size:10px;font-style:italic;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .tt{font-weight:800;font-size:13px}
+.card .row{display:flex;justify-content:space-between;font-size:11.5px}
+.card .row b{color:var(--ok)}
+.mic{width:42px;height:42px;border-radius:50%;background:#e8a23a;margin:0 auto;display:grid;place-items:center;color:#fff;font-size:18px}
+.compose{display:flex;gap:6px;align-items:center}
+.field{flex:1;border:1px solid var(--line);border-radius:12px;padding:6px 9px;color:var(--muted);font-size:11.5px;background:var(--soft)}
+.send{width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--phone);display:grid;place-items:center;font-size:13px}
+
+/* Botón flotante */
+.fab{position:absolute;right:10px;bottom:10px;background:var(--libbg);border:2px solid var(--lib);color:var(--lib);border-radius:16px;
+  padding:5px 9px;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(0,0,0,.22);font-weight:900;font-size:12px;cursor:grab;user-select:none;z-index:3}
+.fab .ic{font-size:17px}
+.fab .c{display:flex;flex-direction:column;line-height:1.05}
+.fab .pend{font-size:10.5px}
+.fab:focus-visible{outline:3px solid var(--accent)}
+.drag{position:absolute;right:120px;bottom:22px;font-size:10px;color:var(--muted);z-index:2}
+
+/* Almanaque */
+.month{display:flex;justify-content:space-between;align-items:center;font-weight:900}
+.month span{font-size:18px;color:var(--accent);padding:0 8px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;font-size:11px}
+.cal b{color:var(--muted);font-size:10px}
+.cal div{padding:5px 0;border-radius:8px}
+.cal .has{background:var(--soft);font-weight:800}
+.cal .today{background:var(--accent);color:var(--phone);font-weight:900}
+.swipe{border:1.5px dashed var(--accent);border-radius:10px;padding:6px 8px;font-size:11px;color:var(--accent);font-weight:700;text-align:center}
+.occ{border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:11.5px}
+.occ small{color:var(--muted);display:block}
+
+/* Listado */
+.filters{display:flex;gap:5px}
+.filters span{border:1px solid var(--line);border-radius:14px;padding:2px 9px;font-size:11px;font-weight:700}
+.filters .on{background:var(--accent);color:var(--phone);border-color:var(--accent)}
+.rt{border:1.5px solid var(--line);border-radius:12px;padding:7px 9px;font-size:12px}
+.rt .t{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt .w{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-top:2px}
+.rt.late{border:2.5px solid var(--danger);background:var(--dangerbg)}
+.rt.late .w{color:var(--danger);font-weight:800}
+.repro{border:1.5px solid var(--danger);color:var(--danger);border-radius:8px;padding:1px 6px;font-size:10.5px;font-weight:800}
+
+/* Carpeta */
+.fhead{display:flex;align-items:center;gap:6px}
+.search{border:1px solid var(--line);border-radius:14px;padding:5px 10px;font-size:11.5px;color:var(--muted)}
+.kind{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kind button{font:800 12.5px var(--body);border:2px solid var(--line);background:transparent;color:var(--fg);border-radius:12px;padding:6px 0;cursor:pointer}
+.kind button.on{border-color:var(--lib);background:var(--libbg);color:var(--lib)}
+.kind button:focus-visible{outline:3px solid var(--accent)}
+.sec{font-size:10.5px;font-weight:900;letter-spacing:.08em;color:var(--muted)}
+.task{position:relative;display:flex;align-items:center;gap:7px;height:36px;border:1px solid var(--line);border-radius:10px;padding:0 30px 0 7px;background:var(--phone)}
+.task .num{font-size:10.5px;color:var(--muted);width:14px;text-align:right}
+.task .box{width:16px;height:16px;border:2px solid var(--muted);border-radius:4px;flex:none}
+.task .box.done{background:var(--ok);border-color:var(--ok);color:#fff;font-size:11px;display:grid;place-items:center}
+.task .tx{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
+.task .tx em{font-style:normal;color:var(--muted);font-size:11px}
+.task.done .tx{text-decoration:line-through;color:var(--muted)}
+.gear{position:absolute;right:3px;top:3px;width:22px;height:22px;border-radius:7px;border:1px solid var(--line);background:var(--soft);font-size:12px;
+  display:grid;place-items:center;cursor:pointer;color:var(--fg);padding:0}
+.gear:focus-visible{outline:3px solid var(--accent)}
+.task.sel{border-color:var(--accent);background:var(--sel)}
+.tools{display:flex;gap:5px;justify-content:flex-end;margin-top:-4px}
+.tools span{border:1.5px solid;border-radius:8px;padding:2px 6px;font-size:12px;font-weight:800}
+.tools .b{color:#2f6fb3}.tools .g{color:var(--ok)}.tools .y{color:var(--lib)}.tools .r{color:var(--danger)}
+.inbar{display:flex;gap:5px;align-items:center;border-top:1px solid var(--line);padding:6px 8px;background:var(--phone)}
+.inbar .field{padding:5px 8px;font-size:11px}
+.inbar .ok,.inbar .mi{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:13px;flex:none}
+.inbar .ok{background:var(--ok);color:#fff}
+.inbar .mi{background:#e8a23a;color:#fff}
+.note{border:1px solid var(--line);border-radius:10px;padding:7px 9px;background:var(--libbg);height:62px;overflow:hidden;position:relative}
+.note b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:24px}
+.note p{margin:1px 0 0;font-size:11px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.note small{position:absolute;right:8px;bottom:4px;font-size:9.5px;color:var(--muted)}
+.paper{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--libbg);font-size:12.5px;line-height:1.55;overflow:hidden}
+.paper b{font-size:15px;display:block;margin-bottom:4px}
+
+/* Hoja de abajo */
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.42)}
+.sheet{position:absolute;left:0;right:0;bottom:18px;background:var(--sheet);border-radius:20px 20px 0 0;padding:8px 14px 12px;display:flex;flex-direction:column;gap:8px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--muted);margin:0 auto 2px}
+.sheet h3{margin:0;font-size:16px}
+.inp{border:1px solid var(--muted);border-radius:6px;padding:7px 9px;font-size:13px}
+.dots{display:flex;gap:7px;flex-wrap:wrap}
+.dots span{width:24px;height:24px;border-radius:50%}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btns span{border-radius:18px;padding:7px 0;text-align:center;font-weight:800;font-size:12.5px}
+.btns .c{border:1px solid var(--muted)}
+.btns .s{background:var(--accent);color:var(--phone)}
+.safe{font-size:10px;color:var(--ok);font-weight:800;text-align:center}
+.pick{display:flex;gap:5px;flex-wrap:wrap}
+.pick span{border:1.5px solid var(--line);border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700}
+.pick .on{border-color:var(--lib);color:var(--lib);background:var(--libbg)}
+@media (prefers-reduced-motion:no-preference){.fab{transition:transform .15s}.fab:active{transform:scale(1.08)}}
+</style>
+
+<h1>Libreta flotante, tareas y notas</h1>
+<p class="lead">Maqueta para ver antes de instalar. Los números siguen el orden de tu pedido. En la carpeta podés tocar <b>Tareas / Notas</b> y los engranajitos ⚙ para ver cómo funcionan.</p>
+
+<div class="grid">
+
+<!-- 1 Chat -->
+<figure>
+<div class="phone">
+  <div class="top">TE RECORDARÉ</div>
+  <div class="screen">
+    <div class="plan">Tu plan: <div class="seg"><span>Gratis</span><span class="on">Con IA</span></div> ⓘ</div>
+    <div class="tabs2"><span class="on">Último recordatorio</span><span>Chat completo</span></div>
+    <div class="card">
+      <div class="said">Dijiste: “mañana a las 10 ir al depósito a ver repuestos”</div>
+      <div class="tt">Ir al depósito a ver repuestos</div>
+      <div class="row"><span>mañana · 10:00 h</span><b>✓ Activo</b></div>
+    </div>
+    <div class="hint"><span>Tocá el micrófono y decime qué querés que te recuerde y cuándo.</span><span class="chip">💡 Ejemplos</span></div>
+    <div class="bigs">
+      <div class="big m"><span class="ic">📝</span><span class="t">Cargar a mano<br>recordatorios</span></div>
+      <div class="big l"><span class="ic">📒</span><span class="t">Libreta</span><span class="pend">5 pendientes</span></div>
+    </div>
+    <div class="was">Antes eran más altos y el número iba en un recuadro naranja</div>
+    <div style="flex:1"></div>
+    <div class="mic">🎤</div>
+    <div class="compose"><div class="field">O escribilo acá…</div><div class="send">➤</div></div>
+  </div>
+  <div class="nav"><div class="on"><i>💬</i>Chat</div><div><i>📅</i>Almanaque</div><div><i>☑</i>Listado</div><div><i>⚙</i>Configuración</div></div>
+  <div class="sysbar">|||  ◯  ‹</div>
+</div>
+<figcaption><b><span class="n">2</span>Botones más chicos y "5 pendientes" en rojo</b>
+<ul><li>"Cargar a mano" y "Libreta" bajan de alto, así queda más lugar arriba.</li>
+<li>Sin recuadro: la letra roja dice <b>5 pendientes</b>, 4 pendientes… Cuando no falta nada dice <span class="pend ok">Todo hecho ✓</span> en verde.</li>
+<li>Lo mismo en las carpetas de adentro de la libreta.</li></ul></figcaption>
+</figure>
+
+<!-- 1b Gratis -->
+<figure>
+<div class="phone">
+  <div class="top">TE RECORDARÉ</div>
+  <div class="screen">
+    <div class="plan">Tu plan: <div class="seg"><span class="on">Gratis</span><span>Con IA</span></div> ⓘ</div>
+    <div class="hint"><span>Cargá tus recordatorios a mano, o anotá en la libreta.</span></div>
+    <div class="bigs">
+      <div class="big m"><span class="ic">📝</span><span class="t">Cargar a mano<br>recordatorios</span></div>
+      <div class="big l"><span class="ic">📒</span><span class="t">Libreta</span><span class="pend">5 pendientes</span></div>
+    </div>
+    <div class="sec">NUEVO RECORDATORIO</div>
+    <div class="inp" style="font-size:12px;color:var(--muted)">¿Qué te recuerdo?</div>
+    <div class="inp" style="font-size:12px;color:var(--muted)">📅 Día · 🕘 Hora</div>
+    <div class="inp" style="font-size:12px;color:var(--muted)">🔁 No se repite</div>
+    <div class="sec">PRIORIDAD</div>
+    <div class="kind" style="grid-template-columns:1fr 1fr 1fr"><button class="on" style="border-color:var(--ok);color:var(--ok);background:var(--okbg)">Normal</button><button>Media</button><button>Alta</button></div>
+    <div class="btns"><span class="c">Cancelar</span><span class="s">Guardar</span></div>
+  </div>
+  <div class="nav"><div class="on"><i>💬</i>Chat</div><div><i>📅</i>Almanaque</div><div><i>☑</i>Listado</div><div><i>⚙</i>Configuración</div></div>
+  <div class="sysbar">|||  ◯  ‹</div>
+</div>
+<figcaption><b><span class="n">5</span>Modo gratis igual que con IA</b>
+<ul><li>Los mismos dos botones (Cargar a mano y Libreta con "5 pendientes"), en el mismo lugar y del mismo tamaño.</li>
+<li>Al cargar a mano también se elige la prioridad (Normal · Media · Alta) y "sonar en silencio".</li>
+<li>El botón flotante de la libreta aparece igual en las otras solapas.</li></ul></figcaption>
+</figure>
+
+<!-- 2 Almanaque con flotante -->
+<figure>
+<div class="phone">
+  <div class="top">TE RECORDARÉ</div>
+  <div class="screen">
+    <div class="month"><span>‹</span>Noviembre 2026<span>›</span></div>
+    <div class="cal">
+      <b>L</b><b>M</b><b>M</b><b>J</b><b>V</b><b>S</b><b>D</b>
+      <div></div><div></div><div></div><div></div><div></div><div></div><div>1</div>
+      <div>2</div><div class="has">3</div><div>4</div><div>5</div><div class="has">6</div><div>7</div><div>8</div>
+      <div>9</div><div>10</div><div class="has">11</div><div>12</div><div class="today">13</div><div class="has">14</div><div>15</div>
+      <div>16</div><div>17</div><div class="has">18</div><div>19</div><div>20</div><div>21</div><div>22</div>
+      <div>23</div><div>24</div><div>25</div><div class="has">26</div><div>27</div><div>28</div><div>29</div>
+      <div>30</div>
+    </div>
+    <div class="swipe">👆 Deslizar ← → cambia de solapa.<br>El mes se cambia solo con las flechitas ‹ ›</div>
+    <div class="occ">Llamar al contador<small>hoy · 17:30 h</small></div>
+    <div class="occ">Hacer impresión 3D para depósito…<small>hoy · 21:00 h</small></div>
+    <span class="drag">mantené apretado y movelo ↔</span>
+    <div class="fab" tabindex="0" role="button" aria-label="Abrir libreta, 5 pendientes"><span class="ic">📒</span><span class="c">Libreta<span class="pend">5 pendientes</span></span></div>
+  </div>
+  <div class="nav"><div><i>💬</i>Chat</div><div class="on"><i>📅</i>Almanaque</div><div><i>☑</i>Listado</div><div><i>⚙</i>Configuración</div></div>
+  <div class="sysbar">|||  ◯  ‹</div>
+</div>
+<figcaption><b><span class="n">3</span>Libreta flotante · <span class="n">6</span>Deslizar entre solapas</b>
+<ul><li>En Almanaque, Listado y Configuración queda la libreta chiquita, flotando abajo a la derecha, con lo pendiente.</li>
+<li>Se puede arrastrar a otro lugar si tapa algo.</li>
+<li>Deslizando el dedo: Chat → Almanaque → Listado → Configuración → vuelve a Chat (y para el otro lado).</li>
+<li>El almanaque ya no cambia de mes al deslizar: para eso están las flechitas.</li></ul></figcaption>
+</figure>
+
+<!-- 2b toque flotante -->
+<figure>
+<div class="phone">
+  <div class="top">TE RECORDARÉ</div>
+  <div class="screen">
+    <div class="month"><span>‹</span>Noviembre 2026<span>›</span></div>
+    <div class="occ">Llamar al contador<small>hoy · 17:30 h</small></div>
+    <div class="dim"></div>
+    <div class="sheet" style="bottom:0">
+      <div class="grab"></div>
+      <h3>📒 Anotar en la libreta</h3>
+      <div class="pick"><span class="on">General</span><span>Compras</span><span>Impresiones 3D</span><span>＋</span></div>
+      <div class="kind"><button class="on">☑ Tarea</button><button>📝 Nota</button></div>
+      <div class="inp">Comprar filamento PETG negro</div>
+      <div class="btns"><span class="c">Abrir libreta</span><span class="s">✓ Anotar</span></div>
+      <div class="safe">Los botones siempre por arriba de la barra del teléfono</div>
+    </div>
+  </div>
+  <div class="nav"><div><i>💬</i>Chat</div><div class="on"><i>📅</i>Almanaque</div><div><i>☑</i>Listado</div><div><i>⚙</i>Configuración</div></div>
+  <div class="sysbar">|||  ◯  ‹</div>
+</div>
+<figcaption><b>Al tocar la libreta flotante</b>
+<ul><li>Se abre una hoja para anotar rápido sin salir de donde estás: elegís la carpeta, si es <b>tarea</b> o <b>nota</b>, escribís o dictás y tocás <b>Anotar</b>.</li>
+<li><b>Abrir libreta</b> te lleva a la libreta completa.</li></ul></figcaption>
+</figure>
+
+<!-- 4 Listado -->
+<figure>
+<div class="phone">
+  <div class="top">TE RECORDARÉ</div>
+  <div class="screen">
+    <div class="search">🔍 Buscar…</div>
+    <div class="tabs2"><span class="on">Pendientes</span><span>Todos</span></div>
+    <div class="filters"><span>Pasados</span><span>Hoy</span><span class="on">Todos</span></div>
+    <div class="rt late"><div class="t">Pagar la luz</div><div class="w"><span>ayer · 9:00 h · vencido</span><span class="repro">Reprogramar</span></div></div>
+    <div class="rt late"><div class="t">Llevar el auto al service</div><div class="w"><span>10 nov · 8:30 h · vencido</span><span class="repro">Reprogramar</span></div></div>
+    <div class="rt"><div class="t">Llamar al contador</div><div class="w"><span>hoy · 17:30 h</span><span>✏️ 🗑</span></div></div>
+    <div class="rt"><div class="t">Hacer impresión 3D para depósito de aceite</div><div class="w"><span>hoy · 21:00 h</span><span>✏️ 🗑</span></div></div>
+    <div class="rt"><div class="t">Turno médico</div><div class="w"><span>18 nov · 11:00 h</span><span>✏️ 🗑</span></div></div>
+    <div class="fab" tabindex="0" role="button" aria-label="Abrir libreta, 5 pendientes"><span class="ic">📒</span><span class="c">Libreta<span class="pend">5 pendientes</span></span></div>
+  </div>
+  <div class="nav"><div><i>💬</i>Chat</div><div><i>📅</i>Almanaque</div><div class="on"><i>☑</i>Listado</div><div><i>⚙</i>Configuración</div></div>
+  <div class="sysbar">|||  ◯  ‹</div>
+</div>
+<figcaption><b><span class="n">7</span>Los vencidos con recuadro rojo</b>
+<ul><li>En Pendientes → <b>Pasados</b> y <b>Todos</b>, y en la solapa <b>Todos</b>: cada uno que quedó vencido va con borde rojo grueso y fondo rosado.</li>
+<li>Así se ve enseguida que hay que reprogramarlo o darlo por hecho.</li></ul></figcaption>
+</figure>
+
+<!-- 8-10 Carpeta tareas/notas (interactiva) -->
+<figure>
+<div class="phone" id="folder">
+  <div class="top left"><span>←</span><span>📁</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">IMPRESIONES 3D</span><span>✎</span><span>🗑</span></div>
+  <div class="screen">
+    <div class="search">🔍 Buscar en IMPRESIONES 3D</div>
+    <div class="kind"><button id="kTask" class="on" type="button">☑ Tareas · <span class="pend" style="font-size:11px">3</span></button><button id="kNote" type="button">📝 Notas · 2</button></div>
+
+    <div id="vTask" style="display:flex;flex-direction:column;gap:6px">
+      <div class="sec">PARA HACER (3)</div>
+      <div class="task" data-t><span class="num">1</span><span class="box"></span><span class="tx">Comprar filamento PETG negro</span><button class="gear" type="button" aria-label="Opciones">⚙</button></div>
+      <div class="tools" hidden><span class="b">▲</span><span class="b">▼</span><span class="g">✏️</span><span class="y">🔔</span><span class="r">🗑</span></div>
+      <div class="task" data-t><span class="num">2</span><span class="box"></span><span class="tx">Imprimir soporte para el depósito de aceite del compresor grande del taller</span><button class="gear" type="button" aria-label="Opciones">⚙</button></div>
+      <div class="tools" hidden><span class="b">▲</span><span class="b">▼</span><span class="g">✏️</span><span class="y">🔔</span><span class="r">🗑</span></div>
+      <div class="task" data-t><span class="num">3</span><span class="box"></span><span class="tx">Repuestos <em>(1/3)</em></span><button class="gear" type="button" aria-label="Opciones">⚙</button></div>
+      <div class="tools" hidden><span class="b">▲</span><span class="b">▼</span><span class="g">✏️</span><span class="y">🔔</span><span class="r">🗑</span></div>
+      <div class="sec">HECHOS (1)</div>
+      <div class="task done"><span class="num">4</span><span class="box done">✓</span><span class="tx">Calibrar la cama</span><button class="gear" type="button" aria-label="Opciones">⚙</button></div>
+    </div>
+
+    <div id="vNote" style="display:none;flex-direction:column;gap:6px">
+      <div class="sec">NOTAS (2)</div>
+      <div class="note"><b>Medidas del depósito</b><p>Diámetro de la boca 42 mm, rosca fina. Altura total 18 cm. Probar con 30 % de relleno.</p><small>12 nov</small><button class="gear" type="button" aria-label="Opciones">⚙</button></div>
+      <div class="note"><b>Configuración de la impresora</b><p>PETG: boquilla 240 °C, cama 80 °C, ventilador al 40 %. Retracción 1,2 mm.</p><small>8 nov</small><button class="gear" type="button" aria-label="Opciones">⚙</button></div>
+      <div class="sec" style="margin-top:4px">AL TOCAR UNA NOTA</div>
+      <div class="paper"><b>Medidas del depósito</b>Diámetro de la boca 42 mm, rosca fina.<br>Altura total 18 cm.<br>Probar con 30 % de relleno…</div>
+    </div>
+  </div>
+  <div class="inbar"><div class="field" id="inph">Escribí una tarea…</div><span class="ok">✓</span><span class="mi">🎤</span></div>
+  <div class="sysbar">|||  ◯  ‹</div>
+</div>
+<figcaption><b><span class="n">8</span>Todas del mismo alto · <span class="n">9</span>Engranajito · <span class="n">10</span>Tareas y Notas</b>
+<ul><li>Cada tarea mide lo mismo, sea larga o corta: un renglón con "…". Tocándola se abre y se lee entera.</li>
+<li>El <b>⚙</b> del rincón muestra ▲ ▼ ✏️ 🔔 🗑 (en vez de dejarla apretada). Probá tocarlo.</li>
+<li>Arriba, <b>Tareas</b> (para tildar) y <b>Notas</b> (texto libre, como las notas de Samsung). Cada nota tiene título, se ven dos renglones y al tocarla se abre para leer y escribir.</li>
+<li>Abajo, la barra para escribir más chica y alineada: campo, ✓ y micrófono del mismo alto.</li></ul></figcaption>
+</figure>
+
+<!-- 1 hoja cortada -->
+<figure>
+<div class="phone">
+  <div class="top left"><span>←</span><span>📁</span><span style="flex:1">IMPRESIONES 3D</span></div>
+  <div class="screen">
+    <div class="search">🔍 Buscar en IMPRESIONES 3D</div>
+    <div class="dim"></div>
+    <div class="sheet" style="bottom:0">
+      <div class="grab"></div>
+      <h3>Editar carpeta</h3>
+      <div class="inp">IMPRESIONES 3D</div>
+      <div style="font-size:12px">Color</div>
+      <div class="dots"><span style="background:#e0a800"></span><span style="background:#2f6fb3"></span><span style="background:#2e8b57"></span><span style="background:#d9534f"></span><span style="background:#8e5cc6"></span><span style="background:#e67e22;outline:3px solid var(--fg);outline-offset:2px"></span><span style="background:#17a2b8"></span><span style="background:#7f8c8d"></span></div>
+      <div class="btns"><span class="c">Cancelar</span><span class="s">Guardar</span></div>
+      <div class="safe">✓ Ahora quedan enteros, arriba de la barra del teléfono</div>
+    </div>
+  </div>
+  <div class="sysbar">|||  ◯  ‹</div>
+</div>
+<figcaption><b><span class="n">1</span>Botones cortados abajo</b>
+<ul><li>En tu captura, Cancelar y Guardar quedaban debajo de la barra del teléfono (|||  ◯  ‹).</li>
+<li>Reviso todas las hojas y carteles de la app para que los botones siempre queden enteros arriba de esa barra.</li></ul></figcaption>
+</figure>
+
+</div>
+
+<script>
+// Engranajitos: muestran u ocultan los botoncitos de esa tarea.
+document.querySelectorAll('#vTask .task[data-t] .gear').forEach(g => {
+  g.addEventListener('click', () => {
+    const task = g.closest('.task');
+    const tools = task.nextElementSibling;
+    const open = tools.hidden;
+    document.querySelectorAll('#vTask .tools').forEach(t => t.hidden = true);
+    document.querySelectorAll('#vTask .task').forEach(t => t.classList.remove('sel'));
+    tools.hidden = !open;
+    task.classList.toggle('sel', open);
+  });
+});
+// Tareas / Notas
+const kT = document.getElementById('kTask'), kN = document.getElementById('kNote');
+function show(notes){
+  kT.classList.toggle('on', !notes); kN.classList.toggle('on', notes);
+  document.getElementById('vTask').style.display = notes ? 'none' : 'flex';
+  document.getElementById('vNote').style.display = notes ? 'flex' : 'none';
+  document.getElementById('inph').textContent = notes ? 'Escribí una nota nueva…' : 'Escribí una tarea…';
+}
+kT.addEventListener('click', () => show(false));
+kN.addEventListener('click', () => show(true));
+</script>
