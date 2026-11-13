@@ -524,10 +524,10 @@ class _LastView extends StatelessWidget {
     final said = last.said;
     final saidLine = said == null
         ? null
-        : Text(
+        : TapToExpand(
             'Dijiste: “$said”',
+            key: const Key('said-line'),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               fontSize: 11,
               color: scheme.onSurfaceVariant,
@@ -921,8 +921,10 @@ class _ReminderCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (said != null) ...[said!, const SizedBox(height: 2)],
-            Text(
+            TapToExpand(
               reminder.title,
+              key: const Key('reminder-title'),
+              maxLines: 2,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -1126,4 +1128,44 @@ class _Composer extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Texto que, si no entra en [maxLines], termina en "…"; al tocarlo se ve
+/// entero y al volver a tocarlo se cierra (pedido del usuario para los
+/// mensajes largos, así la tarjeta del Chat entra siempre).
+class TapToExpand extends StatefulWidget {
+  const TapToExpand(this.text, {super.key, required this.maxLines, this.style});
+
+  final String text;
+  final int maxLines;
+  final TextStyle? style;
+
+  @override
+  State<TapToExpand> createState() => _TapToExpandState();
+}
+
+class _TapToExpandState extends State<TapToExpand> {
+  bool _open = false;
+
+  @override
+  void didUpdateWidget(TapToExpand old) {
+    super.didUpdateWidget(old);
+    if (old.text != widget.text) _open = false;
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: () => setState(() => _open = !_open),
+    child: AnimatedSize(
+      duration: const Duration(milliseconds: 150),
+      alignment: Alignment.topLeft,
+      child: Text(
+        widget.text,
+        maxLines: _open ? null : widget.maxLines,
+        overflow: _open ? TextOverflow.visible : TextOverflow.ellipsis,
+        style: widget.style,
+      ),
+    ),
+  );
 }
