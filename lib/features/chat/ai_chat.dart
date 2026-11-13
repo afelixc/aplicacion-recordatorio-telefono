@@ -827,15 +827,15 @@ class _PriorityPicker extends StatelessWidget {
   }
 
   static String _explain(ReminderPriority p, PriorityConfig c) => switch (p) {
-    ReminderPriority.normal => 'Te avisa una vez, a la hora del recordatorio.',
+    ReminderPriority.normal => 'Avisa una vez, a la hora.',
     ReminderPriority.media =>
       'Repite cada ${c.mediaEvery} min '
           '${c.mediaInHours ? 'de ${c.mediaFrom} a ${c.mediaTo} h' : 'durante ${PriorityConfig.forLabel(c.mediaFor).toLowerCase()}'}'
-          ', hasta que toques "Hecho".',
+          ', hasta "Hecho".',
     ReminderPriority.alta =>
-      'Suena ${c.altaTimes} veces seguidas'
+      'Suena ${c.altaTimes} veces'
           '${c.altaVibrate ? ' y vibra' : ''}; repite cada ${c.altaEvery} min '
-          'hasta que toques "Hecho".',
+          'hasta "Hecho".',
   };
 }
 
@@ -920,9 +920,21 @@ class _ReminderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (said != null) ...[said!, const SizedBox(height: 4)],
+            if (said != null) ...[said!, const SizedBox(height: 2)],
+            Text(
+              reminder.title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                decoration: active ? null : TextDecoration.lineThrough,
+              ),
+            ),
+            // Cuándo y, a la derecha, "Activo" (en un renglón, para que
+            // entre la tarjeta entera).
             Row(
               children: [
+                Expanded(child: Text(describeSchedule(reminder))),
+                const SizedBox(width: 6),
                 Icon(
                   active ? Icons.check_circle : Icons.cancel,
                   color: active ? Colors.green : scheme.onSurfaceVariant,
@@ -937,16 +949,6 @@ class _ReminderCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              reminder.title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                decoration: active ? null : TextDecoration.lineThrough,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(describeSchedule(reminder)),
             if (next != null) Text('Próximo: ${Fmt.when(next)}'),
             const SizedBox(height: 6),
             Row(children: actions),

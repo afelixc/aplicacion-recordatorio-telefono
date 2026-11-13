@@ -124,13 +124,59 @@ class _HomeShellState extends State<HomeShell> {
         onDestinationSelected: _select,
         destinations: [
           for (final t in appTabs)
-            NavigationDestination(
-              icon: Icon(t.icon),
-              selectedIcon: Icon(t.selectedIcon),
+            _OneLineLabel(
               label: t.label,
+              child: NavigationDestination(
+                icon: Icon(t.icon),
+                selectedIcon: Icon(t.selectedIcon),
+                label: t.label,
+              ),
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Si el nombre de la solapa no entra en un renglón (p. ej. "Configuración"
+/// con letra grande), achica solo esa palabra para que entre, y el dibujo
+/// queda a la misma altura que los demás (pedido del usuario).
+class _OneLineLabel extends StatelessWidget {
+  const _OneLineLabel({required this.label, required this.child});
+
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style =
+        (theme.navigationBarTheme.labelTextStyle?.resolve({
+                  WidgetState.selected,
+                }) ??
+                theme.textTheme.labelMedium)!
+            .copyWith(fontWeight: FontWeight.w700);
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final painter = TextPainter(
+          text: TextSpan(text: label, style: style),
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout();
+        final room = box.maxWidth - 8;
+        final width = painter.width;
+        painter.dispose();
+        if (width <= room) return child;
+        final size = style.fontSize ?? 12;
+        final fitted = scaler.scale(size) * room / width;
+        return MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(fitted / size)),
+          child: child,
+        );
+      },
     );
   }
 }
