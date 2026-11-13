@@ -316,7 +316,7 @@ class _CalendarSectionState extends State<CalendarSection> {
     final both = s.calendarSend && writable && s.calendarAuto;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 16,
+      spacing: 12,
       children: [
         _Box(
           color: Colors.green.shade800,
@@ -364,6 +364,7 @@ class _CalendarSectionState extends State<CalendarSection> {
           title: '2 · De Recordame → al calendario',
           children: [
             SwitchListTile(
+              dense: true,
               key: const Key('cal-send'),
               contentPadding: EdgeInsets.zero,
               title: const Text('Enviar mis recordatorios al calendario'),
@@ -426,6 +427,7 @@ class _CalendarSectionState extends State<CalendarSection> {
           title: '4 · Del calendario → a Recordame, siempre',
           children: [
             SwitchListTile(
+              dense: true,
               key: const Key('cal-auto'),
               contentPadding: EdgeInsets.zero,
               title: const Text('Traer lo nuevo automáticamente'),
@@ -724,34 +726,34 @@ class _CalendarPicker extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: () => _open(context),
         child: Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           decoration: BoxDecoration(
             border: Border.all(color: scheme.outline),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Row(
-            children: [
-              Icon(Icons.event, color: scheme.primary),
-              const SizedBox(width: 12),
-              Expanded(
-                child: current == null
-                    ? const Text('Tocá para elegir')
-                    : _CalendarText(calendar: current),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Cambiar',
-                style: TextStyle(
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+          child: current == null
+              ? Row(
+                  children: [
+                    Icon(Icons.event, color: scheme.primary, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(child: Text('Tocá para elegir')),
+                    _change(scheme),
+                  ],
+                )
+              : _CalendarText(calendar: current, trailing: _change(scheme)),
         ),
       ),
     );
   }
+
+  Widget _change(ColorScheme scheme) => Text(
+    'Cambiar',
+    style: TextStyle(
+      color: scheme.primary,
+      fontWeight: FontWeight.w700,
+      fontSize: 13,
+    ),
+  );
 
   Future<void> _open(BuildContext context) async {
     final byAccount = <String, List<PhoneCalendar>>{};
@@ -820,29 +822,67 @@ String _tags(PhoneCalendar c) => [
   if (!c.synced) 'El teléfono no lo está sincronizando',
 ].join(' · ');
 
+/// El calendario elegido, compacto: arriba el nombre y "Cambiar", abajo el
+/// mail a lo largo en un renglón (se achica si no entra) y "El principal".
 class _CalendarText extends StatelessWidget {
-  const _CalendarText({required this.calendar});
+  const _CalendarText({required this.calendar, required this.trailing});
 
   final PhoneCalendar calendar;
+  final Widget trailing;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final tags = _tags(calendar);
+    final account =
+        calendar.account.isNotEmpty && calendar.account != calendar.name
+        ? calendar.account
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          calendar.name.isEmpty ? '(sin nombre)' : calendar.name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+        Row(
+          children: [
+            Icon(Icons.event, color: scheme.primary, size: 18),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                calendar.name.isEmpty ? '(sin nombre)' : calendar.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            trailing,
+          ],
         ),
-        if (calendar.account.isNotEmpty && calendar.account != calendar.name)
-          Text(calendar.account, style: theme.textTheme.bodySmall),
+        if (account != null)
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                account,
+                maxLines: 1,
+                style: theme.textTheme.bodySmall?.copyWith(fontSize: 12.5),
+              ),
+            ),
+          ),
         if (tags.isNotEmpty)
           Text(
             tags,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 11.5,
+              color: calendar.primary
+                  ? Colors.green.shade700
+                  : scheme.onSurfaceVariant,
+              fontWeight: calendar.primary ? FontWeight.w700 : null,
             ),
           ),
       ],

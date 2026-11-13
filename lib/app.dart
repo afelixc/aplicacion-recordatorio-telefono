@@ -69,6 +69,18 @@ class RecordameApp extends StatelessWidget {
           locale: const Locale('es', 'AR'),
           supportedLocales: const [Locale('es', 'AR'), Locale('es')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          // En toda la app nada queda tapado por la barra del teléfono
+          // (|||  ◯  ‹): el contenido termina arriba de ella (pedido del
+          // usuario: abajo se cortaban textos y botones).
+          builder: (context, child) => ColoredBox(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            child: SafeArea(
+              top: false,
+              left: false,
+              right: false,
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
           home: UpdatePrompt(
             child: HomeShell(
               openedReminders: openedReminders,
