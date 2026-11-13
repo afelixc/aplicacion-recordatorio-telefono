@@ -11,6 +11,7 @@ import '../ai/ai_provider.dart';
 import '../ai/ai_providers.dart';
 import '../ai/pricing.dart';
 import '../ai/reminder_interpreter.dart';
+import '../reminders/priority_chooser.dart';
 import '../reminders/reminder_editor.dart';
 import 'chat_screen.dart';
 import 'dictation.dart';
@@ -18,8 +19,6 @@ import '../notebook/notebook_page.dart';
 import '../notebook/notes.dart';
 import 'examples_sheet.dart';
 import 'talking_panel.dart';
-import '../notifications/priority_config.dart';
-import '../settings/priorities_page.dart';
 
 enum _Status { thinking, saved, question, error }
 
@@ -342,6 +341,9 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
         Expanded(
           child: TabBarView(
             controller: _tabs,
+            // Deslizar el dedo cambia la solapa de abajo (Chat → Almanaque…);
+            // estas dos se cambian tocándolas.
+            physics: const NeverScrollableScrollPhysics(),
             children: [
               ListenableBuilder(
                 listenable: widget.settings,
@@ -487,32 +489,10 @@ class _LastView extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: _BigButton(
-                  icon: Icons.edit_note,
-                  label: 'Cargar a mano\nrecordatorios',
-                  color: scheme.primary,
-                  onPressed: onManual,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _BigButton(
-                  key: const Key('open-notebook'),
-                  icon: Icons.menu_book_outlined,
-                  label: 'Libreta',
-                  badge: ToDoBadge(notebookToDo),
-                  big: true,
-                  color: const Color(0xFFC98A00),
-                  onPressed: onNotebook,
-                ),
-              ),
-            ],
-          ),
+        NotebookShortcuts(
+          notebookToDo: notebookToDo,
+          onManual: onManual,
+          onNotebook: onNotebook,
         ),
       ],
     );
@@ -586,8 +566,9 @@ class _LastView extends StatelessWidget {
                   // Lo que dijo va arriba de todo, en la primera tarjeta.
                   said: i == 0 ? saidLine : null,
                   footer: item.active
-                      ? _PriorityPicker(
-                          reminder: item.reminder,
+                      ? PriorityChooser(
+                          priority: item.reminder.priority,
+                          loud: item.reminder.loud,
                           onPriority: (p) => onPriority(i, p),
                           onLoud: (v) => onLoud(i, v),
                         )
@@ -645,7 +626,55 @@ class _LastView extends StatelessWidget {
   }
 }
 
+/// Los dos botones: "Cargar a mano recordatorios" (azul) y "Libreta"
+/// (amarillo, con lo pendiente). Iguales en el Chat con IA y en el gratis.
+class NotebookShortcuts extends StatelessWidget {
+  const NotebookShortcuts({
+    super.key,
+    required this.notebookToDo,
+    required this.onManual,
+    required this.onNotebook,
+  });
+
+  final int notebookToDo;
+  final VoidCallback onManual;
+  final VoidCallback onNotebook;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _BigButton(
+              icon: Icons.edit_note,
+              label: 'Cargar a mano\nrecordatorios',
+              color: scheme.primary,
+              onPressed: onManual,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _BigButton(
+              key: const Key('open-notebook'),
+              icon: Icons.menu_book_outlined,
+              label: 'Libreta',
+              badge: ToDoBadge(notebookToDo),
+              big: true,
+              color: const Color(0xFFC98A00),
+              onPressed: onNotebook,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Botón grande (Cargar a mano / Libreta): al tocarlo se agranda y entra.
+/// Lo usa también el modo gratis ([NotebookShortcuts]).
 class _BigButton extends StatefulWidget {
   const _BigButton({
     super.key,
@@ -701,12 +730,12 @@ class _BigButtonState extends State<_BigButton> {
           borderRadius: BorderRadius.circular(16),
           onTap: _tap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(widget.icon, size: widget.big ? 36 : 30, color: c),
-                const SizedBox(height: 4),
+                Icon(widget.icon, size: widget.big ? 26 : 22, color: c),
+                const SizedBox(height: 2),
                 Text(
                   widget.label,
                   textAlign: TextAlign.center,
@@ -714,12 +743,13 @@ class _BigButtonState extends State<_BigButton> {
                   style: TextStyle(
                     color: c,
                     fontWeight: FontWeight.w800,
-                    fontSize: widget.big ? 18 : 15,
+                    fontSize: widget.big ? 16 : 13.5,
+                    height: 1.15,
                   ),
                 ),
                 if (widget.badge != null) ...[
-                  const SizedBox(height: 2),
-                  widget.badge!,
+                  const SizedBox(height: 1),
+                  FittedBox(fit: BoxFit.scaleDown, child: widget.badge!),
                 ],
               ],
             ),
@@ -738,151 +768,6 @@ final _smallButton = ButtonStyle(
     TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600),
   ),
 );
-
-/// Prioridad del recordatorio (Normal · Media · Alta) y "Sonar aunque esté
-/// en silencio", debajo de Cancelar / Modificar.
-class _PriorityPicker extends StatelessWidget {
-  const _PriorityPicker({
-    required this.reminder,
-    required this.onPriority,
-    required this.onLoud,
-  });
-
-  final Reminder reminder;
-  final ValueChanged<ReminderPriority> onPriority;
-  final ValueChanged<bool> onLoud;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final config =
-        AppScope.of(context).notifications?.priorities ??
-        const PriorityConfig();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Divider(height: 12),
-        Text(
-          'PRIORIDAD',
-          style: theme.textTheme.labelSmall?.copyWith(
-            letterSpacing: 1,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            for (final p in ReminderPriority.values) ...[
-              if (p != ReminderPriority.normal) const SizedBox(width: 6),
-              Expanded(
-                child: _PriorityButton(
-                  key: Key('priority-${p.name}'),
-                  label: p.label,
-                  color: priorityColor(p),
-                  selected: reminder.priority == p,
-                  onTap: () => onPriority(p),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 3),
-        Text(
-          _explain(reminder.priority, config),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontSize: 11,
-            color: scheme.onSurfaceVariant,
-          ),
-        ),
-        InkWell(
-          key: const Key('priority-loud'),
-          onTap: () => onLoud(!reminder.loud),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 30,
-                height: 28,
-                child: Checkbox(
-                  value: reminder.loud,
-                  visualDensity: VisualDensity.compact,
-                  onChanged: (v) => onLoud(v ?? false),
-                ),
-              ),
-              const Icon(Icons.notifications_off_outlined, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                'Sonar aunque esté en silencio',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  static String _explain(ReminderPriority p, PriorityConfig c) => switch (p) {
-    ReminderPriority.normal => 'Avisa una vez, a la hora.',
-    ReminderPriority.media =>
-      'Repite cada ${c.mediaEvery} min '
-          '${c.mediaInHours ? 'de ${c.mediaFrom} a ${c.mediaTo} h' : 'durante ${PriorityConfig.forLabel(c.mediaFor).toLowerCase()}'}'
-          ', hasta "Hecho".',
-    ReminderPriority.alta =>
-      'Suena ${c.altaTimes} veces'
-          '${c.altaVibrate ? ' y vibra' : ''}; repite cada ${c.altaEvery} min '
-          'hasta "Hecho".',
-  };
-}
-
-class _PriorityButton extends StatelessWidget {
-  const _PriorityButton({
-    super.key,
-    required this.label,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Material(
-      color: selected ? color.withValues(alpha: 0.15) : Colors.transparent,
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: selected ? color : scheme.outlineVariant,
-          width: 2,
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: selected ? color : scheme.onSurface,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ReminderCard extends StatelessWidget {
   const _ReminderCard({

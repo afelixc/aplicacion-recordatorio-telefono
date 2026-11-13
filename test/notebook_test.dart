@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:recordame/core/settings.dart';
 import 'package:recordame/features/notebook/notebook_page.dart';
 import 'package:recordame/features/notebook/notes.dart';
 
 void main() {
+  setUpAll(() => initializeDateFormatting('es_AR'));
   test('cuenta lo que falta hacer, con los ítems de adentro', () {
     final at = DateTime(2026);
     final f = NoteFolder(
@@ -32,7 +34,8 @@ void main() {
     expect(f.toDo, 4);
     expect(notebookToDo([f, NoteFolder('Vacía')]), 4);
     expect(toDoLabel(0), 'Todo hecho ✓');
-    expect(toDoLabel(4), '4 por hacer');
+    expect(toDoLabel(4), '4 pendientes');
+    expect(toDoLabel(1), '1 pendiente');
   });
 
   test('separa lo dictado en renglones', () {
@@ -117,8 +120,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('✓ Anoté 2 cosas en Auto.'), findsOneWidget);
     expect(find.text('PARA HACER (2)'), findsOneWidget);
-    // Tocar el texto no lo da por hecho: muestra subir y bajar.
-    await tester.tap(find.text('Taller'));
+    // El engranajito (no el texto) muestra subir y bajar; no la da por hecha.
+    await tester.tap(find.byKey(const Key('gear-1-p')));
     await tester.pumpAndSettle();
     expect(f.items.first.done, isFalse);
     expect(find.byTooltip('Bajar'), findsOneWidget);
@@ -299,5 +302,71 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Vino'), findsOneWidget);
     expect(find.text('Llamar a Ignacio'), findsNothing);
+  });
+
+  testWidgets('cada tarea del mismo alto; al tocarla se abre entera', (
+    tester,
+  ) async {
+    final s = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    final f = await s.addFolder('Taller', folderColors.first);
+    final long = List.filled(30, 'repuesto').join(' ');
+    await s.addNotes(f, ['Corta', long]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FolderPage(settings: s, folder: f),
+      ),
+    );
+    final short = tester.getSize(
+      find
+          .ancestor(of: find.text('Corta'), matching: find.byType(SizedBox))
+          .first,
+    );
+    final big = tester.getSize(
+      find.ancestor(of: find.text(long), matching: find.byType(SizedBox)).first,
+    );
+    expect(big.height, short.height);
+    await tester.tap(find.text(long));
+    await tester.pumpAndSettle();
+    expect(find.text('Editar nota'), findsOneWidget);
+  });
+
+  testWidgets('notas de texto libre: se anotan, se abren y se guardan', (
+    tester,
+  ) async {
+    final store = MemorySettingsStore();
+    final s = AppSettings(store, MemoryKeyStore());
+    final f = await s.addFolder('Impresiones', folderColors.first);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FolderPage(settings: s, folder: f),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('kind-memos')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('notebook-input')),
+      'Medidas del depósito: boca 42 mm',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notebook-send')));
+    await tester.pumpAndSettle();
+    expect(f.memos.single.heading, 'Medidas del depósito: boca 42 mm');
+    // No cuenta como pendiente.
+    expect(f.toDo, 0);
+
+    await tester.tap(find.text('Medidas del depósito: boca 42 mm'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('memo-title')), 'Depósito');
+    await tester.enterText(
+      find.byKey(const Key('memo-text')),
+      'Boca 42 mm\nAltura 18 cm',
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(f.memos.single.title, 'Depósito');
+    expect(find.text('Depósito'), findsOneWidget);
+    // Se guarda en la libreta (y por eso va en la copia).
+    final back = NoteFolder.decodeAll(NoteFolder.encodeAll(s.folders));
+    expect(back.single.memos.single.text, 'Boca 42 mm\nAltura 18 cm');
   });
 }

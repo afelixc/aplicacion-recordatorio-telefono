@@ -86,7 +86,7 @@ class _NoteInputBarState extends State<NoteInputBar> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+          padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
           child: _dictation.active
               ? TalkingPanel(
                   text: _dictation.text,
@@ -98,6 +98,7 @@ class _NoteInputBarState extends State<NoteInputBar> {
                       'y cuando termines tocá Anotar.',
                 )
               : Row(
+                  // Campo, ✓ y micrófono del mismo alto y alineados.
                   children: [
                     Expanded(
                       child: TextField(
@@ -105,38 +106,36 @@ class _NoteInputBarState extends State<NoteInputBar> {
                         controller: _input,
                         minLines: 1,
                         maxLines: 4,
+                        style: const TextStyle(fontSize: 14),
                         textCapitalization: TextCapitalization.sentences,
                         decoration: InputDecoration(
                           hintText: widget.hint,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           isDense: true,
-                          suffixIcon: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: IconButton.filled(
-                              key: const Key('notebook-send'),
-                              tooltip: 'Anotar',
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.green.shade600,
-                                foregroundColor: Colors.white,
-                              ),
-                              icon: const Icon(Icons.check),
-                              onPressed: _input.text.trim().isEmpty
-                                  ? null
-                                  : _send,
-                            ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
                           ),
                         ),
                         onSubmitted: (_) => _send(),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    IconButton.filled(
+                    const SizedBox(width: 6),
+                    _RoundButton(
+                      key: const Key('notebook-send'),
+                      tooltip: 'Anotar',
+                      icon: Icons.check,
+                      color: Colors.green.shade600,
+                      onPressed: _input.text.trim().isEmpty ? null : _send,
+                    ),
+                    const SizedBox(width: 6),
+                    _RoundButton(
                       key: const Key('notebook-mic'),
                       tooltip: 'Dictar',
-                      iconSize: 28,
-                      icon: const Icon(Icons.mic),
+                      icon: Icons.mic,
+                      color: scheme.secondary,
                       onPressed: _talk,
                     ),
                   ],
@@ -145,4 +144,36 @@ class _NoteInputBarState extends State<NoteInputBar> {
       ),
     );
   }
+}
+
+/// Botón redondo de 40, igual para ✓ y el micrófono.
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({
+    super.key,
+    required this.tooltip,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton.filled(
+    tooltip: tooltip,
+    onPressed: onPressed,
+    iconSize: 22,
+    constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+    padding: EdgeInsets.zero,
+    style: IconButton.styleFrom(
+      backgroundColor: color,
+      foregroundColor: Colors.white,
+      disabledBackgroundColor: color.withValues(alpha: 0.35),
+      disabledForegroundColor: Colors.white,
+    ),
+    icon: Icon(icon),
+  );
 }

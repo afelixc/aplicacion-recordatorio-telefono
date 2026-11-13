@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../core/sheets.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../core/formatting.dart';
@@ -65,7 +68,7 @@ Future<Recurrence?> showMultiDayPicker(
   Recurrence? initial,
   DateTime? initialMonth,
 }) {
-  return showModalBottomSheet<Recurrence>(
+  return showAppSheet<Recurrence>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

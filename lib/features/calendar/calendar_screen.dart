@@ -64,70 +64,62 @@ class _CalendarScreenState extends State<CalendarScreen> {
             DateTime(_month.year, _month.month + 1),
           );
           final dayItems = byDay[_selected] ?? const [];
-          // Deslizar el dedo a la izquierda pasa al mes siguiente; a la
-          // derecha, al anterior.
-          return GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onHorizontalDragEnd: (d) {
-              final v = d.primaryVelocity ?? 0;
-              if (v < -250) _changeMonth(1);
-              if (v > 250) _changeMonth(-1);
-            },
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-              children: [
-                _MonthHeader(
+          // El mes se cambia con las flechitas: deslizar el dedo cambia de
+          // solapa (pedido del usuario).
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+            children: [
+              _MonthHeader(
+                month: _month,
+                onPrevious: () => _changeMonth(-1),
+                onNext: () => _changeMonth(1),
+                onToday: _goToday,
+              ),
+              const SizedBox(height: 4),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                transitionBuilder: (child, animation) {
+                  final incoming = child.key == ValueKey(_month);
+                  final dx = (incoming ? 1.0 : -1.0) * _direction * 0.25;
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: Offset(dx, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: _MonthGrid(
+                  key: ValueKey(_month),
                   month: _month,
-                  onPrevious: () => _changeMonth(-1),
-                  onNext: () => _changeMonth(1),
-                  onToday: _goToday,
-                ),
-                const SizedBox(height: 4),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (child, animation) {
-                    final incoming = child.key == ValueKey(_month);
-                    final dx = (incoming ? 1.0 : -1.0) * _direction * 0.25;
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween(
-                          begin: Offset(dx, 0),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
-                    );
+                  selected: _selected,
+                  counts: {
+                    for (final e in byDay.entries)
+                      e.key: e.value.where((o) => !_isDone(o)).length,
                   },
-                  child: _MonthGrid(
-                    key: ValueKey(_month),
-                    month: _month,
-                    selected: _selected,
-                    counts: {
-                      for (final e in byDay.entries)
-                        e.key: e.value.where((o) => !_isDone(o)).length,
-                    },
-                    onSelect: (d) => setState(() => _selected = d),
-                  ),
+                  onSelect: (d) => setState(() => _selected = d),
                 ),
-                const SizedBox(height: 16),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Text(
-                    _capitalize(Fmt.day(_selected)),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  _capitalize(Fmt.day(_selected)),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                const SizedBox(height: 8),
-                if (dayItems.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(4),
-                    child: Text('Sin recordatorios este día.'),
-                  )
-                else
-                  for (final o in dayItems) _OccurrenceTile(occurrence: o),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              if (dayItems.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Text('Sin recordatorios este día.'),
+                )
+              else
+                for (final o in dayItems) _OccurrenceTile(occurrence: o),
+            ],
           );
         },
       ),

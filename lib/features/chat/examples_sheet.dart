@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/sheets.dart';
+
 /// Ejemplos de cómo pedir cada tipo de recordatorio. Son solo para leer:
 /// tocarlos no crea nada.
 const exampleGroups = <(IconData, String, List<String>)>[
@@ -64,7 +66,7 @@ const exampleTips = [
   'Después de guardarlo podés tocar "Modificar" para corregir lo que quieras.',
 ];
 
-Future<void> showExamples(BuildContext context) => showModalBottomSheet<void>(
+Future<void> showExamples(BuildContext context) => showAppSheet<void>(
   context: context,
   isScrollControlled: true,
   showDragHandle: true,

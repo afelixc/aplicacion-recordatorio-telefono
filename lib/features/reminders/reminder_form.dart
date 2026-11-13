@@ -4,6 +4,7 @@ import '../../core/formatting.dart';
 import '../../data/recurrence.dart';
 import '../../data/reminder.dart';
 import 'multi_day_picker.dart';
+import 'priority_chooser.dart';
 
 /// Formulario de título, día y hora. Se usa para crear y editar recordatorios,
 /// en el modo gratis del chat y, más adelante, para corregir lo que arme la IA.
@@ -33,6 +34,8 @@ class _ReminderFormState extends State<ReminderForm> {
   late RepeatKind _repeat;
   late Set<int> _weekdays;
   late List<DateTime> _dates;
+  late ReminderPriority _priority;
+  late bool _loud;
   String? _repeatError;
 
   @override
@@ -47,6 +50,8 @@ class _ReminderFormState extends State<ReminderForm> {
     _repeat = rule.kind;
     _weekdays = {...rule.weekdays};
     _dates = [...rule.dates];
+    _priority = initial?.priority ?? ReminderPriority.normal;
+    _loud = initial?.loud ?? false;
   }
 
   /// Por defecto: la próxima hora en punto.
@@ -141,11 +146,15 @@ class _ReminderFormState extends State<ReminderForm> {
               title: _title.text.trim(),
               dueAt: _dueAt,
               recurrence: _recurrence,
+              priority: _priority,
+              loud: _loud,
             )
           : base.copyWith(
               title: _title.text.trim(),
               dueAt: _dueAt,
               recurrence: _recurrence,
+              priority: _priority,
+              loud: _loud,
               clearSnoozedUntil: true,
             ),
     );
@@ -310,7 +319,16 @@ class _ReminderFormState extends State<ReminderForm> {
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ],
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          // Igual que en el Chat: Normal · Media · Alta y "sonar en silencio".
+          PriorityChooser(
+            priority: _priority,
+            loud: _loud,
+            divider: false,
+            onPriority: (p) => setState(() => _priority = p),
+            onLoud: (v) => setState(() => _loud = v),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               if (widget.onCancel != null) ...[

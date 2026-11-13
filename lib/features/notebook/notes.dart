@@ -67,6 +67,39 @@ class NoteItem {
   );
 }
 
+/// Una nota de texto libre (como las notas del teléfono): título y texto,
+/// sin tildar. Van en la solapa "Notas" de cada carpeta.
+class Memo {
+  const Memo({this.title = '', this.text = '', required this.at});
+
+  final String title;
+  final String text;
+
+  /// Última vez que se cambió.
+  final DateTime at;
+
+  /// Lo que se muestra como título: el puesto o el primer renglón.
+  String get heading {
+    if (title.trim().isNotEmpty) return title.trim();
+    final first = text.trim().split('\n').first.trim();
+    return first.isEmpty ? 'Nota sin título' : first;
+  }
+
+  bool get isEmpty => title.trim().isEmpty && text.trim().isEmpty;
+
+  Map<String, dynamic> toJson() => {
+    if (title.isNotEmpty) 't': title,
+    if (text.isNotEmpty) 'x': text,
+    'at': at.toIso8601String(),
+  };
+
+  static Memo fromJson(Map<String, dynamic> j) => Memo(
+    title: j['t'] is String ? j['t'] as String : '',
+    text: j['x'] is String ? j['x'] as String : '',
+    at: DateTime.tryParse('${j['at']}') ?? DateTime.now(),
+  );
+}
+
 /// Colores para las carpetas (ARGB).
 const folderColors = <int>[
   0xFFE0A800, // amarillo
@@ -82,12 +115,22 @@ const folderColors = <int>[
 /// Una carpeta de la libreta (Impresora, Auto…). Primero los pendientes, en
 /// el orden que eligió el usuario, y después los hechos.
 class NoteFolder {
-  NoteFolder(this.name, {this.color = 0xFFE0A800, List<NoteItem>? items})
-    : items = items ?? [];
+  NoteFolder(
+    this.name, {
+    this.color = 0xFFE0A800,
+    List<NoteItem>? items,
+    List<Memo>? memos,
+  }) : items = items ?? [],
+       memos = memos ?? [];
 
   String name;
   int color;
+
+  /// Tareas para tildar.
   final List<NoteItem> items;
+
+  /// Notas de texto libre (la más nueva primero).
+  final List<Memo> memos;
 
   List<NoteItem> get pending => [
     for (final n in items)
@@ -115,6 +158,7 @@ class NoteFolder {
     'n': name,
     'c': color,
     'i': [for (final n in items) n.toJson()],
+    if (memos.isNotEmpty) 'm': [for (final m in memos) m.toJson()],
   };
 
   static NoteFolder fromJson(Map<String, dynamic> j) => NoteFolder(
@@ -123,6 +167,10 @@ class NoteFolder {
     items: [
       for (final e in (j['i'] as List? ?? const []))
         NoteItem.fromJson(e as Map<String, dynamic>),
+    ],
+    memos: [
+      for (final e in (j['m'] as List? ?? const []))
+        Memo.fromJson(e as Map<String, dynamic>),
     ],
   );
 
@@ -249,5 +297,9 @@ List<String> splitNotes(String text) {
 int notebookToDo(List<NoteFolder> folders) =>
     folders.fold(0, (sum, f) => sum + f.toDo);
 
-/// "1 por hacer" / "5 por hacer".
-String toDoLabel(int n) => n == 0 ? 'Todo hecho ✓' : '$n por hacer';
+/// "1 pendiente" / "5 pendientes".
+String toDoLabel(int n) => switch (n) {
+  0 => 'Todo hecho ✓',
+  1 => '1 pendiente',
+  _ => '$n pendientes',
+};

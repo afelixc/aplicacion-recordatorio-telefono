@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/sheets.dart';
+
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../core/settings.dart';
@@ -756,7 +758,7 @@ class _CalendarPicker extends StatelessWidget {
     for (final c in calendars) {
       byAccount.putIfAbsent(c.account, () => []).add(c);
     }
-    final picked = await showModalBottomSheet<PhoneCalendar>(
+    final picked = await showAppSheet<PhoneCalendar>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,

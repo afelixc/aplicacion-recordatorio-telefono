@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/sheets.dart';
+
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../data/reminder.dart';
@@ -22,7 +24,7 @@ Future<void> showReminderEditor(
       dueAt: DateTime(day.year, day.month, day.day, 9),
     );
   }
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

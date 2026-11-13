@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/sheets.dart';
+
 import '../../core/app_scope.dart';
 import '../../data/reminder_repository.dart';
 import '../../data/scheduling_reminder_repository.dart';
@@ -280,7 +282,7 @@ Future<void> showSoundPicker(
   BuildContext context,
   NotificationService service,
 ) {
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

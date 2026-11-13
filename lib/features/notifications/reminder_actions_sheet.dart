@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/sheets.dart';
+
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import 'reminder_actions.dart';
@@ -16,7 +18,7 @@ Future<void> showReminderActionsSheet(
   final actions = ReminderActions(repo);
   final messenger = ScaffoldMessenger.of(context);
 
-  await showModalBottomSheet<void>(
+  await showAppSheet<void>(
     context: context,
     showDragHandle: true,
     builder: (context) => SafeArea(

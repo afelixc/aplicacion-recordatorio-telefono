@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../core/sheets.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 import '../home/home_shell.dart';
@@ -6,7 +9,7 @@ import '../home/home_shell.dart';
 /// Explicación completa: gratis vs. con IA, por qué hace falta una clave,
 /// cuánto sale y cómo conseguirla.
 Future<void> showModesHelp(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

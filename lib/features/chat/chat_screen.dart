@@ -142,33 +142,45 @@ class _ManualEntryState extends State<_ManualEntry> {
   // Cambiar la clave reinicia el formulario después de guardar.
   int _formVersion = 0;
   String? _lastSaved;
+  final _formKey = GlobalKey();
+  final _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final repo = AppScope.of(context).reminders;
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.all(16),
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: FilledButton.tonalIcon(
-            key: const Key('open-notebook'),
-            icon: const Icon(Icons.menu_book_outlined),
-            label: ListenableBuilder(
-              listenable: AppScope.of(context).settings,
-              builder: (context, _) {
-                final n = notebookToDo(AppScope.of(context).settings.folders);
-                return Text(n == 0 ? 'Libreta' : 'Libreta · $n por hacer');
-              },
-            ),
-            onPressed: () =>
-                openNotebook(context, AppScope.of(context).settings),
-          ),
+        // Los mismos dos botones que en el Chat con IA.
+        ListenableBuilder(
+          listenable: AppScope.of(context).settings,
+          builder: (context, _) {
+            final settings = AppScope.of(context).settings;
+            return NotebookShortcuts(
+              notebookToDo: notebookToDo(settings.folders),
+              onManual: () => _formKey.currentContext == null
+                  ? null
+                  : Scrollable.ensureVisible(
+                      _formKey.currentContext!,
+                      duration: const Duration(milliseconds: 300),
+                    ),
+              onNotebook: () => openNotebook(context, settings),
+            );
+          },
         ),
+        const SizedBox(height: 8),
         if (_lastSaved != null) ChatBubble(text: _lastSaved!),
         const SizedBox(height: 8),
         Card(
+          key: _formKey,
           elevation: 0,
           shape: RoundedRectangleBorder(
             side: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -186,6 +198,14 @@ class _ManualEntryState extends State<_ManualEntry> {
                   _lastSaved =
                       'Guardado ✓ "${r.title}", ${describeSchedule(r)}.';
                 });
+                // Arriba, para que se vea el "Guardado ✓".
+                if (_scroll.hasClients) {
+                  await _scroll.animateTo(
+                    0,
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOut,
+                  );
+                }
               },
             ),
           ),

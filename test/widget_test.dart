@@ -45,6 +45,8 @@ void main() {
       find.byKey(const Key('reminder-title')),
       'Lavar el auto',
     );
+    await tester.ensureVisible(find.text('Guardar recordatorio'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar recordatorio'));
     await tester.pumpAndSettle();
 
@@ -58,6 +60,8 @@ void main() {
 
   testWidgets('No deja guardar sin título', (tester) async {
     final repo = await pumpApp(tester);
+    await tester.ensureVisible(find.text('Guardar recordatorio'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar recordatorio'));
     await tester.pumpAndSettle();
     expect(find.text('Escribí qué recordar'), findsOneWidget);
@@ -140,6 +144,8 @@ void main() {
       }
     }
     await tester.ensureVisible(find.text('Guardar recordatorio'));
+    await tester.ensureVisible(find.text('Guardar recordatorio'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar recordatorio'));
     await tester.pumpAndSettle();
 
@@ -556,34 +562,80 @@ void main() {
     expect(b.exportPrefs(const []).keys, contains('colores_noche'));
   });
 
-  testWidgets('Almanaque: deslizar cambia de mes', (tester) async {
+  testWidgets('deslizar cambia de solapa y da la vuelta; el mes queda', (
+    tester,
+  ) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Almanaque'));
-    await tester.pumpAndSettle();
     final now = DateTime.now();
     String title(DateTime m) {
       final t = DateFormat('MMMM yyyy', 'es_AR').format(m);
       return t[0].toUpperCase() + t.substring(1);
     }
 
-    expect(find.textContaining(title(now)), findsOneWidget);
-    await tester.fling(
-      find.byType(ListView).first,
+    final area = find.byKey(const Key('tab-swipe'));
+    // Chat → Almanaque.
+    await tester.flingFrom(
+      tester.getTopLeft(area) + const Offset(400, 30),
       const Offset(-300, 0),
       1000,
     );
     await tester.pumpAndSettle();
-    expect(
-      find.textContaining(title(DateTime(now.year, now.month + 1))),
-      findsOneWidget,
+    expect(find.textContaining(title(now)), findsOneWidget);
+    // En el almanaque, deslizar no cambia el mes: pasa a Listado.
+    await tester.flingFrom(
+      tester.getTopLeft(area) + const Offset(400, 30),
+      const Offset(-300, 0),
+      1000,
     );
-    await tester.fling(find.byType(ListView).first, const Offset(300, 0), 1000);
-    await tester.fling(find.byType(ListView).first, const Offset(300, 0), 1000);
     await tester.pumpAndSettle();
-    expect(
-      find.textContaining(title(DateTime(now.year, now.month - 1))),
-      findsOneWidget,
+    expect(find.textContaining(title(now)), findsNothing);
+    expect(find.byKey(const Key('notebook-fab')), findsOneWidget);
+    // Listado → Configuración → vuelve a Chat.
+    await tester.flingFrom(
+      tester.getTopLeft(area) + const Offset(400, 30),
+      const Offset(-300, 0),
+      1000,
     );
+    await tester.pumpAndSettle();
+    await tester.flingFrom(
+      tester.getTopLeft(area) + const Offset(400, 30),
+      const Offset(-300, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('notebook-fab')), findsNothing);
+    // Para el otro lado: Chat → Configuración.
+    await tester.flingFrom(
+      tester.getTopLeft(area) + const Offset(400, 30),
+      const Offset(300, 0),
+      1000,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('notebook-fab')), findsOneWidget);
+  });
+
+  testWidgets('la libreta flotante anota rápido sin salir del almanaque', (
+    tester,
+  ) async {
+    final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+    await tester.pumpWidget(
+      RecordameApp(reminders: MemoryReminderRepository(), settings: settings),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Almanaque'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('notebook-fab')));
+    await tester.pumpAndSettle();
+    expect(find.text('Anotar en la libreta'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('notebook-input')),
+      'Comprar filamento',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('notebook-send')));
+    await tester.pumpAndSettle();
+    expect(settings.folders.single.items.single.text, 'Comprar filamento');
+    expect(find.text('1 pendiente'), findsWidgets);
   });
 
   testWidgets(

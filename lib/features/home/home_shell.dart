@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/app_scope.dart';
 import '../calendar/calendar_screen.dart';
 import '../chat/chat_screen.dart';
+import '../notebook/notebook_fab.dart';
 import '../notifications/reminder_actions_sheet.dart';
 import '../reminders/reminders_screen.dart';
 import '../settings/settings_screen.dart';
@@ -76,6 +78,20 @@ class _HomeShellState extends State<HomeShell> {
   int _index = 0;
 
   void _select(int i) => setState(() => _index = i);
+
+  /// Deslizar el dedo cambia de solapa y al llegar a la última vuelve a la
+  /// primera: hacia la izquierda, la de la derecha (Chat → Almanaque →
+  /// Listado → Configuración → Chat); hacia la derecha, la anterior.
+  void _swipe(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0;
+    if (v.abs() < 300) return;
+    final n = appTabs.length;
+    _select((_index + (v < 0 ? 1 : -1) + n) % n);
+  }
+
+  /// Dónde está la libreta flotante (desde abajo a la izquierda); se mueve
+  /// arrastrándola.
+  Offset _fab = const Offset(12, 14);
   StreamSubscription<int>? _openedSub;
 
   @override
@@ -118,7 +134,46 @@ class _HomeShellState extends State<HomeShell> {
           style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 2),
         ),
       ),
-      body: tab.builder(context),
+      body: LayoutBuilder(
+        builder: (context, box) {
+          final settings = AppScope.of(context).settings;
+          // Que no se salga de la pantalla.
+          final fab = Offset(
+            _fab.dx.clamp(0, (box.maxWidth - 120).clamp(0, double.infinity)),
+            _fab.dy.clamp(0, (box.maxHeight - 60).clamp(0, double.infinity)),
+          );
+          return Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  key: const Key('tab-swipe'),
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragEnd: _swipe,
+                  child: KeyedSubtree(
+                    key: ValueKey(_index),
+                    child: tab.builder(context),
+                  ),
+                ),
+              ),
+              // En el Chat ya está el botón grande de la Libreta.
+              if (_index != 0)
+                Positioned(
+                  left: fab.dx,
+                  bottom: fab.dy,
+                  child: GestureDetector(
+                    onPanUpdate: (d) => setState(
+                      () => _fab = Offset(
+                        fab.dx + d.delta.dx,
+                        fab.dy - d.delta.dy,
+                      ),
+                    ),
+                    child: NotebookFab(settings: settings),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: _select,

@@ -4,6 +4,7 @@ import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../core/palette.dart';
 import '../../core/settings.dart';
+import '../../core/sheets.dart';
 import '../../data/reminder.dart';
 import '../chat/dictation.dart';
 import '../reminders/reminders_screen.dart' show matchesSearch;
@@ -41,18 +42,23 @@ class _NotebookPageState extends State<NotebookPage> {
     super.dispose();
   }
 
-  Future<void> _open(NoteFolder f, {NoteItem? note, String? word}) =>
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => FolderPage(
-            settings: _s,
-            folder: f,
-            speech: widget.speech,
-            highlight: note,
-            highlightWord: word,
-          ),
-        ),
-      );
+  Future<void> _open(
+    NoteFolder f, {
+    NoteItem? note,
+    String? word,
+    bool memos = false,
+  }) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => FolderPage(
+        settings: _s,
+        folder: f,
+        speech: widget.speech,
+        highlight: note,
+        highlightWord: word,
+        startOnMemos: memos,
+      ),
+    ),
+  );
 
   Future<void> _newFolder() async {
     final r = await editFolder(context);
@@ -167,7 +173,12 @@ class _NotebookPageState extends State<NotebookPage> {
               (f, n, x.text, x.done, 'En ${f.name} › ${n.text}'),
         ],
     ];
-    if (folders.isEmpty && items.isEmpty) {
+    final memos = [
+      for (final f in _s.folders)
+        for (final m in f.memos)
+          if (matchesSearch('${m.title}\n${m.text}', q)) (f, m),
+    ];
+    if (folders.isEmpty && items.isEmpty && memos.isEmpty) {
       return [Text('No encontré "$q" en la libreta.')];
     }
     return [
@@ -195,6 +206,15 @@ class _NotebookPageState extends State<NotebookPage> {
           subtitle: Text(where),
           trailing: const Icon(Icons.chevron_right),
           onTap: () => _open(f, note: n, word: q),
+        ),
+      for (final (f, m) in memos)
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.sticky_note_2_outlined, color: Color(f.color)),
+          title: Text(m.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
+          subtitle: Text('Nota en ${f.name}'),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => _open(f, word: q, memos: true),
         ),
     ];
   }
@@ -263,7 +283,7 @@ class _FolderCard extends StatelessWidget {
 Future<(String, int)?> editFolder(BuildContext context, {NoteFolder? folder}) {
   final name = TextEditingController(text: folder?.name ?? '');
   var color = folder?.color ?? folderColors.first;
-  return showModalBottomSheet<(String, int)>(
+  return showAppSheet<(String, int)>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -363,11 +383,15 @@ class FolderPage extends StatefulWidget {
     this.speech,
     this.highlight,
     this.highlightWord,
+    this.startOnMemos = false,
   });
 
   final AppSettings settings;
   final NoteFolder folder;
   final Dictation? speech;
+
+  /// Abrir directamente en la solapa "Notas".
+  final bool startOnMemos;
 
   /// Desde el buscador: la nota a mostrar (abierta y resaltada) y la palabra.
   final NoteItem? highlight;
@@ -379,7 +403,15 @@ class FolderPage extends StatefulWidget {
 
 class _FolderPageState extends State<FolderPage> {
   final _fresh = <NoteItem>{};
-  late NoteItem? _selected = widget.highlight;
+
+  /// La que muestra los botoncitos (se abren con el engranajito).
+  Object? _selected;
+
+  /// Las notas con lista adentro que están desplegadas.
+  late final _open = <NoteItem>{?widget.highlight};
+
+  /// Solapa: Tareas (false) o Notas (true).
+  late bool _memos = widget.startOnMemos;
   String? _message;
   final _highlightKey = GlobalKey();
 
@@ -589,12 +621,103 @@ class _FolderPageState extends State<FolderPage> {
     navigator.pop();
   }
 
+  Future<void> _addMemo(String text) async {
+    final m = await _s.saveMemo(
+      _f,
+      null,
+      Memo(text: text.trim(), at: DateTime.now()),
+    );
+    if (m == null) return;
+    setState(() => _message = 'Guardé la nota en ${_f.name}.');
+  }
+
+  Future<void> _openMemo(Memo? m) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => MemoPage(settings: _s, folder: _f, memo: m),
+    ),
+  );
+
+  Future<void> _deleteMemo(Memo m) async {
+    final index = await _s.removeMemo(_f, m);
+    setState(() => _selected = null);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Borré la nota "${m.heading}".'),
+          duration: const Duration(seconds: 5),
+          persist: false,
+          action: SnackBarAction(
+            label: 'Deshacer',
+            onPressed: () => _s.insertMemo(_f, index, m),
+          ),
+        ),
+      );
+  }
+
+  /// La solapa "Notas": cada una del mismo alto (título y dos renglones);
+  /// al tocarla se abre para leer y escribir.
+  List<Widget> _memoList(ColorScheme scheme) {
+    final memos = [
+      for (final m in _f.memos)
+        if (_query.isEmpty || _isHit('${m.title}\n${m.text}')) m,
+    ];
+    return [
+      if (_message != null) ...[
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text('✓ $_message'),
+        ),
+        const SizedBox(height: 10),
+      ],
+      _Section('Notas (${memos.length})'),
+      if (_f.memos.isEmpty)
+        Text(
+          'Acá van notas de texto libre, como las del teléfono: medidas, '
+          'datos, ideas. Escribí o dictá abajo, o tocá "Nota nueva".',
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        )
+      else if (memos.isEmpty)
+        Text('No encontré "$_query" en las notas.'),
+      for (final m in memos)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _MemoCard(
+            memo: m,
+            color: Color(_f.color),
+            selected: identical(_selected, m),
+            onTap: () => _openMemo(m),
+            onGear: () =>
+                setState(() => _selected = identical(_selected, m) ? null : m),
+            onDelete: () => _deleteMemo(m),
+          ),
+        ),
+      const SizedBox(height: 4),
+      OutlinedButton.icon(
+        key: const Key('memo-new'),
+        icon: const Icon(Icons.note_add_outlined),
+        label: const Text('Nota nueva'),
+        onPressed: () => _openMemo(null),
+      ),
+    ];
+  }
+
+  /// Un renglón de tarea: todos del mismo alto, largo o corto ("…").
+  /// Tocarlo abre la tarea entera (o despliega la lista de adentro); el
+  /// engranajito del rincón muestra subir, bajar, editar, aviso y borrar.
   Widget _row(NoteItem n, int number, List<NoteItem> list) {
     final scheme = Theme.of(context).colorScheme;
     final selected = identical(_selected, n);
     // Buscando, la nota se muestra abierta si coincide algo de adentro.
     final open =
-        selected || (_query.isNotEmpty && n.sub.any((x) => _isHit(x.text)));
+        n.sub.isNotEmpty &&
+        (_open.contains(n) ||
+            (_query.isNotEmpty && n.sub.any((x) => _isHit(x.text))));
     final pos = list.indexOf(n);
     final subDone = n.sub.where((x) => x.done).length;
     final night = Theme.of(context).brightness == Brightness.dark;
@@ -612,27 +735,26 @@ class _FolderPageState extends State<FolderPage> {
           ? scheme.secondary.withValues(alpha: 0.18)
           : tint.fill(night),
       child: InkWell(
-        // Tocar el renglón solo lo marca: hecho, únicamente con el cuadradito.
-        onTap: () => setState(() => _selected = selected ? null : n),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 10, right: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        onTap: n.sub.isEmpty
+            ? () => _edit(n)
+            : () => setState(() {
+                if (!_open.remove(n)) _open.add(n);
+              }),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 48,
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 14),
-                    child: SizedBox(
-                      width: 24,
-                      child: Text(
-                        '$number.',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                  SizedBox(
+                    width: 30,
+                    child: Text(
+                      '$number.',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -647,164 +769,162 @@ class _FolderPageState extends State<FolderPage> {
                       setState(() => _selected = null);
                     },
                   ),
+                  if (n.alarm != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Tooltip(
+                        message: 'Te aviso: ${Fmt.when(n.alarm!)}',
+                        child: Icon(
+                          Icons.notifications_active,
+                          size: 16,
+                          color: Colors.amber.shade800,
+                        ),
+                      ),
+                    ),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            n.sub.isEmpty
-                                ? n.text
-                                : '${n.text}  ($subDone/${n.sub.length})',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: n.sub.isEmpty
-                                  ? null
-                                  : FontWeight.w600,
-                              decoration: n.done
-                                  ? TextDecoration.lineThrough
-                                  : null,
-                              color: n.done ? scheme.onSurfaceVariant : null,
-                            ),
-                          ),
-                          if (n.alarm != null)
-                            Text(
-                              '🔔 ${Fmt.when(n.alarm!)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: scheme.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                        ],
+                    child: Text(
+                      n.sub.isEmpty
+                          ? n.text
+                          : '${n.text}  ($subDone/${n.sub.length})',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: n.sub.isEmpty ? null : FontWeight.w600,
+                        decoration: n.done ? TextDecoration.lineThrough : null,
+                        color: n.done ? scheme.onSurfaceVariant : null,
                       ),
                     ),
                   ),
                   if (n.sub.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Icon(
-                        open ? Icons.expand_less : Icons.expand_more,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                    Icon(
+                      open ? Icons.expand_less : Icons.expand_more,
+                      color: scheme.onSurfaceVariant,
                     ),
+                  _Gear(
+                    key: Key('gear-$number-${n.done ? 'h' : 'p'}'),
+                    on: selected,
+                    onPressed: () =>
+                        setState(() => _selected = selected ? null : n),
+                  ),
                 ],
               ),
-              // La lista de adentro se despliega al tocar la nota; cerrada,
-              // la nota ocupa un renglón como las demás (con el 0/4).
-              if (open)
-                for (final (i, x) in n.sub.indexed)
-                  // Tocar el ítem no cierra la nota: solo el título la cierra.
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {},
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 64),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 32,
-                            height: 32,
-                            child: Checkbox(
-                              visualDensity: VisualDensity.compact,
-                              value: x.done,
-                              // Tildar un ítem deja la nota abierta.
-                              onChanged: (v) async {
-                                final u = await _s.replaceNote(
-                                  _f,
-                                  n,
-                                  n.copyWith(
-                                    sub: [...n.sub]
-                                      ..[i] = SubItem(x.text, done: v ?? false),
-                                  ),
-                                );
-                                setState(() => _selected = u);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
-                              ),
-                              decoration: _isHit(x.text)
-                                  ? BoxDecoration(
-                                      color: Colors.amber.withValues(
-                                        alpha: 0.45,
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    )
-                                  : null,
-                              child: Text(
-                                x.text,
-                                style: TextStyle(
-                                  decoration: x.done
-                                      ? TextDecoration.lineThrough
-                                      : null,
-                                  color: x.done
-                                      ? scheme.onSurfaceVariant
-                                      : null,
+            ),
+            // La lista de adentro se despliega al tocar la nota; cerrada,
+            // la nota ocupa un renglón como las demás (con el 0/4).
+            if (open)
+              for (final (i, x) in n.sub.indexed)
+                // Tocar el ítem no cierra la nota: solo el título la cierra.
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {},
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 70, right: 10),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Checkbox(
+                            visualDensity: VisualDensity.compact,
+                            value: x.done,
+                            // Tildar un ítem deja la nota abierta.
+                            onChanged: (v) async {
+                              final u = await _s.replaceNote(
+                                _f,
+                                n,
+                                n.copyWith(
+                                  sub: [...n.sub]
+                                    ..[i] = SubItem(x.text, done: v ?? false),
                                 ),
+                              );
+                              setState(() {
+                                _open
+                                  ..remove(n)
+                                  ..add(u);
+                                if (identical(_selected, n)) _selected = u;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            ),
+                            decoration: _isHit(x.text)
+                                ? BoxDecoration(
+                                    color: Colors.amber.withValues(alpha: 0.45),
+                                    borderRadius: BorderRadius.circular(6),
+                                  )
+                                : null,
+                            child: Text(
+                              x.text,
+                              style: TextStyle(
+                                decoration: x.done
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                                color: x.done ? scheme.onSurfaceVariant : null,
                               ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-              if (open && n.sub.isNotEmpty) const SizedBox(height: 8),
-              if (selected)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10, left: 34),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      if (!n.done) ...[
-                        _Tool(
-                          tooltip: 'Subir',
-                          icon: Icons.arrow_upward,
-                          color: Colors.blue.shade700,
-                          onPressed: pos == 0
-                              ? null
-                              : () => _s.moveNote(_f, n, -1),
-                        ),
-                        _Tool(
-                          tooltip: 'Bajar',
-                          icon: Icons.arrow_downward,
-                          color: Colors.blue.shade700,
-                          onPressed: pos == list.length - 1
-                              ? null
-                              : () => _s.moveNote(_f, n, 1),
                         ),
                       ],
-                      _Tool(
-                        tooltip: 'Editar',
-                        icon: Icons.edit,
-                        color: Colors.green.shade700,
-                        onPressed: () => _edit(n),
-                      ),
-                      if (!n.done)
-                        _Tool(
-                          tooltip: 'Avisarme',
-                          icon: Icons.notifications_active,
-                          color: Colors.amber.shade800,
-                          onPressed: () => _alarm(n),
-                        ),
-                      _Tool(
-                        tooltip: 'Borrar',
-                        icon: Icons.delete,
-                        color: Colors.red.shade700,
-                        onPressed: () => _delete(n),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-            ],
-          ),
+            if (open) const SizedBox(height: 8),
+            if (selected)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10, left: 40, right: 10),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    if (!n.done) ...[
+                      _Tool(
+                        tooltip: 'Subir',
+                        icon: Icons.arrow_upward,
+                        color: Colors.blue.shade700,
+                        onPressed: pos == 0
+                            ? null
+                            : () => _s.moveNote(_f, n, -1),
+                      ),
+                      _Tool(
+                        tooltip: 'Bajar',
+                        icon: Icons.arrow_downward,
+                        color: Colors.blue.shade700,
+                        onPressed: pos == list.length - 1
+                            ? null
+                            : () => _s.moveNote(_f, n, 1),
+                      ),
+                    ],
+                    _Tool(
+                      tooltip: 'Editar',
+                      icon: Icons.edit,
+                      color: Colors.green.shade700,
+                      onPressed: () => _edit(n),
+                    ),
+                    if (!n.done)
+                      _Tool(
+                        tooltip: 'Avisarme',
+                        icon: Icons.notifications_active,
+                        color: Colors.amber.shade800,
+                        onPressed: () => _alarm(n),
+                      ),
+                    _Tool(
+                      tooltip: 'Borrar',
+                      icon: Icons.delete,
+                      color: Colors.red.shade700,
+                      onPressed: () => _delete(n),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -873,71 +993,91 @@ class _FolderPageState extends State<FolderPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    if (_query.isNotEmpty && !_f.items.any(_matches)) ...[
-                      Text('No encontré "$_query" en ${_f.name}.'),
-                      const SizedBox(height: 10),
-                    ],
-                    if (_message != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: scheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text('✓ $_message'),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    _Section('Para hacer (${pending.length})'),
-                    _Paper(
-                      color: color,
-                      children: pending.isEmpty
-                          ? [
-                              Padding(
-                                padding: const EdgeInsets.all(14),
-                                child: Text(
-                                  'No falta nada en esta carpeta. Escribí '
-                                  'abajo o tocá el micrófono.',
-                                  style: TextStyle(
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ]
-                          : [
-                              for (final (i, n) in pending.indexed)
-                                if (_query.isEmpty || _matches(n))
-                                  _row(n, i + 1, pending),
-                            ],
+                    _KindSwitch(
+                      memos: _memos,
+                      tasks: _f.toDo,
+                      notes: _f.memos.length,
+                      onChanged: (v) => setState(() {
+                        _memos = v;
+                        _selected = null;
+                        _message = null;
+                      }),
                     ),
-                    if (done.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      _Section('Hechos (${done.length})'),
+                    const SizedBox(height: 10),
+                    if (_memos)
+                      ..._memoList(scheme)
+                    else ...[
+                      if (_query.isNotEmpty && !_f.items.any(_matches)) ...[
+                        Text('No encontré "$_query" en ${_f.name}.'),
+                        const SizedBox(height: 10),
+                      ],
+                      if (_message != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: scheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text('✓ $_message'),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                      _Section('Para hacer (${pending.length})'),
                       _Paper(
                         color: color,
-                        children: [
-                          for (final (i, n) in done.indexed)
-                            if (_query.isEmpty || _matches(n))
-                              _row(n, i + 1, done),
-                        ],
+                        children: pending.isEmpty
+                            ? [
+                                Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Text(
+                                    'No falta nada en esta carpeta. Escribí '
+                                    'abajo o tocá el micrófono.',
+                                    style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ]
+                            : [
+                                for (final (i, n) in pending.indexed)
+                                  if (_query.isEmpty || _matches(n))
+                                    _row(n, i + 1, pending),
+                              ],
+                      ),
+                      if (done.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _Section('Hechos (${done.length})'),
+                        _Paper(
+                          color: color,
+                          children: [
+                            for (final (i, n) in done.indexed)
+                              if (_query.isEmpty || _matches(n))
+                                _row(n, i + 1, done),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      Text(
+                        'Tocá una tarea para verla entera. Con el ⚙ la movés, '
+                        'la editás (y le armás una lista adentro, como las '
+                        'compras), le ponés aviso o la borrás. Solo el '
+                        'cuadradito la da por hecha.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
-                    const SizedBox(height: 10),
-                    Text(
-                      'Tocá un renglón para moverlo, editarlo (y armar una '
-                      'lista adentro, como las compras), ponerle aviso o '
-                      'borrarlo. Solo el cuadradito lo da por hecho.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
                   ],
                 ),
               ),
               NoteInputBar(
+                key: ValueKey(_memos),
                 language: _s.language,
                 speech: widget.speech,
-                onSubmit: _add,
+                hint: _memos
+                    ? 'Escribí o dictá una nota nueva…'
+                    : 'Escribí o dictá tareas para hacer…',
+                onSubmit: _memos ? _addMemo : _add,
               ),
             ],
           ),
@@ -1130,6 +1270,16 @@ class _NoteEditPageState extends State<NoteEditPage> {
                     onSubmitted: (_) => _saveTitle(),
                     onTapOutside: (_) => _saveTitle(),
                   ),
+                  if (_note.alarm != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '🔔 Te aviso: ${Fmt.when(_note.alarm!)}',
+                      style: TextStyle(
+                        color: scheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 18),
                   _Section('Lista adentro de la nota (${_note.sub.length})'),
                   if (_note.sub.isEmpty)
@@ -1326,29 +1476,368 @@ double folderNameSize(TextScaler scaler, List<String> names, double width) {
 /// parejas (un renglón).
 const folderNameMax = 15;
 
-/// Cartelito resaltado con lo que falta hacer ("2 por hacer").
+/// Lo que falta hacer, en letra roja ("5 pendientes"), o "Todo hecho ✓" en
+/// verde. Sin recuadro (pedido del usuario).
 class ToDoBadge extends StatelessWidget {
-  const ToDoBadge(this.count, {super.key});
+  const ToDoBadge(this.count, {super.key, this.size = 13});
 
   final int count;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final none = count == 0;
-    final color = none ? const Color(0xFF2E7D32) : const Color(0xFFD84315);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: none ? color.withValues(alpha: 0.15) : color,
-        borderRadius: BorderRadius.circular(20),
+    final night = Theme.of(context).brightness == Brightness.dark;
+    final color = count == 0
+        ? (night ? const Color(0xFF66BB6A) : const Color(0xFF2E7D32))
+        : (night ? const Color(0xFFFF7B7B) : const Color(0xFFC62828));
+    return Text(
+      toDoLabel(count),
+      maxLines: 1,
+      style: TextStyle(
+        color: color,
+        fontWeight: FontWeight.w900,
+        fontSize: size,
       ),
-      child: Text(
-        toDoLabel(count),
-        maxLines: 1,
-        style: TextStyle(
-          color: none ? color : Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 13,
+    );
+  }
+}
+
+/// Arriba de la carpeta: "Tareas" (para tildar) o "Notas" (texto libre).
+class _KindSwitch extends StatelessWidget {
+  const _KindSwitch({
+    required this.memos,
+    required this.tasks,
+    required this.notes,
+    required this.onChanged,
+  });
+
+  final bool memos;
+  final int tasks;
+  final int notes;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget button(bool value, IconData icon, String label, Widget count) {
+      final on = memos == value;
+      const lib = Color(0xFFC98A00);
+      return Expanded(
+        child: Material(
+          color: on ? lib.withValues(alpha: 0.14) : Colors.transparent,
+          shape: RoundedRectangleBorder(
+            side: BorderSide(color: on ? lib : scheme.outlineVariant, width: 2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            key: Key(value ? 'kind-memos' : 'kind-tasks'),
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => onChanged(value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 18, color: on ? lib : null),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: on ? lib : null,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    count,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        button(false, Icons.check_box_outlined, 'Tareas', ToDoBadge(tasks)),
+        const SizedBox(width: 8),
+        button(
+          true,
+          Icons.sticky_note_2_outlined,
+          'Notas',
+          Text('· $notes', style: const TextStyle(fontWeight: FontWeight.w800)),
+        ),
+      ],
+    );
+  }
+}
+
+/// El engranajito del rincón: muestra u oculta los botoncitos.
+class _Gear extends StatelessWidget {
+  const _Gear({super.key, required this.on, required this.onPressed});
+
+  final bool on;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton(
+      tooltip: 'Opciones',
+      onPressed: onPressed,
+      iconSize: 18,
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      padding: EdgeInsets.zero,
+      style: IconButton.styleFrom(
+        backgroundColor: on
+            ? scheme.primary
+            : scheme.surfaceContainerHighest.withValues(alpha: 0.7),
+        foregroundColor: on ? scheme.onPrimary : scheme.onSurfaceVariant,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
+      icon: const Icon(Icons.settings),
+    );
+  }
+}
+
+/// Una nota de texto libre en la lista: siempre del mismo alto (título y dos
+/// renglones del texto).
+class _MemoCard extends StatelessWidget {
+  const _MemoCard({
+    required this.memo,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+    required this.onGear,
+    required this.onDelete,
+  });
+
+  final Memo memo;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onGear;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final body = memo.title.trim().isEmpty
+        ? memo.text.trim().split('\n').skip(1).join(' ').trim()
+        : memo.text.trim().replaceAll('\n', ' ');
+    return Material(
+      color: selected
+          ? scheme.primaryContainer.withValues(alpha: 0.6)
+          : color.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: color.withValues(alpha: 0.4)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 6, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          memo.heading,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                        // Siempre dos renglones, aunque esté vacío.
+                        Text(
+                          body.isEmpty ? ' \n ' : body,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.3,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    children: [
+                      _Gear(on: selected, onPressed: onGear),
+                      Text(
+                        '${memo.at.day}/${memo.at.month}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              if (selected)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, right: 6),
+                  child: Wrap(
+                    spacing: 8,
+                    alignment: WrapAlignment.end,
+                    children: [
+                      _Tool(
+                        tooltip: 'Editar',
+                        icon: Icons.edit,
+                        color: Colors.green.shade700,
+                        onPressed: onTap,
+                      ),
+                      _Tool(
+                        tooltip: 'Borrar',
+                        icon: Icons.delete,
+                        color: Colors.red.shade700,
+                        onPressed: onDelete,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Leer y escribir una nota de texto libre (como las notas del teléfono).
+/// Se guarda sola al salir; si queda vacía, no se guarda.
+class MemoPage extends StatefulWidget {
+  const MemoPage({
+    super.key,
+    required this.settings,
+    required this.folder,
+    this.memo,
+  });
+
+  final AppSettings settings;
+  final NoteFolder folder;
+
+  /// null = nota nueva.
+  final Memo? memo;
+
+  @override
+  State<MemoPage> createState() => _MemoPageState();
+}
+
+class _MemoPageState extends State<MemoPage> {
+  late Memo? _memo = widget.memo;
+  late final _title = TextEditingController(text: widget.memo?.title ?? '');
+  late final _text = TextEditingController(text: widget.memo?.text ?? '');
+  bool _deleted = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _text.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (_deleted) return;
+    final old = _memo;
+    if (old != null && old.title == _title.text && old.text == _text.text) {
+      return;
+    }
+    _memo = await widget.settings.saveMemo(
+      widget.folder,
+      old,
+      Memo(title: _title.text, text: _text.text, at: DateTime.now()),
+    );
+  }
+
+  Future<void> _delete() async {
+    final m = _memo;
+    _deleted = true;
+    if (m != null) await widget.settings.removeMemo(widget.folder, m);
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Color(widget.folder.color);
+    return PopScope(
+      onPopInvokedWithResult: (_, _) => _save(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.memo == null ? 'Nota nueva' : 'Nota'),
+          actions: [
+            IconButton(
+              key: const Key('memo-delete'),
+              tooltip: 'Borrar nota',
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _delete,
+            ),
+          ],
+        ),
+        body: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  key: const Key('memo-title'),
+                  controller: _title,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  decoration: const InputDecoration(
+                    hintText: 'Título',
+                    border: InputBorder.none,
+                  ),
+                ),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: color.withValues(alpha: 0.35)),
+                    ),
+                    child: TextField(
+                      key: const Key('memo-text'),
+                      controller: _text,
+                      autofocus: widget.memo == null,
+                      maxLines: null,
+                      expands: true,
+                      textAlignVertical: TextAlignVertical.top,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: const TextStyle(fontSize: 16, height: 1.45),
+                      decoration: const InputDecoration(
+                        hintText: 'Escribí lo que quieras anotar…',
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -245,6 +245,36 @@ class AppSettings extends ChangeNotifier {
     return updated;
   }
 
+  /// Guarda una nota de texto libre: si es nueva va primera; si quedó
+  /// vacía se borra. Devuelve la guardada (o null si se borró).
+  Future<Memo?> saveMemo(NoteFolder f, Memo? old, Memo updated) async {
+    final i = old == null ? -1 : f.memos.indexOf(old);
+    if (updated.isEmpty) {
+      if (i >= 0) f.memos.removeAt(i);
+      await saveNotes();
+      return null;
+    }
+    if (i >= 0) {
+      f.memos[i] = updated;
+    } else {
+      f.memos.insert(0, updated);
+    }
+    await saveNotes();
+    return updated;
+  }
+
+  Future<int> removeMemo(NoteFolder f, Memo m) async {
+    final i = f.memos.indexOf(m);
+    f.memos.remove(m);
+    await saveNotes();
+    return i;
+  }
+
+  Future<void> insertMemo(NoteFolder f, int index, Memo m) async {
+    f.memos.insert(index.clamp(0, f.memos.length), m);
+    await saveNotes();
+  }
+
   /// Guarda la libreta (también después de cambiar nombre o color).
   Future<void> saveNotes() async {
     notifyListeners();

@@ -44,13 +44,24 @@ class ReminderTile extends StatelessWidget {
         !reminder.repeats &&
         reminder.dueAt.isBefore(DateTime.now());
     final next = reminder.repeats ? reminder.nextOccurrence() : null;
+    // Vencido: recuadro rojo grueso y fondo rosado, en Pendientes y en
+    // Todos, para que se vea que hay que reprogramarlo (pedido del usuario).
+    final red = night ? const Color(0xFFFF7B7B) : const Color(0xFFC62828);
     return Card(
       margin: EdgeInsets.zero,
       elevation: 0,
-      color: tint?.fill(night),
+      color: overdue
+          ? Color.alphaBlend(
+              red.withValues(alpha: night ? 0.16 : 0.08),
+              theme.colorScheme.surface,
+            )
+          : tint?.fill(night),
       shape: RoundedRectangleBorder(
         side: BorderSide(
-          color: tint?.border(night) ?? theme.colorScheme.outlineVariant,
+          color: overdue
+              ? red
+              : tint?.border(night) ?? theme.colorScheme.outlineVariant,
+          width: overdue ? 2.5 : 1,
         ),
         borderRadius: BorderRadius.circular(14),
       ),
