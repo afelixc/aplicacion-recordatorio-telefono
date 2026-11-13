@@ -52,6 +52,11 @@ class _Last {
 
 /// Chat con IA: el usuario habla o escribe, la IA arma el recordatorio y queda
 /// guardado y activo enseguida; después se puede modificar o cancelar.
+/// Prendido mientras se ve un recordatorio recién guardado: la pantalla del
+/// Chat se achica (barra del plan, solapas, micrófono) para que entre la
+/// tarjeta entera con la prioridad, sin deslizar (pedido del usuario).
+final chatCompact = ValueNotifier<bool>(false);
+
 class AiChat extends StatefulWidget {
   const AiChat({super.key, required this.settings, this.interpreter});
 
@@ -93,6 +98,7 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
     _dictation.dispose();
     _input.dispose();
     _tabs.dispose();
+    chatCompact.value = false;
     super.dispose();
   }
 
@@ -315,13 +321,22 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final talking = _dictation.active && !_dictatingIntoField;
+    final compact =
+        _last?.status == _Status.saved && _last!.items.any((i) => i.active);
+    if (chatCompact.value != compact) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) chatCompact.value = compact;
+      });
+    }
     return Column(
       children: [
         TabBar(
           controller: _tabs,
-          tabs: const [
-            Tab(text: 'Último recordatorio'),
-            Tab(text: 'Chat completo'),
+          labelStyle: compact ? const TextStyle(fontSize: 14) : null,
+          unselectedLabelStyle: compact ? const TextStyle(fontSize: 14) : null,
+          tabs: [
+            Tab(text: 'Último recordatorio', height: compact ? 32 : null),
+            Tab(text: 'Chat completo', height: compact ? 32 : null),
           ],
         ),
         Expanded(
@@ -361,7 +376,7 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
           child: SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              padding: EdgeInsets.fromLTRB(12, compact ? 6 : 10, 12, 8),
               child: talking
                   ? TalkingPanel(
                       text: _dictation.text,
@@ -369,6 +384,7 @@ class _AiChatState extends State<AiChat> with SingleTickerProviderStateMixin {
                       onSend: _sendTalking,
                     )
                   : _Composer(
+                      compact: compact,
                       input: _input,
                       busy: _thinking,
                       dictatingIntoField: _dictatingIntoField,
@@ -510,15 +526,16 @@ class _LastView extends StatelessWidget {
         ? null
         : Text(
             'Dijiste: “$said”',
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
+              fontSize: 11,
               color: scheme.onSurfaceVariant,
               fontStyle: FontStyle.italic,
             ),
           );
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       children: [
         switch (last.status) {
           _Status.thinking => Column(
@@ -739,20 +756,23 @@ class _PriorityPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final config = AppScope.of(context).notifications?.priorities;
+    final config =
+        AppScope.of(context).notifications?.priorities ??
+        const PriorityConfig();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Divider(height: 18),
+        const Divider(height: 12),
         Text(
           'PRIORIDAD',
           style: theme.textTheme.labelSmall?.copyWith(
             letterSpacing: 1,
+            fontSize: 10,
             fontWeight: FontWeight.w800,
             color: scheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Row(
           children: [
             for (final p in ReminderPriority.values) ...[
@@ -769,23 +789,24 @@ class _PriorityPicker extends StatelessWidget {
             ],
           ],
         ),
-        if (config != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            _explain(reminder.priority, config),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
+        const SizedBox(height: 3),
+        Text(
+          _explain(reminder.priority, config),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            color: scheme.onSurfaceVariant,
           ),
-        ],
+        ),
         InkWell(
           key: const Key('priority-loud'),
           onTap: () => onLoud(!reminder.loud),
           child: Row(
             children: [
               SizedBox(
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 28,
                 child: Checkbox(
                   value: reminder.loud,
                   visualDensity: VisualDensity.compact,
@@ -848,7 +869,7 @@ class _PriorityButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 5),
           child: Text(
             label,
             textAlign: TextAlign.center,
@@ -895,17 +916,17 @@ class _ReminderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (said != null) ...[said!, const SizedBox(height: 8)],
+            if (said != null) ...[said!, const SizedBox(height: 4)],
             Row(
               children: [
                 Icon(
                   active ? Icons.check_circle : Icons.cancel,
                   color: active ? Colors.green : scheme.onSurfaceVariant,
-                  size: 20,
+                  size: 18,
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -916,7 +937,7 @@ class _ReminderCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 2),
             Text(
               reminder.title,
               style: theme.textTheme.titleMedium?.copyWith(
@@ -927,7 +948,7 @@ class _ReminderCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(describeSchedule(reminder)),
             if (next != null) Text('Próximo: ${Fmt.when(next)}'),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Row(children: actions),
             ?footer,
           ],
@@ -1017,6 +1038,7 @@ class _HistoryView extends StatelessWidget {
 /// Botón grande para hablar y, debajo, un recuadro chico para escribir.
 class _Composer extends StatelessWidget {
   const _Composer({
+    this.compact = false,
     required this.input,
     required this.busy,
     required this.dictatingIntoField,
@@ -1025,6 +1047,8 @@ class _Composer extends StatelessWidget {
     required this.onSend,
   });
 
+  /// Con un recordatorio a la vista, el micrófono un poco más chico.
+  final bool compact;
   final TextEditingController input;
   final bool busy;
   final bool dictatingIntoField;
@@ -1040,20 +1064,25 @@ class _Composer extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 64,
-          height: 64,
+          width: compact ? 52 : 64,
+          height: compact ? 52 : 64,
           child: FloatingActionButton.large(
             heroTag: 'mic',
             tooltip: 'Hablar',
             backgroundColor: scheme.secondary,
             foregroundColor: scheme.onSecondary,
             onPressed: busy || dictatingIntoField ? null : onTalk,
-            child: const Icon(Icons.mic, size: 30),
+            child: Icon(Icons.mic, size: compact ? 26 : 30),
           ),
         ),
         const SizedBox(height: 2),
-        Text('Tocá para hablar', style: theme.textTheme.bodySmall),
-        const SizedBox(height: 8),
+        Text(
+          'Tocá para hablar',
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontSize: compact ? 11 : null,
+          ),
+        ),
+        SizedBox(height: compact ? 4 : 8),
         Row(
           children: [
             Expanded(

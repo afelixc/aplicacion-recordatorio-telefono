@@ -22,7 +22,13 @@ class ChatScreen extends StatelessWidget {
       listenable: settings,
       builder: (context, _) => Column(
         children: [
-          PlanBar(settings: settings),
+          ValueListenableBuilder(
+            valueListenable: chatCompact,
+            builder: (context, compact, _) => PlanBar(
+              settings: settings,
+              compact: compact && settings.aiReady,
+            ),
+          ),
           Expanded(
             child: settings.aiReady
                 ? AiChat(key: ValueKey(settings.providerId), settings: settings)
@@ -36,36 +42,56 @@ class ChatScreen extends StatelessWidget {
 
 /// "Tu plan: Gratis | Con IA". El activo se ve resaltado y el otro en gris.
 class PlanBar extends StatelessWidget {
-  const PlanBar({super.key, required this.settings});
+  const PlanBar({super.key, required this.settings, this.compact = false});
 
   final AppSettings settings;
+
+  /// Más chica mientras se ve un recordatorio recién guardado.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final missingKey = settings.mode == UsageMode.ai && !settings.aiReady;
+    final segStyle = compact ? const TextStyle(fontSize: 12) : null;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      padding: EdgeInsets.fromLTRB(16, compact ? 0 : 4, 8, compact ? 0 : 4),
       child: Column(
         children: [
           Row(
             children: [
-              Text('Tu plan:', style: theme.textTheme.labelLarge),
+              Text(
+                'Tu plan:',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontSize: compact ? 12 : null,
+                ),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: SegmentedButton<UsageMode>(
                   key: const Key('plan-selector'),
                   showSelectedIcon: false,
                   style: SegmentedButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
+                    visualDensity: compact
+                        ? const VisualDensity(vertical: -4)
+                        : VisualDensity.compact,
+                    tapTargetSize: compact
+                        ? MaterialTapTargetSize.shrinkWrap
+                        : null,
                     selectedBackgroundColor: scheme.primary,
                     selectedForegroundColor: scheme.onPrimary,
                     foregroundColor: scheme.onSurface.withValues(alpha: 0.45),
                   ),
-                  segments: const [
-                    ButtonSegment(value: UsageMode.free, label: Text('Gratis')),
-                    ButtonSegment(value: UsageMode.ai, label: Text('Con IA')),
+                  segments: [
+                    ButtonSegment(
+                      value: UsageMode.free,
+                      label: Text('Gratis', style: segStyle),
+                    ),
+                    ButtonSegment(
+                      value: UsageMode.ai,
+                      label: Text('Con IA', style: segStyle),
+                    ),
                   ],
                   selected: {settings.mode},
                   onSelectionChanged: (s) => settings.setMode(s.first),
@@ -73,6 +99,10 @@ class PlanBar extends StatelessWidget {
               ),
               IconButton(
                 tooltip: '¿Cómo funciona?',
+                visualDensity: compact
+                    ? const VisualDensity(vertical: -4)
+                    : null,
+                iconSize: compact ? 20 : null,
                 icon: const Icon(Icons.help_outline),
                 onPressed: () => showModesHelp(context),
               ),
