@@ -118,7 +118,7 @@ Future<void> calendarBackground() async {
       calendar: AndroidDeviceCalendar(),
       settings: settings,
     );
-    if (settings.calendarAuto) {
+    if (settings.calendarAuto || settings.icalUrl != null) {
       final notifications = NotificationService.instance;
       await notifications.init();
       db = AppDatabase();

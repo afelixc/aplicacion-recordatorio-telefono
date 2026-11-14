@@ -57,6 +57,10 @@ class _CalendarCheckPageState extends State<CalendarCheckPage> {
   /// Eventos de cada calendario (id → eventos), del más cercano al más lejano.
   final Map<String, List<CalendarEvent>> _events = {};
   List<Reminder> _have = const [];
+
+  /// Lo que se lee del link privado de Google (null = sin link).
+  List<CalendarEvent>? _ical;
+  String? _icalError;
   String? _message;
   bool _busy = false;
 
@@ -87,6 +91,15 @@ class _CalendarCheckPageState extends State<CalendarCheckPage> {
         _events[c.id] = list;
       }
       _have = await repo.watchAll().first;
+      _ical = null;
+      _icalError = null;
+      if (_sync.settings.icalUrl != null) {
+        try {
+          _ical = await _sync.icalReader(_sync.settings.icalUrl!, from, to);
+        } catch (e) {
+          _icalError = '$e';
+        }
+      }
       if (!mounted) return;
       setState(() {
         _calendars = calendars;
@@ -170,12 +183,44 @@ class _CalendarCheckPageState extends State<CalendarCheckPage> {
                   ),
                 ],
                 const SizedBox(height: 12),
+                ..._link(theme),
                 ..._chosen(theme),
                 const SizedBox(height: 16),
                 ..._others(theme),
               ],
             ),
     );
+  }
+
+  /// Lo que se lee del link privado de Google (el 5), si está puesto.
+  List<Widget> _link(ThemeData theme) {
+    if (_sync.settings.icalUrl == null) return const [];
+    final known = _sync.settings.calendarKnown;
+    final events = _ical ?? const [];
+    return [
+      Text(
+        'DESDE GOOGLE, CON EL LINK PRIVADO (EL 5)',
+        style: theme.textTheme.labelLarge?.copyWith(
+          letterSpacing: 0.8,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      const SizedBox(height: 6),
+      if (_icalError != null)
+        _Warn(_icalError!, theme.colorScheme)
+      else if (events.isEmpty)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 8),
+          child: Text('Google no tiene nada anotado para estos días.'),
+        )
+      else
+        for (final e in events)
+          _EventTile(
+            event: e,
+            state: eventState(e, _have, auto: true, known: known),
+          ),
+      const SizedBox(height: 16),
+    ];
   }
 
   /// El calendario elegido en el 1, con el estado de cada evento.

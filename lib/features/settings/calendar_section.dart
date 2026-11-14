@@ -7,6 +7,7 @@ import '../../core/sheets.dart';
 import '../../data/reminder.dart';
 import '../calendar_sync/calendar_sync.dart';
 import '../calendar_sync/device_calendar.dart';
+import '../calendar_sync/ical.dart';
 import 'battery_help.dart';
 import 'calendar_check_page.dart';
 import 'settings_screen.dart';
@@ -213,6 +214,209 @@ class _CalendarSectionState extends State<CalendarSection> {
     } else if (mounted) {
       _say('Listo ✓ Desde ahora, lo nuevo va al calendario.');
     }
+  }
+
+  // --- 5 · Link privado de Google ---
+
+  Future<void> _pasteLink() async {
+    final field = TextEditingController();
+    final raw = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pegá el link privado'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'En la computadora:\n'
+                '1. Entrá a calendar.google.com\n'
+                '2. Arriba a la derecha, ⚙ → Configuración\n'
+                '3. A la izquierda, en "Configuración de mis calendarios", '
+                'tocá tu calendario\n'
+                '4. Bajá hasta "Integrar el calendario"\n'
+                '5. Copiá la "Dirección secreta en formato iCal" (termina '
+                'en .ics)\n'
+                '6. Mandátela por WhatsApp o mail y pegala acá.',
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'No se la pases a nadie: con ese link se puede ver tu '
+                'calendario.',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('ical-field'),
+                controller: field,
+                autofocus: true,
+                maxLines: 3,
+                minLines: 1,
+                decoration: const InputDecoration(
+                  labelText: 'Link privado (.ics)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('ical-ok'),
+            onPressed: () => Navigator.pop(context, field.text),
+            child: const Text('Listo'),
+          ),
+        ],
+      ),
+    );
+    if (raw == null || !mounted) return;
+    final url = cleanIcalUrl(raw);
+    if (url == null) {
+      _say(
+        'Eso no parece el link del calendario. Tiene que empezar con '
+        'https:// y terminar en .ics.',
+        seconds: 8,
+      );
+      return;
+    }
+    setState(() => _busy = true);
+    final now = DateTime.now();
+    List<CalendarEvent> events;
+    try {
+      events = await widget.sync.icalReader(
+        url,
+        now,
+        now.add(CalendarSync.autoWindow),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        _say('$e', seconds: 8);
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    final repo = AppScope.of(context).reminders;
+    final have = await repo.watchAll().first;
+    if (!mounted) return;
+    final missing = [
+      for (final e in events)
+        if (!alreadyHave(e, have)) e,
+    ];
+    final choice = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.link, color: Colors.green),
+        title: const Text('¡Funciona!'),
+        content: Text(
+          events.isEmpty
+              ? 'Leí tu calendario desde Google, pero no hay nada anotado '
+                    'para el próximo año. Lo que anotes de ahora en más va a '
+                    'llegar a Recordame.'
+              : 'Leí tu calendario desde Google: hay ${events.length} '
+                    '${events.length == 1 ? 'evento' : 'eventos'} de acá a '
+                    'un año (por ejemplo "${events.first.title}", '
+                    '${Fmt.when(events.first.start)}).\n\n'
+                    '¿Traigo a Recordame lo que ya está, o solo lo nuevo que '
+                    'anotes de ahora en más?',
+        ),
+        actions: [
+          if (missing.isNotEmpty)
+            FilledButton(
+              key: const Key('ical-all'),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(
+                missing.length == 1
+                    ? 'Traer el que falta'
+                    : 'Traer los ${missing.length} que faltan',
+              ),
+            ),
+          TextButton(
+            key: const Key('ical-new'),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Solo lo nuevo'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == false) {
+      await _settings.addCalendarKnown(events.map((e) => e.id));
+    }
+    await _settings.setIcalUrl(url);
+    await widget.sync.ensureBackground();
+    final added = await widget.sync.autoImport(repo);
+    if (!mounted) return;
+    _say(
+      added == 0
+          ? 'Listo: lo nuevo de tu calendario va a llegar solo.'
+          : 'Listo: traje $added. Lo nuevo va a llegar solo.',
+      seconds: 6,
+    );
+  }
+
+  Future<void> _readLinkNow() async {
+    setState(() => _busy = true);
+    try {
+      await widget.sync.icalUpcoming(CalendarSync.autoWindow);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        _say('$e', seconds: 8);
+      }
+      return;
+    }
+    if (!mounted) return;
+    final added = await widget.sync.autoImport(AppScope.of(context).reminders);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    _say(
+      added == 0
+          ? 'Leí tu calendario: no había nada nuevo.'
+          : added == 1
+          ? 'Traje 1 nuevo de tu calendario.'
+          : 'Traje $added nuevos de tu calendario.',
+    );
+  }
+
+  Future<void> _removeLink() async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Quitar el link?'),
+        content: const Text(
+          'Recordame deja de leer tu calendario desde Google. Lo que ya '
+          'trajo queda como está.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('ical-remove-yes'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Quitar'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    await _settings.setIcalUrl(null);
+    await widget.sync.ensureBackground();
   }
 
   Future<void> _toggleAuto(bool on) async {
@@ -460,6 +664,55 @@ class _CalendarSectionState extends State<CalendarSection> {
                     'Google Calendar también avisa. Si te molesta, apagá los '
                     'avisos de Google Calendar en el teléfono.',
               ),
+          ],
+        ),
+        SettingsCard(
+          title: '5 · Link privado de Google (si no llega nada)',
+          children: [
+            if (s.icalUrl == null) ...[
+              Text(
+                'Si lo que anotás en Google Calendar no llega al teléfono, '
+                'Recordame lo puede leer directo de Google con el link '
+                'privado de tu calendario. Solo lee: no anota nada en Google.',
+                style: hint,
+              ),
+              FilledButton.icon(
+                key: const Key('ical-paste'),
+                icon: const Icon(Icons.link),
+                label: const Text('Pegar el link privado'),
+                onPressed: _busy ? null : _pasteLink,
+              ),
+            ] else ...[
+              _Box(
+                color: Colors.green.shade800,
+                background: Colors.green.shade50,
+                text:
+                    'Conectado ✓ · Recordame lee tu calendario directo de '
+                    'Google al abrir la app y cada 15 minutos, aunque esté '
+                    'cerrada.',
+              ),
+              Row(
+                spacing: 8,
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      key: const Key('ical-read'),
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: const Text('Leer ahora'),
+                      onPressed: _busy ? null : _readLinkNow,
+                    ),
+                  ),
+                  Expanded(
+                    child: TextButton.icon(
+                      key: const Key('ical-remove'),
+                      icon: const Icon(Icons.link_off, size: 18),
+                      label: const Text('Quitar link'),
+                      onPressed: _busy ? null : _removeLink,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
         // Para ver por qué algo de Google Calendar no llegó.

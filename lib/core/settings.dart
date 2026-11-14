@@ -359,6 +359,23 @@ class AppSettings extends ChangeNotifier {
     await _saveKnown();
   }
 
+  /// Link privado (iCal) de un calendario de Google: Recordame lo lee
+  /// directo de Google. Se guarda cifrado, como las claves (es secreto) y
+  /// no va en la copia.
+  String? icalUrl;
+
+  Future<void> setIcalUrl(String? url) async {
+    icalUrl = url;
+    if (url == null) {
+      await keys.delete(_icalKey);
+    } else {
+      await keys.write(_icalKey, url);
+    }
+    notifyListeners();
+  }
+
+  static const _icalKey = 'ical_google';
+
   Future<void> addCalendarKnown(Iterable<String> ids) async {
     calendarKnown.addAll(ids);
     await _saveKnown();
@@ -458,6 +475,9 @@ class AppSettings extends ChangeNotifier {
     calendarName = await _store.read('cal_name');
     calendarSend = await _store.read('cal_send') == 'true';
     calendarAuto = await _store.read('cal_auto') == 'true';
+    try {
+      icalUrl = await keys.read(_icalKey);
+    } catch (_) {}
     try {
       calendarKnown
         ..clear()

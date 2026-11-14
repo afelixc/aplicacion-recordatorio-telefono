@@ -58,10 +58,18 @@ jobs:
             echo "::warning::Falta el secret FIRMA_BASE64: el APK sale con firma de prueba, no se publica y no se podrá actualizar encima de otra versión."
           fi
 
+      # Versión que ve el usuario: sube de a una décima por actualización
+      # (la ejecución 72 es la 1.7, la 73 la 1.8, la 75 la 2.0…). El tag
+      # sigue siendo v1.0.N: la app compara N para ofrecer "Actualizar".
+      - name: Número de versión
+        run: |
+          V=$(( ${{ github.run_number }} - 55 ))
+          echo "VERSION=$(( V / 10 )).$(( V % 10 ))" >> "$GITHUB_ENV"
+
       - name: Compilar
         run: |
           flutter build apk --release \
-            --build-name=1.0.${{ github.run_number }} \
+            --build-name=$VERSION \
             --build-number=${{ github.run_number }}
           cp build/app/outputs/flutter-apk/app-release.apk Recordame.apk
 
@@ -79,5 +87,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v1.0.${{ github.run_number }}" Recordame.apk \
-            --title "Recordame 1.0.${{ github.run_number }}" \
+            --title "Recordame $VERSION" \
             --notes "Descargá **Recordame.apk** desde el teléfono y abrilo para instalar. Si ya tenés la app, al abrirla te ofrece actualizar sola."

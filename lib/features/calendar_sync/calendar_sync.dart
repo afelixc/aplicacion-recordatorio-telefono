@@ -3,6 +3,7 @@ import '../../data/recurrence.dart';
 import '../../data/reminder.dart';
 import '../../data/reminder_repository.dart';
 import 'device_calendar.dart';
+import 'ical.dart';
 
 /// Regla de repetición del calendario (RRULE) para un recordatorio. Null si
 /// no se repite o si son días puntuales (esos van como eventos sueltos).
@@ -31,12 +32,37 @@ bool alreadyHave(CalendarEvent e, List<Reminder> reminders) => reminders.any(
           r.dueAt.minute == e.start.minute),
 );
 
+typedef IcalReader = Future<List<CalendarEvent>> Function(
+  String url,
+  DateTime from,
+  DateTime to,
+);
+
 /// Une Recordame con el calendario que ya está en el teléfono.
 class CalendarSync {
-  CalendarSync({required this.calendar, required this.settings});
+  CalendarSync({
+    required this.calendar,
+    required this.settings,
+    IcalReader? icalReader,
+  }) : icalReader = icalReader ?? _readIcal;
 
   final DeviceCalendar calendar;
   final AppSettings settings;
+
+  /// Lee el link privado de Google (en las pruebas, uno de mentira).
+  final IcalReader icalReader;
+
+  static Future<List<CalendarEvent>> _readIcal(
+    String url,
+    DateTime from,
+    DateTime to,
+  ) => fetchIcal(url, from: from, to: to);
+
+  /// Lo del link privado de Google, de ahora a [window].
+  Future<List<CalendarEvent>> icalUpcoming(Duration window, {DateTime? now}) {
+    now ??= DateTime.now();
+    return icalReader(settings.icalUrl!, now, now.add(window));
+  }
 
   bool get sending => settings.calendarSend && settings.calendarId != null;
 
@@ -157,7 +183,7 @@ class CalendarSync {
   /// Al abrir la app: si está prendido, que siga revisando con la app cerrada.
   /// Si está apagado, se cancela (por si quedó programada de antes).
   Future<void> ensureBackground() async {
-    if (settings.calendarAuto) {
+    if (settings.calendarAuto || settings.icalUrl != null) {
       await calendar.scheduleBackground();
     } else {
       await calendar.cancelBackground();
@@ -166,9 +192,20 @@ class CalendarSync {
 
   /// Trae lo nuevo del calendario (al abrir o volver a la app).
   Future<int> autoImport(ReminderRepository repo) async {
-    if (!settings.calendarAuto || settings.calendarId == null) return 0;
-    if (!await calendar.hasPermission()) return 0;
-    final events = await upcoming(autoWindow);
+    final events = <CalendarEvent>[];
+    if (settings.calendarAuto &&
+        settings.calendarId != null &&
+        await calendar.hasPermission()) {
+      events.addAll(await upcoming(autoWindow));
+    }
+    // El link privado de Google: lo nuevo llega aunque el teléfono no lo
+    // reciba. Si no hay internet, se intenta la próxima vez.
+    if (settings.icalUrl != null) {
+      try {
+        events.addAll(await icalUpcoming(autoWindow));
+      } catch (_) {}
+    }
+    if (events.isEmpty) return 0;
     final fresh = <String, CalendarEvent>{};
     for (final e in events) {
       if (!settings.calendarKnown.contains(e.id)) {
