@@ -178,4 +178,50 @@ void main() {
       expect((await repo.watchAll().first).length, 1);
     },
   );
+
+  test(
+    'lo borrado o cambiado en Google se borra o cambia en Recordame',
+    () async {
+      final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+      await settings.load(const []);
+      final soon = DateTime.now().add(const Duration(days: 4));
+      var events = [
+        CalendarEvent(id: 'ical:turno', title: 'Turno', start: soon),
+        CalendarEvent(id: 'ical:asado', title: 'Asado', start: soon),
+      ];
+      final sync = CalendarSync(
+        calendar: FakeCalendar()..permission = false,
+        settings: settings,
+        icalReader: (url, from, to) async => events,
+      );
+      await settings.setIcalUrl('https://calendar.google.com/x/basic.ics');
+      final repo = MemoryReminderRepository([
+        // Uno cargado en Recordame: no viene del link, no se toca.
+        Reminder(title: 'Pagar la luz', dueAt: soon),
+      ]);
+      await sync.autoImport(repo);
+      expect((await repo.watchAll().first).length, 3);
+
+      // En Google: borran el turno y el asado pasa a las 21.
+      final later = DateTime(soon.year, soon.month, soon.day, 21);
+      events = [CalendarEvent(id: 'ical:asado', title: 'Asado', start: later)];
+      await sync.autoImport(repo);
+      final all = await repo.watchAll().first;
+      expect(
+        all.map((r) => r.title),
+        unorderedEquals(['Pagar la luz', 'Asado']),
+      );
+      expect(all.firstWhere((r) => r.title == 'Asado').dueAt, later);
+
+      // Si Google no contesta, no se borra nada.
+      final failing = CalendarSync(
+        calendar: FakeCalendar()..permission = false,
+        settings: settings,
+        icalReader: (url, from, to) async =>
+            throw const IcalError('sin internet'),
+      );
+      await failing.autoImport(repo);
+      expect((await repo.watchAll().first).length, 2);
+    },
+  );
 }

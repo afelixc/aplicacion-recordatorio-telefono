@@ -209,7 +209,12 @@ class CalendarSync {
     // reciba. Si no hay internet, se intenta la próxima vez.
     if (settings.icalUrl != null) {
       try {
-        events.addAll(await icalUpcoming(autoWindow));
+        final now = DateTime.now();
+        final fromLink = await icalUpcoming(autoWindow, now: now);
+        events.addAll(fromLink);
+        // Solo si Google contestó bien: lo borrado o cambiado allá, también
+        // acá.
+        await followLink(repo, fromLink, now: now);
       } catch (_) {}
     }
     if (events.isEmpty) return 0;
@@ -223,6 +228,42 @@ class CalendarSync {
     // app cerrada) empieza mientras tanto, no los vuelve a traer.
     await settings.addCalendarKnown(events.map((e) => e.id));
     return import(fresh.values, repo);
+  }
+
+  /// Lo que vino del link y todavía no pasó: si en Google lo borraron, se
+  /// borra de Recordame; si le cambiaron el nombre o la hora, se cambia acá.
+  /// Los hechos y los ya pasados no se tocan.
+  Future<({int removed, int changed})> followLink(
+    ReminderRepository repo,
+    List<CalendarEvent> fromLink, {
+    DateTime? now,
+  }) async {
+    now ??= DateTime.now();
+    final byId = {for (final e in fromLink) e.id: e};
+    final until = now.add(autoWindow);
+    var removed = 0;
+    var changed = 0;
+    for (final r in await repo.watchAll().first) {
+      final id = r.calendarEventId;
+      if (!isLinkId(id) || r.done || r.id == null) continue;
+      if (r.dueAt.isBefore(now) || !r.dueAt.isBefore(until)) continue;
+      final e = byId[id];
+      if (e == null) {
+        await repo.delete(r.id!);
+        removed++;
+        continue;
+      }
+      final title = e.title.trim().isEmpty
+          ? 'Evento del calendario'
+          : e.title.trim();
+      if (r.title != title || r.dueAt != e.start) {
+        await repo.save(
+          r.copyWith(title: title, dueAt: e.start, clearSnoozedUntil: true),
+        );
+        changed++;
+      }
+    }
+    return (removed: removed, changed: changed);
   }
 
   /// Borra los repetidos que trajo el link de Google (mismo evento dos
