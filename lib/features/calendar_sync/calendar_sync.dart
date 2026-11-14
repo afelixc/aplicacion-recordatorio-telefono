@@ -199,6 +199,10 @@ class CalendarSync {
 
   Future<int> _autoImport(ReminderRepository repo) async {
     await removeDuplicates(repo);
+    // Lo borrado en el calendario del teléfono, también acá.
+    try {
+      await followPhone(repo);
+    } catch (_) {}
     final events = <CalendarEvent>[];
     if (settings.calendarAuto &&
         settings.calendarId != null &&
@@ -264,6 +268,37 @@ class CalendarSync {
       }
     }
     return (removed: removed, changed: changed);
+  }
+
+  /// Los que están unidos a un evento del teléfono (traídos del calendario o
+  /// mandados con el 2): si ese evento ya no existe (lo borraron en Google o
+  /// en el teléfono), se borran de Recordame. Los hechos y los ya pasados no
+  /// se tocan. Si de golpe faltan todos (y son varios), no se borra nada:
+  /// algo anda mal con el calendario (por ejemplo, se sacó la cuenta).
+  Future<int> followPhone(ReminderRepository repo, {DateTime? now}) async {
+    now ??= DateTime.now();
+    if (!await calendar.hasPermission()) return 0;
+    final linked = <Reminder, List<String>>{};
+    for (final r in await repo.watchAll().first) {
+      final id = r.calendarEventId;
+      if (id == null || isLinkId(id) || r.done || r.id == null) continue;
+      if (r.dueAt.isBefore(now) && !r.repeats) continue;
+      final ids = id.split(',').where((x) => x.isNotEmpty).toList();
+      if (ids.isNotEmpty) linked[r] = ids;
+    }
+    if (linked.isEmpty) return 0;
+    final alive = await calendar.existing([
+      for (final ids in linked.values) ...ids,
+    ]);
+    final gone = [
+      for (final MapEntry(key: r, value: ids) in linked.entries)
+        if (!ids.any(alive.contains)) r,
+    ];
+    if (gone.length >= 2 && gone.length == linked.length) return 0;
+    for (final r in gone) {
+      await repo.delete(r.id!);
+    }
+    return gone.length;
   }
 
   /// Borra los repetidos que trajo el link de Google (mismo evento dos

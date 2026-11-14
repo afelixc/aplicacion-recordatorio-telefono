@@ -63,6 +63,28 @@ class CalendarChannel(private val context: Context) {
                 val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id)
                 resolver.update(uri, eventValues(call), null, null) > 0
             }
+            // De estos ids, los que siguen en el calendario (no borrados).
+            "existen" -> background(result) {
+                val ids = (call.argument<List<String>>("ids") ?: emptyList())
+                    .mapNotNull { it.toLongOrNull() }
+                val alive = mutableListOf<String>()
+                for (chunk in ids.chunked(300)) {
+                    if (chunk.isEmpty()) continue
+                    val where = "${CalendarContract.Events._ID} IN (${chunk.joinToString(",") { "?" }})"
+                    resolver.query(
+                        CalendarContract.Events.CONTENT_URI,
+                        arrayOf(CalendarContract.Events._ID, CalendarContract.Events.DELETED),
+                        where,
+                        chunk.map { it.toString() }.toTypedArray(),
+                        null,
+                    )?.use { c ->
+                        while (c.moveToNext()) {
+                            if (c.getInt(1) == 0) alive.add(c.getLong(0).toString())
+                        }
+                    }
+                }
+                alive
+            }
             "borrar" -> background(result) {
                 val id = (call.argument<String>("id") ?: "0").toLong()
                 val uri = ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id)

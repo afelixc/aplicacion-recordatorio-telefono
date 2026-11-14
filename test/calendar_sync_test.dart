@@ -86,6 +86,11 @@ class FakeCalendar implements DeviceCalendar {
 
   @override
   Future<void> delete(String id) async => stored.remove(id);
+  @override
+  Future<Set<String>> existing(List<String> ids) async => {
+    for (final id in ids)
+      if (stored.containsKey(id)) id,
+  };
   bool background = false;
   @override
   Future<void> scheduleBackground() async => background = true;
@@ -416,4 +421,35 @@ void main() {
       EventState.here,
     );
   });
+
+  test(
+    'lo borrado en el calendario del teléfono se borra de Recordame',
+    () async {
+      final (sync, repo, cal, inner) = await make();
+      await sync.choose(
+        const PhoneCalendar(
+          id: '1',
+          name: 'yo@gmail.com',
+          account: 'yo@gmail.com',
+        ),
+      );
+      cal.add('7', 'Pruebaaa', at);
+      cal.add('8', 'Asado', at);
+      cal.add('9', 'Dentista', at);
+      await sync.import(await sync.upcoming(const Duration(days: 30)), repo);
+      await inner.save(Reminder(title: 'Mío', dueAt: at));
+      expect((await inner.watchAll().first).length, 4);
+
+      // Lo borran en Google: se va de Recordame. Lo cargado a mano queda.
+      cal.stored.remove('7');
+      await sync.autoImport(repo);
+      final titles = (await inner.watchAll().first).map((r) => r.title);
+      expect(titles, unorderedEquals(['Asado', 'Dentista', 'Mío']));
+
+      // Si de golpe faltan todos (se sacó la cuenta), no borra nada.
+      cal.stored.clear();
+      await sync.autoImport(repo);
+      expect((await inner.watchAll().first).length, 3);
+    },
+  );
 }

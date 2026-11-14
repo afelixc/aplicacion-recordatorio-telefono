@@ -68,6 +68,9 @@ abstract class DeviceCalendar {
   Future<bool> update(String id, String title, DateTime start, String? rrule);
   Future<void> delete(String id);
 
+  /// De estos ids de eventos, los que siguen en el calendario del teléfono.
+  Future<Set<String>> existing(List<String> ids);
+
   /// Revisar el calendario con la app cerrada (al cambiar y cada 15 minutos).
   Future<void> scheduleBackground();
   Future<void> cancelBackground();
@@ -165,6 +168,14 @@ class AndroidDeviceCalendar implements DeviceCalendar {
 
   @override
   Future<void> delete(String id) => _channel.invokeMethod('borrar', {'id': id});
+
+  @override
+  Future<Set<String>> existing(List<String> ids) async {
+    final alive = await _channel.invokeListMethod<String>('existen', {
+      'ids': ids,
+    });
+    return {...?alive};
+  }
 
   @override
   Future<void> scheduleBackground() => _channel.invokeMethod('programarFondo');
