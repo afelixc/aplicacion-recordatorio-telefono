@@ -383,12 +383,15 @@ class _CalendarSectionState extends State<CalendarSection> {
     final added = await widget.sync.autoImport(AppScope.of(context).reminders);
     if (!mounted) return;
     setState(() => _busy = false);
+    final name = lastIcalName ?? 'tu calendario';
     _say(
-      added == 0
-          ? 'Leí tu calendario: no había nada nuevo.'
+      'Leí "$name" ($lastIcalTotal en total). '
+      '${added == 0
+          ? 'No había nada nuevo: si falta algo, tocá "¿Qué ve el teléfono?".'
           : added == 1
-          ? 'Traje 1 nuevo de tu calendario.'
-          : 'Traje $added nuevos de tu calendario.',
+          ? 'Traje 1 nuevo.'
+          : 'Traje $added nuevos.'}',
+      seconds: 8,
     );
   }
 

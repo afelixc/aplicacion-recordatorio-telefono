@@ -18,6 +18,11 @@ String? cleanIcalUrl(String raw) {
   return url;
 }
 
+/// De la última lectura del link: el nombre del calendario (para ver que
+/// sea el correcto) y cuántos eventos tiene en total (también los pasados).
+String? lastIcalName;
+int lastIcalTotal = 0;
+
 /// Error al leer el link, con la explicación para el usuario.
 class IcalError implements Exception {
   const IcalError(this.message);
@@ -58,6 +63,11 @@ Future<List<CalendarEvent>> fetchIcal(
         'secreta en formato iCal".',
       );
     }
+    lastIcalName = RegExp(
+      r'^X-WR-CALNAME:(.*)$',
+      multiLine: true,
+    ).firstMatch(body)?.group(1)?.trim();
+    lastIcalTotal = 'BEGIN:VEVENT'.allMatches(body).length;
     return parseIcs(body, from: from, to: to);
   } on IcalError {
     rethrow;

@@ -5,6 +5,7 @@ import '../../core/formatting.dart';
 import '../../data/reminder.dart';
 import '../calendar_sync/calendar_sync.dart';
 import '../calendar_sync/device_calendar.dart';
+import '../calendar_sync/ical.dart';
 
 /// Lo que el teléfono tiene en cada calendario y si ya está en Recordame.
 /// Sirve para ver por qué algo de Google Calendar no llegó (pedido del
@@ -197,6 +198,12 @@ class _CalendarCheckPageState extends State<CalendarCheckPage> {
     if (_sync.settings.icalUrl == null) return const [];
     final known = _sync.settings.calendarKnown;
     final events = _ical ?? const [];
+    final missing = [
+      for (final e in events)
+        if (eventState(e, _have, auto: true, known: known) != EventState.here &&
+            e.start.isAfter(DateTime.now()))
+          e,
+    ];
     return [
       Text(
         'DESDE GOOGLE, CON EL LINK PRIVADO (EL 5)',
@@ -205,6 +212,16 @@ class _CalendarCheckPageState extends State<CalendarCheckPage> {
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
+      if (_icalError == null)
+        Text(
+          'Calendario del link: ${lastIcalName ?? '(sin nombre)'} · '
+          '$lastIcalTotal ${lastIcalTotal == 1 ? 'evento' : 'eventos'} en '
+          'total (también los pasados).',
+          key: const Key('check-ical-name'),
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       const SizedBox(height: 6),
       if (_icalError != null)
         _Warn(_icalError!, theme.colorScheme)
@@ -218,7 +235,21 @@ class _CalendarCheckPageState extends State<CalendarCheckPage> {
           _EventTile(
             event: e,
             state: eventState(e, _have, auto: true, known: known),
+            link: true,
           ),
+      if (missing.isNotEmpty) ...[
+        const SizedBox(height: 6),
+        FilledButton.icon(
+          key: const Key('check-bring-ical'),
+          icon: const Icon(Icons.download),
+          label: Text(
+            missing.length == 1
+                ? 'Traer el que falta'
+                : 'Traer los ${missing.length} que faltan',
+          ),
+          onPressed: _busy ? null : () => _bringMissing(missing),
+        ),
+      ],
       const SizedBox(height: 16),
     ];
   }
@@ -359,10 +390,17 @@ class _Warn extends StatelessWidget {
 }
 
 class _EventTile extends StatelessWidget {
-  const _EventTile({required this.event, required this.state});
+  const _EventTile({
+    required this.event,
+    required this.state,
+    this.link = false,
+  });
 
   final CalendarEvent event;
   final EventState state;
+
+  /// Viene del link privado (no del teléfono).
+  final bool link;
 
   @override
   Widget build(BuildContext context) {
@@ -376,7 +414,9 @@ class _EventTile extends StatelessWidget {
       EventState.before => (
         Icons.history,
         Colors.orange.shade800,
-        'Ya estaba antes de prender el 4: no se trae solo',
+        link
+            ? 'Ya estaba al pegar el link: no se trae solo'
+            : 'Ya estaba antes de prender el 4: no se trae solo',
       ),
       EventState.coming => (
         Icons.schedule,
