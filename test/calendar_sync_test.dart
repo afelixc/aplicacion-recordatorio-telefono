@@ -10,6 +10,7 @@ import 'package:recordame/data/reminder.dart';
 import 'package:recordame/features/calendar_sync/calendar_sync.dart';
 import 'package:recordame/features/calendar_sync/device_calendar.dart';
 import 'package:recordame/features/settings/battery_help.dart';
+import 'package:recordame/features/settings/calendar_check_page.dart';
 
 /// Un calendario de mentira, en memoria.
 class FakeCalendar implements DeviceCalendar {
@@ -349,5 +350,70 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     expect(find.text('Listo ✓ Sin restricciones'), findsOneWidget);
+  });
+
+  testWidgets(
+    '¿Qué ve el teléfono?: dice por qué no llegó y trae lo que falta',
+    (tester) async {
+      final (sync, repo, cal, inner) = await make();
+      await sync.choose(
+        const PhoneCalendar(
+          id: '1',
+          name: 'yo@gmail.com',
+          account: 'yo@gmail.com',
+        ),
+      );
+      // "Turno" ya estaba cuando se prendió el 4; "Asado" se anotó después.
+      cal.add('7', 'Turno', at);
+      await sync.startAuto();
+      cal.add('8', 'Asado', at.add(const Duration(days: 1)));
+      await tester.pumpWidget(
+        RecordameApp(reminders: repo, settings: sync.settings, calendar: sync),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Configuración'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Google Calendar'), 100);
+      await tester.tap(find.text('Google Calendar'));
+      await tester.pumpAndSettle();
+      // Al abrir la app ya trajo lo nuevo; para la prueba, se borra así se ve.
+      for (final r in await inner.watchAll().first) {
+        await inner.delete(r.id!);
+      }
+      await tester.ensureVisible(find.byKey(const Key('cal-check')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('cal-check')));
+      await tester.pumpAndSettle();
+      expect(find.text('¿Qué ve el teléfono?'), findsOneWidget);
+      expect(
+        find.text('Ya estaba antes de prender el 4: no se trae solo'),
+        findsOneWidget,
+      );
+      expect(find.text('Trabajo'), findsOneWidget, reason: 'otros calendarios');
+      await tester.tap(find.byKey(const Key('check-bring')));
+      await tester.pumpAndSettle();
+      final titles = (await inner.watchAll().first).map((r) => r.title);
+      expect(titles, containsAll(['Turno', 'Asado']));
+      expect(find.text('Ya está en Recordame'), findsNWidgets(2));
+    },
+  );
+
+  test('estado de cada evento', () {
+    final e = CalendarEvent(id: '1', title: 'Turno', start: at);
+    expect(
+      eventState(e, const [], auto: true, known: {'1'}),
+      EventState.before,
+    );
+    expect(eventState(e, const [], auto: true, known: {}), EventState.coming);
+    expect(eventState(e, const [], auto: false, known: {}), EventState.manual);
+    expect(
+      eventState(
+        e,
+        [Reminder(title: 'turno', dueAt: at)],
+        auto: true,
+        known: {},
+      ),
+      EventState.here,
+    );
   });
 }

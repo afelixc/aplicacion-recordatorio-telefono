@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../core/sheets.dart';
-
 import '../../core/app_scope.dart';
 import '../../core/formatting.dart';
 import '../../core/settings.dart';
+import '../../core/sheets.dart';
 import '../../data/reminder.dart';
 import '../calendar_sync/calendar_sync.dart';
 import '../calendar_sync/device_calendar.dart';
 import 'battery_help.dart';
+import 'calendar_check_page.dart';
 import 'settings_screen.dart';
 
 /// Configuración → Google Calendar: usa el calendario que ya está en el
@@ -461,6 +461,25 @@ class _CalendarSectionState extends State<CalendarSection> {
                     'avisos de Google Calendar en el teléfono.',
               ),
           ],
+        ),
+        // Para ver por qué algo de Google Calendar no llegó.
+        OutlinedButton.icon(
+          key: const Key('cal-check'),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(46),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          icon: const Icon(Icons.fact_check_outlined),
+          label: const Text('¿Qué ve el teléfono? (revisar)'),
+          onPressed: s.calendarId == null
+              ? null
+              : () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CalendarCheckPage(sync: widget.sync),
+                  ),
+                ),
         ),
         Container(
           padding: const EdgeInsets.all(12),
