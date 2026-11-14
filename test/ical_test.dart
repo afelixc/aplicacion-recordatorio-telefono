@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:recordame/core/settings.dart';
 import 'package:recordame/data/memory_reminder_repository.dart';
+import 'package:recordame/data/reminder.dart';
 import 'package:recordame/features/calendar_sync/calendar_sync.dart';
 import 'package:recordame/features/calendar_sync/device_calendar.dart';
 import 'package:recordame/features/calendar_sync/ical.dart';
@@ -141,6 +142,40 @@ void main() {
       expect(await sync.autoImport(repo), 0);
       // El link se guarda cifrado (con las claves), no en las preferencias.
       expect(await settings.keys.read('ical_google'), isNotNull);
+    },
+  );
+
+  test(
+    'dos lecturas a la vez no lo traen dos veces; borra el repetido',
+    () async {
+      final settings = AppSettings(MemorySettingsStore(), MemoryKeyStore());
+      await settings.load(const []);
+      final soon = DateTime.now().add(const Duration(days: 4));
+      final sync = CalendarSync(
+        calendar: FakeCalendar()..permission = false,
+        settings: settings,
+        icalReader: (url, from, to) async {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          return [CalendarEvent(id: 'ical:turno', title: 'Turno', start: soon)];
+        },
+      );
+      await settings.setIcalUrl('https://calendar.google.com/x/basic.ics');
+      final repo = MemoryReminderRepository();
+      await Future.wait([sync.autoImport(repo), sync.autoImport(repo)]);
+      expect((await repo.watchAll().first).length, 1);
+
+      // Uno que ya había quedado repetido (de antes del arreglo): se borra.
+      final first = (await repo.watchAll().first).single;
+      await repo.save(
+        Reminder(
+          title: first.title,
+          dueAt: first.dueAt,
+          calendarEventId: first.calendarEventId,
+        ),
+      );
+      expect((await repo.watchAll().first).length, 2);
+      await sync.autoImport(repo);
+      expect((await repo.watchAll().first).length, 1);
     },
   );
 }

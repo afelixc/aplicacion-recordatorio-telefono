@@ -147,10 +147,11 @@ class CalendarSync {
     ReminderRepository repo,
   ) async {
     var added = 0;
-    final have = await repo.watchAll().first;
     for (final e in events) {
+      // Se mira de nuevo cada vez: otra lectura pudo haberlo traído recién.
+      final have = await repo.watchAll().first;
       if (alreadyHave(e, have)) continue;
-      final saved = await repo.save(
+      await repo.save(
         Reminder(
           title: e.title.trim().isEmpty
               ? 'Evento del calendario'
@@ -161,7 +162,6 @@ class CalendarSync {
           calendarEventId: e.repeats ? null : e.id,
         ),
       );
-      have.add(saved);
       added++;
     }
     return added;
@@ -190,8 +190,15 @@ class CalendarSync {
     }
   }
 
-  /// Trae lo nuevo del calendario (al abrir o volver a la app).
-  Future<int> autoImport(ReminderRepository repo) async {
+  /// Trae lo nuevo del calendario (al abrir o volver a la app). Si ya hay una
+  /// lectura en marcha, espera esa: dos a la vez traían lo mismo dos veces.
+  Future<int> autoImport(ReminderRepository repo) =>
+      _importing ??= _autoImport(repo).whenComplete(() => _importing = null);
+
+  Future<int>? _importing;
+
+  Future<int> _autoImport(ReminderRepository repo) async {
+    await removeDuplicates(repo);
     final events = <CalendarEvent>[];
     if (settings.calendarAuto &&
         settings.calendarId != null &&
@@ -212,11 +219,33 @@ class CalendarSync {
         fresh.putIfAbsent(e.id, () => e);
       }
     }
-    final added = await import(fresh.values, repo);
+    // Se anotan como conocidos antes de traerlos: si otra lectura (la de la
+    // app cerrada) empieza mientras tanto, no los vuelve a traer.
     await settings.addCalendarKnown(events.map((e) => e.id));
-    return added;
+    return import(fresh.values, repo);
+  }
+
+  /// Borra los repetidos que trajo el link de Google (mismo evento dos
+  /// veces). Deja el primero. No toca el calendario.
+  Future<int> removeDuplicates(ReminderRepository repo) async {
+    final seen = <String>{};
+    var removed = 0;
+    final all = (await repo.watchAll().first).toList()
+      ..sort((a, b) => (a.id ?? 0).compareTo(b.id ?? 0));
+    for (final r in all) {
+      final id = r.calendarEventId;
+      if (id == null || !isLinkId(id)) continue;
+      if (!seen.add(id) && r.id != null) {
+        await repo.delete(r.id!);
+        removed++;
+      }
+    }
+    return removed;
   }
 }
+
+/// Lo que vino del link privado de Google (no es un evento del teléfono).
+bool isLinkId(String? id) => id != null && id.startsWith('ical:');
 
 /// Envuelve otro repositorio: si está prendido "Enviar al calendario", cada
 /// cambio se refleja en el calendario del teléfono. Si el calendario falla,
@@ -252,6 +281,8 @@ class CalendarSyncRepository implements ReminderRepository {
     }
     var saved = await _inner.save(reminder);
     if (!sync.sending || saved.done) return saved;
+    // Lo que vino del link de Google ya está en Google: no se manda otra vez.
+    if (isLinkId(saved.calendarEventId)) return saved;
     final unchanged =
         saved.calendarEventId != null &&
         (previous == null || _same(previous, saved));
@@ -276,7 +307,7 @@ class CalendarSyncRepository implements ReminderRepository {
   Future<void> delete(int id) async {
     final r = await _inner.getById(id);
     await _inner.delete(id);
-    if (r == null || !sync.sending) return;
+    if (r == null || !sync.sending || isLinkId(r.calendarEventId)) return;
     try {
       await sync.remove(r);
     } catch (_) {}

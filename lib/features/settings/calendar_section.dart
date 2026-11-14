@@ -690,26 +690,25 @@ class _CalendarSectionState extends State<CalendarSection> {
                 color: Colors.green.shade800,
                 background: Colors.green.shade50,
                 text:
-                    'Conectado ✓ · Recordame lee tu calendario directo de '
-                    'Google al abrir la app y cada 15 minutos, aunque esté '
-                    'cerrada.',
+                    'Conectado ✓ · Se lee de Google al abrir la app y cada '
+                    '15 minutos.',
               ),
               Row(
                 spacing: 8,
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
+                    child: _LinkButton(
                       key: const Key('ical-read'),
-                      icon: const Icon(Icons.refresh, size: 18),
-                      label: const Text('Leer ahora'),
+                      icon: Icons.refresh,
+                      label: 'Leer ahora',
                       onPressed: _busy ? null : _readLinkNow,
                     ),
                   ),
                   Expanded(
-                    child: TextButton.icon(
+                    child: _LinkButton(
                       key: const Key('ical-remove'),
-                      icon: const Icon(Icons.link_off, size: 18),
-                      label: const Text('Quitar link'),
+                      icon: Icons.link_off,
+                      label: 'Quitar link',
                       onPressed: _busy ? null : _removeLink,
                     ),
                   ),
@@ -894,19 +893,59 @@ class _Box extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Más chico (pedido del usuario: ocupaba mucha pantalla).
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: background,
-        border: Border.all(color: color, width: 1.5),
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1.2),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12.5,
+        ),
       ),
     );
   }
+}
+
+/// Botón con recuadro, el dibujo y el texto centrados en un renglón (la
+/// letra se achica si no entra).
+class _LinkButton extends StatelessWidget {
+  const _LinkButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton(
+    onPressed: onPressed,
+    style: OutlinedButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      minimumSize: const Size.fromHeight(40),
+    ),
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 6),
+          Text(label, maxLines: 1),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Si Android puede frenar a Recordame, lo avisa con un botón para arreglarlo.
